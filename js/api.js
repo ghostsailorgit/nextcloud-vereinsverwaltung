@@ -1,8 +1,8 @@
 import axios from '@nextcloud/axios'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl } from './absoluteUrl'
 
 const instance = axios.create({
-  baseURL: generateUrl('/apps/verein/'),
+  baseURL: absoluteUrl('/apps/verein/'),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'

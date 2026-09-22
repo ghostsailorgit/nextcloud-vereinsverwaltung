@@ -31,7 +31,7 @@
 
 <script>
 import axios from '@nextcloud/axios'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import * as notify from '../notify'
 
 export default {

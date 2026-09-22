@@ -156,7 +156,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { api } from '../api'
 import Alert from './Alert.vue'
 

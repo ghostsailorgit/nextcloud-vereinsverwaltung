@@ -89,7 +89,7 @@
 
 <script>
 import axios from '@nextcloud/axios'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Roles',

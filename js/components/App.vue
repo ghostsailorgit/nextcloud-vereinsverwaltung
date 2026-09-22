@@ -46,7 +46,7 @@
 
 <script>
 import { ref, reactive, computed, defineAsyncComponent, onMounted } from 'vue'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl } from '../absoluteUrl'
 import { api } from '../api'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
@@ -79,8 +79,8 @@ export default {
       { id: 'finance', label: 'Finanzen', icon: 'finance' },
       { id: 'roles', label: 'Rollen', icon: 'roles' },
       { id: 'sepa', label: 'SEPA-Export', icon: 'sepa' },
-      { id: 'documents', label: 'Dokumente', icon: 'documents', href: generateUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')) },
-      { id: 'calendar', label: 'Termine', icon: 'calendar', href: generateUrl('/apps/calendar/') },
+      { id: 'documents', label: 'Dokumente', icon: 'documents', href: absoluteUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')) },
+      { id: 'calendar', label: 'Termine', icon: 'calendar', href: absoluteUrl('/apps/calendar/') },
       { id: 'settings', label: 'Einstellungen', icon: 'settings' }
     ])
 
@@ -90,7 +90,7 @@ export default {
         const path = res.data?.data?.documents_path
         if (path) {
           const documentsTab = tabs.find(t => t.id === 'documents')
-          if (documentsTab) documentsTab.href = generateUrl('/apps/files/files?dir=' + encodeURIComponent(path))
+          if (documentsTab) documentsTab.href = absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(path))
         }
       } catch (e) {
         // keep the default documents href on error

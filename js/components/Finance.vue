@@ -149,7 +149,7 @@ import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
 import ExportButtons from './ExportButtons.vue'
 import axios from '@nextcloud/axios'
-import { generateUrl } from '@nextcloud/router'
+import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
