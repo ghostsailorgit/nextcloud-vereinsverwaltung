@@ -198,7 +198,10 @@ $max-container-width: 1200px; // retained for fallback but not enforced for full
 }
 
 .verein-tabs-container {
-  display: flex;
+  // !important: Nextcloud's own core CSS (now loaded, see PageController)
+  // has higher-specificity rules (e.g. "#content a") that otherwise win
+  // over this scoped class for the <a>-based Dokumente/Termine tabs
+  display: flex !important;
   gap: 0;
   /* allow the tab bar to use the full available width inside Nextcloud's content area
      but keep a small horizontal padding so it doesn't touch browser edges */
@@ -219,8 +222,12 @@ $max-container-width: 1200px; // retained for fallback but not enforced for full
 }
 
 .verein-tab {
+  // !important on the box-model/layout properties: same Nextcloud-core-CSS
+  // specificity issue as .verein-tabs-container above, but here it's
+  // specifically core's own "a" element styling beating our class for the
+  // Dokumente/Termine tabs (which render as <a>, not <button>)
   flex: 0 0 auto;
-  padding: 14px 16px;
+  padding: 14px 16px !important;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -228,13 +235,14 @@ $max-container-width: 1200px; // retained for fallback but not enforced for full
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
   transition: all 0.2s ease;
   -webkit-user-select: none;
   user-select: none;
+  text-decoration: none !important;
 
   @media (max-width: $breakpoint-tablet) {
     padding: 12px 12px;
