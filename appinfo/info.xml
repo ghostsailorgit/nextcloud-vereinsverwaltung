@@ -9,15 +9,15 @@ A comprehensive club/association management solution for Nextcloud with member m
     ]]></description>
     <version>0.2.0-beta</version>
     <licence>agpl</licence>
-    <author mail="your-email@example.com">Your Name</author>
+    <author>Vereinsverwaltung</author>
     <namespace>Verein</namespace>
     <category>organization</category>
     <category>tools</category>
-    <website>https://github.com/yourusername/nextcloud-verein</website>
-    <bugs>https://github.com/yourusername/nextcloud-verein/issues</bugs>
+    <website>https://github.com/Wacken2012/nextcloud-verein</website>
+    <bugs>https://github.com/Wacken2012/nextcloud-verein/issues</bugs>
     <dependencies>
-        <php min-version="7.4" max-version="8.4"/>
-        <nextcloud min-version="27" max-version="32"/>
+        <php min-version="7.4" max-version="8.5"/>
+        <nextcloud min-version="27" max-version="34"/>
     </dependencies>
     <navigations>
         <navigation>
