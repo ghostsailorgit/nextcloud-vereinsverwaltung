@@ -111,6 +111,19 @@ body {
 }
 */
 
+/*
+ * Nextcloud's own core CSS (loaded for the app's main page since it's
+ * needed for correct theming/layout) has higher-specificity rules for
+ * plain elements like table cells, resetting padding to 0 and clobbering
+ * per-component scoped styles that only use classes. Restore sane table
+ * spacing app-wide here rather than repeating !important in every
+ * component's own table CSS.
+ */
+.verein-app table th,
+.verein-app table td {
+  padding: 12px !important;
+}
+
 a {
   color: var(--color-primary);
   text-decoration: none;

@@ -190,10 +190,12 @@ $max-container-width: 1200px; // retained for fallback but not enforced for full
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--color-border);
-  position: sticky;
+  // !important: same Nextcloud-core-CSS specificity issue as elsewhere in
+  // this file - without it "position" gets reset (observed as both "static"
+  // and "fixed" depending on cache state), breaking the sticky tab bar
+  position: sticky !important;
   top: var(--header-height, 50px);
-  z-index: 100;
-  z-index: 2100; /* place tabs above header area so they remain clickable */
+  z-index: 2100 !important; /* place tabs above header area so they remain clickable */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
