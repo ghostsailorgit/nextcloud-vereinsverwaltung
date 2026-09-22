@@ -19,6 +19,18 @@
           <span>SEPA-Export</span>
         </router-link>
       </li>
+      <li>
+        <a :href="documentsUrl">
+          <span class="icon">📁</span>
+          <span>Dokumente</span>
+        </a>
+      </li>
+      <li>
+        <a :href="calendarUrl">
+          <span class="icon">📅</span>
+          <span>Termine</span>
+        </a>
+      </li>
       <li v-if="showRolesLink">
         <router-link to="/roles" :class="{ active: isActive('roles') }">
           <span class="icon">🛡️</span>
@@ -44,7 +56,9 @@ export default {
   data() {
     return {
       showSettingsLink: false,
-      showRolesLink: false
+      showRolesLink: false,
+      documentsUrl: generateUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')),
+      calendarUrl: generateUrl('/apps/calendar/')
     }
   },
   methods: {
@@ -65,6 +79,17 @@ export default {
       // no permission or error -> hide the settings and roles links
       this.showSettingsLink = false
       this.showRolesLink = false
+    }
+
+    try {
+      // the documents folder path is admin-configurable (Einstellungen), default '/Verein'
+      const settingsRes = await axios.get(generateUrl('/apps/verein/api/settings'))
+      const path = settingsRes.data?.data?.documents_path
+      if (path) {
+        this.documentsUrl = generateUrl('/apps/files/files?dir=' + encodeURIComponent(path))
+      }
+    } catch (e) {
+      // keep the default documentsUrl on error
     }
   }
 }

@@ -40,4 +40,17 @@ class SettingsController extends Controller {
             'data' => ['enable_charts' => $this->settingsService->isChartsEnabled()]
         ]);
     }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function setDocumentsPath(string $path = ''): JSONResponse {
+        $path = $this->request->getParam('path', $path);
+        $this->settingsService->setDocumentsPath($path);
+        return new JSONResponse([
+            'status' => 'ok',
+            'data' => ['documents_path' => $this->settingsService->getDocumentsPath()]
+        ]);
+    }
 }

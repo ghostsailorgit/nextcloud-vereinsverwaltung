@@ -40,5 +40,11 @@ return [
         ['name' => 'role#removeRoles', 'url' => '/roles/users', 'verb' => 'DELETE'],
 
         ['name' => 'permission#index', 'url' => '/permissions', 'verb' => 'GET'],
+
+        // App settings (url includes /api to match what js/components/Navigation.vue actually calls;
+        // see note below about the pre-existing /api prefix mismatch on the older routes in this file)
+        ['name' => 'settings#getAppSettings', 'url' => '/api/settings', 'verb' => 'GET'],
+        ['name' => 'settings#setChartsEnabled', 'url' => '/api/settings/charts', 'verb' => 'PUT'],
+        ['name' => 'settings#setDocumentsPath', 'url' => '/api/settings/documents-path', 'verb' => 'PUT'],
     ]
 ];
