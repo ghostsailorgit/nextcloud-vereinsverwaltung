@@ -34,9 +34,9 @@
           <option value="paid">Bezahlt</option>
           <option value="overdue">Überfällig</option>
         </select>
-        <button type="submit" class="btn btn-primary" :disabled="loading">
+        <NcButton type="submit" variant="primary" :disabled="loading">
           {{ loading ? 'Wird gespeichert...' : 'Hinzufügen' }}
-        </button>
+        </NcButton>
       </form>
     </div>
 
@@ -105,35 +105,35 @@
               <td>{{ fee.paidDate ? formatDate(fee.paidDate) : '-' }}</td>
 
               <td class="actions">
-                <button
+                <NcButton
                   v-if="editingId !== fee.id"
                   @click="startEdit(fee)"
-                  class="btn btn-small btn-secondary"
+                  variant="secondary"
                 >
                   Bearbeiten
-                </button>
-                <button
+                </NcButton>
+                <NcButton
                   v-else
                   @click="saveEdit(fee.id)"
-                  class="btn btn-small btn-success"
+                  variant="primary"
                   :disabled="loading"
                 >
                   Speichern
-                </button>
-                <button
+                </NcButton>
+                <NcButton
                   v-if="editingId === fee.id"
                   @click="cancelEdit"
-                  class="btn btn-small"
+                  variant="tertiary"
                 >
                   Abbrechen
-                </button>
-                <button
+                </NcButton>
+                <NcButton
                   @click="deleteFee(fee.id)"
-                  class="btn btn-small btn-danger"
+                  variant="error"
                   :disabled="loading"
                 >
                   Löschen
-                </button>
+                </NcButton>
               </td>
             </tr>
           </tbody>
@@ -147,13 +147,14 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
+import NcButton from '@nextcloud/vue/components/NcButton'
 import ExportButtons from './ExportButtons.vue'
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
-  components: { ExportButtons },
+  components: { NcButton, ExportButtons },
   setup() {
     const fees = ref([])
     const members = ref([])
@@ -494,71 +495,6 @@ export default {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.btn {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-main-background);
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: var(--color-background-hover);
-    border-color: var(--color-primary);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &.btn-primary {
-    background: var(--color-primary);
-    color: white;
-    border-color: var(--color-primary);
-
-    &:hover:not(:disabled) {
-      background: var(--color-primary-element);
-    }
-  }
-
-  &.btn-success {
-    background: var(--color-success);
-    color: white;
-    border-color: var(--color-success);
-  }
-
-  &.btn-danger {
-    background: var(--color-error);
-    color: white;
-    border-color: var(--color-error);
-  }
-
-  &.btn-secondary {
-    background: var(--color-main-background);
-    color: var(--color-text);
-    border: 1px solid var(--color-border);
-
-    &:hover:not(:disabled) {
-      background: var(--color-background-hover);
-      border-color: var(--color-primary);
-    }
-  }
-
-  &.btn-secondary {
-    background: var(--color-background-secondary);
-    color: var(--color-text);
-  }
-
-  &.btn-small {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
 }
 
 .empty-state {

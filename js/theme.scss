@@ -119,8 +119,12 @@ body {
  * spacing app-wide here rather than repeating !important in every
  * component's own table CSS.
  */
-.verein-app table th,
-.verein-app table td {
+/* !important alone isn't enough - Nextcloud's own core CSS apparently also
+   uses !important with higher specificity (likely ID-scoped) for its table
+   reset. #app-content-vue is the id we explicitly set on NcAppContent in
+   App.vue, giving our rule matching/higher specificity too. */
+#app-content-vue table th,
+#app-content-vue table td {
   padding: 12px !important;
 }
 

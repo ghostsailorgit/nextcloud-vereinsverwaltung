@@ -1,31 +1,23 @@
 <template>
   <div class="export-buttons" :class="{ inline: inline }">
-    <button
+    <NcButton
       :disabled="busyCsv"
       @click="handleCsv"
-      class="button"
-      :aria-busy="busyCsv ? 'true' : 'false'"
+      variant="secondary"
       :aria-label="`${labelBase} als CSV exportieren`"
       :title="`${labelBase} als CSV herunterladen`"
     >
-      <span v-if="!busyCsv">📊 CSV Export</span>
-      <span v-else class="spinner" role="status" aria-live="polite" aria-label="Export läuft"> 
-        <span class="visually-hidden">Export läuft…</span>
-      </span>
-    </button>
-    <button
+      {{ busyCsv ? 'Export läuft…' : '📊 CSV Export' }}
+    </NcButton>
+    <NcButton
       :disabled="busyPdf"
       @click="handlePdf"
-      class="button"
-      :aria-busy="busyPdf ? 'true' : 'false'"
+      variant="secondary"
       :aria-label="`${labelBase} als PDF exportieren`"
       :title="`${labelBase} als PDF herunterladen`"
     >
-      <span v-if="!busyPdf">📄 PDF Export</span>
-      <span v-else class="spinner" role="status" aria-live="polite" aria-label="Export läuft">
-        <span class="visually-hidden">Export läuft…</span>
-      </span>
-    </button>
+      {{ busyPdf ? 'Export läuft…' : '📄 PDF Export' }}
+    </NcButton>
   </div>
 </template>
 
@@ -33,9 +25,11 @@
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import * as notify from '../notify'
+import NcButton from '@nextcloud/vue/components/NcButton'
 
 export default {
   name: 'ExportButtons',
+  components: { NcButton },
   props: {
     resource: { type: String, required: true }, // 'members' | 'fees'
     inline: { type: Boolean, default: false }
@@ -115,43 +109,5 @@ export default {
 }
 .export-buttons.inline {
   display: inline-flex;
-}
-.button {
-  background-color: #f0f0f0;
-  color: #333;
-  padding: 8px 14px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: background-color .2s;
-}
-.button:hover:not(:disabled) {
-  background-color: #e0e0e0;
-}
-.button:disabled {
-  opacity: .6;
-  cursor: default;
-}
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: rgba(0,0,0,0.6);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-.visually-hidden {
-  position: absolute !important;
-  height: 1px; width: 1px;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
-  white-space: nowrap;
 }
 </style>
