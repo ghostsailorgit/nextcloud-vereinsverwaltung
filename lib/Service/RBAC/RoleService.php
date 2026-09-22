@@ -15,9 +15,16 @@
 
 namespace OCA\Verein\Service\RBAC;
 
+use OCA\Verein\Db\Role;
+use OCA\Verein\Db\RoleMapper;
+use OCA\Verein\Db\UserRole;
+use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Exception\PermissionDeniedException;
+use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IGroupManager;
 use OCP\IUserSession;
+use Psr\Log\LoggerInterface;
 
 class RoleService {
     
@@ -132,10 +139,191 @@ class RoleService {
         ]
     ];
     
+    /**
+     * The permissions actually enforced by #[RequirePermission] across the app's
+     * controllers - the only ones that matter for userHasPermission(). The
+     * templates above additionally reference some aspirational, not-yet-built
+     * categories (score.*, training.*, athlete.assign, musician.assign) which
+     * are harmless to keep as preset suggestions but grant nothing real.
+     */
+    private const ENFORCED_PERMISSIONS = [
+        'verein.member.view',
+        'verein.member.manage',
+        'verein.finance.read',
+        'verein.finance.write',
+        'verein.finance.delete',
+        'verein.finance.export',
+        'verein.role.manage',
+        'verein.sepa.export',
+    ];
+
+    private const ENFORCED_PERMISSION_DESCRIPTIONS = [
+        'verein.member.view' => 'Mitglieder einsehen',
+        'verein.member.manage' => 'Mitglieder anlegen, bearbeiten, löschen',
+        'verein.finance.read' => 'Finanzdaten einsehen',
+        'verein.finance.write' => 'Finanzdaten anlegen und bearbeiten',
+        'verein.finance.delete' => 'Finanzdaten löschen',
+        'verein.finance.export' => 'Finanzdaten exportieren',
+        'verein.role.manage' => 'Rollen und Berechtigungen verwalten',
+        'verein.sepa.export' => 'SEPA-Export erstellen',
+    ];
+
     private IUserSession $userSession;
-    
-    public function __construct(IUserSession $userSession) {
+    private RoleMapper $roleMapper;
+    private UserRoleMapper $userRoleMapper;
+    private IGroupManager $groupManager;
+    private LoggerInterface $logger;
+
+    public function __construct(
+        RoleMapper $roleMapper,
+        UserRoleMapper $userRoleMapper,
+        IGroupManager $groupManager,
+        IUserSession $userSession,
+        LoggerInterface $logger
+    ) {
+        $this->roleMapper = $roleMapper;
+        $this->userRoleMapper = $userRoleMapper;
+        $this->groupManager = $groupManager;
         $this->userSession = $userSession;
+        $this->logger = $logger;
+    }
+
+    /**
+     * Checks whether a user holds a role granting the given permission.
+     * Nextcloud admins always pass, since they administer the whole instance
+     * anyway; everyone else needs an explicit Role assignment (see assignRole()).
+     */
+    public function userHasPermission(string $userId, string $permission): bool {
+        if ($this->groupManager->isAdmin($userId)) {
+            return true;
+        }
+
+        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            if (in_array($permission, $role->getPermissionsArray(), true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getAvailablePermissions(): array {
+        return self::ENFORCED_PERMISSIONS;
+    }
+
+    /**
+     * @return array<string, array{label: string, description: string, permissions: string[]}>
+     */
+    public function getDefaultRoleTemplates(): array {
+        return [
+            'music' => self::MUSIC_CLUB_ROLES,
+            'sport' => self::SPORT_CLUB_ROLES,
+        ];
+    }
+
+    /**
+     * @param string[] $permissions
+     * @throws ValidationException
+     */
+    public function createRole(string $name, string $clubType, ?string $description, array $permissions): Role {
+        if (trim($name) === '') {
+            throw new ValidationException('Name erforderlich');
+        }
+
+        $role = new Role();
+        $role->setName($name);
+        $role->setDescription($description ?? '');
+        $role->setClubType($clubType);
+        $role->setPermissionsArray($permissions);
+        $now = date('Y-m-d H:i:s');
+        $role->setCreatedAt($now);
+        $role->setUpdatedAt($now);
+
+        return $this->roleMapper->insert($role);
+    }
+
+    /**
+     * @param string[]|null $permissions
+     * @throws ValidationException
+     */
+    public function updateRole(int $id, ?string $name, ?string $description, ?array $permissions): Role {
+        $role = $this->roleMapper->find($id);
+
+        if ($name !== null && trim($name) !== '') {
+            $role->setName($name);
+        }
+        if ($description !== null) {
+            $role->setDescription($description);
+        }
+        if ($permissions !== null) {
+            $role->setPermissionsArray($permissions);
+        }
+        $role->setUpdatedAt(date('Y-m-d H:i:s'));
+
+        return $this->roleMapper->update($role);
+    }
+
+    public function deleteRole(int $id): void {
+        $role = $this->roleMapper->find($id);
+        $this->roleMapper->delete($role);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function getUserRoles(string $userId, int $clubId = 0): array {
+        $userRoles = $clubId > 0
+            ? $this->userRoleMapper->findByUserAndClub($userId, $clubId)
+            : $this->userRoleMapper->findByUserId($userId);
+
+        $result = [];
+        foreach ($userRoles as $userRole) {
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                $this->logger->warning('RBAC: user role references missing role', [
+                    'userId' => $userId,
+                    'roleId' => $userRole->getRoleId(),
+                ]);
+                continue;
+            }
+            $result[] = array_merge($userRole->jsonSerialize(), ['role' => $role->jsonSerialize()]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public function assignRole(string $userId, int $roleId, int $clubId = 0): UserRole {
+        // Confirm the role actually exists before assigning it
+        $this->roleMapper->find($roleId);
+
+        if ($this->userRoleMapper->existsForUserAndRole($userId, $roleId, $clubId)) {
+            throw new ValidationException('Rolle ist diesem Benutzer bereits zugewiesen');
+        }
+
+        $userRole = new UserRole();
+        $userRole->setUserId($userId);
+        $userRole->setRoleId($roleId);
+        $userRole->setClubId($clubId);
+        $currentUser = $this->userSession->getUser();
+        $userRole->setGrantedBy($currentUser !== null ? $currentUser->getUID() : 'system');
+
+        return $this->userRoleMapper->insert($userRole);
+    }
+
+    public function removeUserRoles(string $userId, ?int $clubId = null): void {
+        $this->userRoleMapper->deleteByUserAndClub($userId, $clubId ?? 0);
     }
     
     /**

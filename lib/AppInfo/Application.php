@@ -21,10 +21,10 @@ use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\AppFramework\IAppContainer;
 use OCP\IGroupManager;
-use OCP\ILogger;
 use OCP\IUserSession;
 use OCP\IURLGenerator;
 use OCP\IL10N;
+use Psr\Log\LoggerInterface;
 
 class Application extends App implements IBootstrap {
     public const APP_ID = 'verein';
@@ -40,7 +40,7 @@ class Application extends App implements IBootstrap {
                 $container->query(UserRoleMapper::class),
                 $container->query(IGroupManager::class),
                 $container->query(IUserSession::class),
-                $container->query(ILogger::class)
+                $container->query(LoggerInterface::class)
             );
         });
 
@@ -48,7 +48,7 @@ class Application extends App implements IBootstrap {
             return new AuthorizationMiddleware(
                 $container->query(RoleService::class),
                 $container->query(IUserSession::class),
-                $container->query(ILogger::class)
+                $container->query(LoggerInterface::class)
             );
         });
 

@@ -86,7 +86,7 @@
         </div>
       </div>
 
-      <!-- Liniendiagramm: Mitgliederwachstum (Simuliert) -->
+      <!-- Liniendiagramm: Mitgliederwachstum (aus echten Beitrittsdaten) -->
       <div class="chart-container">
         <h3 class="chart-title">📈 Mitgliederwachstum (Letzte 6 Monate)</h3>
         <div class="chart-wrapper">
@@ -180,11 +180,11 @@ const feeStatusChartData = ref({
 })
 
 const memberGrowthChartData = ref({
-  labels: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun'],
+  labels: [],
   datasets: [
     {
       label: 'Mitglieder',
-      data: [8, 9, 10, 11, 11, 12],
+      data: [],
       borderColor: '#1976d2',
       backgroundColor: 'rgba(25, 118, 210, 0.1)',
       fill: true,
@@ -264,6 +264,11 @@ const loadStatistics = async () => {
     const memberStatsResponse = await api.getMemberStatistics()
     if (memberStatsResponse.data.status === 'ok') {
       statistics.memberCount = memberStatsResponse.data.data.total || 0
+      const growth = memberStatsResponse.data.data.growthByMonth
+      if (growth) {
+        memberGrowthChartData.value.labels = growth.labels
+        memberGrowthChartData.value.datasets[0].data = growth.data
+      }
     }
 
     // Lade Gebühren-Statistiken
@@ -549,6 +554,7 @@ $breakpoint-mobile: 480px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
+  min-width: 0;
 
   @media (max-width: $breakpoint-tablet) {
     padding: 16px;
@@ -579,9 +585,11 @@ $breakpoint-mobile: 480px;
 .chart-wrapper {
   position: relative;
   width: 100%;
+  min-width: 0;
   min-height: 300px;
   display: flex;
   align-items: center;
+  overflow: hidden;
 
   @media (max-width: $breakpoint-mobile) {
     min-height: 250px;
