@@ -31,8 +31,8 @@ class PageController extends Controller {
         Util::addScript('core', 'main');
 
         return new TemplateResponse('verein', 'main', [
-            'id-app-content' => '#app-content',
-            'id-app-navigation' => '#verein-navigation',
+            'id-app-content' => '#app-content-vue',
+            'id-app-navigation' => '#app-navigation-vue',
             'pageTitle' => 'Verein',
         ], TemplateResponse::RENDER_AS_USER);
     }
