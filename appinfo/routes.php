@@ -16,7 +16,8 @@ return [
         ['name' => 'finance#update', 'url' => '/finance/{id}', 'verb' => 'PUT'],
         ['name' => 'finance#destroy', 'url' => '/finance/{id}', 'verb' => 'DELETE'],
         
-        ['name' => 'sepa#export', 'url' => '/sepa/export', 'verb' => 'GET'],
+        ['name' => 'sepa#export', 'url' => '/sepa/export', 'verb' => 'POST'],
+        ['name' => 'sepa#preview', 'url' => '/sepa/preview', 'verb' => 'POST'],
 
         // Export endpoints
         ['name' => 'export#exportMembersAsCsv', 'url' => '/export/members/csv', 'verb' => 'GET'],
@@ -41,10 +42,9 @@ return [
 
         ['name' => 'permission#index', 'url' => '/permissions', 'verb' => 'GET'],
 
-        // App settings (url includes /api to match what js/components/Navigation.vue actually calls;
-        // see note below about the pre-existing /api prefix mismatch on the older routes in this file)
-        ['name' => 'settings#getAppSettings', 'url' => '/api/settings', 'verb' => 'GET'],
-        ['name' => 'settings#setChartsEnabled', 'url' => '/api/settings/charts', 'verb' => 'PUT'],
-        ['name' => 'settings#setDocumentsPath', 'url' => '/api/settings/documents-path', 'verb' => 'PUT'],
+        // App settings
+        ['name' => 'settings#getAppSettings', 'url' => '/settings', 'verb' => 'GET'],
+        ['name' => 'settings#setChartsEnabled', 'url' => '/settings/charts', 'verb' => 'PUT'],
+        ['name' => 'settings#setDocumentsPath', 'url' => '/settings/documents-path', 'verb' => 'PUT'],
     ]
 ];

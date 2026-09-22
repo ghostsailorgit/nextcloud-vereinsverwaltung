@@ -106,7 +106,7 @@ export default {
     async preview() {
       try {
         const response = await axios.post(
-          generateUrl('/apps/verein/api/sepa/preview'),
+          generateUrl('/apps/verein/sepa/preview'),
           this.form
         )
         this.previewData = response.data
@@ -118,7 +118,7 @@ export default {
     async generateSepa() {
       try {
         const response = await axios.post(
-          generateUrl('/apps/verein/api/sepa/export'),
+          generateUrl('/apps/verein/sepa/export'),
           this.form,
           { responseType: 'blob' }
         )

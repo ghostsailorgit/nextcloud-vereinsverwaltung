@@ -118,6 +118,14 @@ body {
   content: '📄';
 }
 
+.icon-roles::before {
+  content: '🛡️';
+}
+
+.icon-sepa::before {
+  content: '🏦';
+}
+
 /* Responsive tables */
 @media (max-width: 768px) {
   .table-wrapper {

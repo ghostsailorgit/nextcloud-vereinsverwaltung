@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!name) return;
             const description = prompt('Beschreibung (optional):') || '';
             try {
-                const res = await fetch('/apps/verein/api/roles', {
+                const res = await fetch('/apps/verein/roles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description, permissions: [] })
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (name === null) return;
             const description = prompt('Neue Beschreibung:', currentDesc) || '';
             try {
-                const res = await fetch(`/apps/verein/api/roles/${roleId}`, {
+                const res = await fetch(`/apps/verein/roles/${roleId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, description })
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const roleId = this.closest('.role-row').dataset.roleId;
             if (!confirm('Rolle wirklich löschen?')) return;
             try {
-                const res = await fetch(`/apps/verein/api/roles/${roleId}`, { method: 'DELETE' });
+                const res = await fetch(`/apps/verein/roles/${roleId}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Fehler beim Löschen');
                 alert('Rolle gelöscht');
                 window.location.reload();

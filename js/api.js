@@ -56,6 +56,17 @@ export const api = {
     return instance.get('statistics/fees')
   },
 
+  // App settings
+  getAppSettings() {
+    return instance.get('settings')
+  },
+  setChartsEnabled(enabled) {
+    return instance.put('settings/charts', { enabled: enabled ? '1' : '0' })
+  },
+  setDocumentsPath(path) {
+    return instance.put('settings/documents-path', { path })
+  },
+
   // Fees
   getFees() {
     return instance.get('finance')

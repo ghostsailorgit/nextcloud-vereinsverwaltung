@@ -3,22 +3,24 @@
     <!-- Tabs Navigation -->
     <nav id="verein-navigation" class="verein-tabs" role="navigation" aria-label="Hauptnavigation" tabindex="-1">
       <div class="verein-tabs-container" role="tablist" aria-label="Hauptnavigation">
-        <button
+        <component
+          :is="tab.href ? 'a' : 'button'"
           v-for="tab in tabs"
           :key="tab.id"
-          :class="['verein-tab', { active: activeTab === tab.id }]"
+          :href="tab.href || null"
+          :class="['verein-tab', { active: !tab.href && activeTab === tab.id }]"
           :id="'verein-tab-' + tab.id"
-          :aria-current="activeTab === tab.id ? 'page' : false"
-          @click="activeTab = tab.id"
+          :aria-current="!tab.href && activeTab === tab.id ? 'page' : false"
+          @click="!tab.href && (activeTab = tab.id)"
           role="tab"
           aria-controls="app-content"
-          :aria-selected="activeTab === tab.id"
-          :tabindex="activeTab === tab.id ? 0 : -1"
+          :aria-selected="!tab.href && activeTab === tab.id"
+          :tabindex="!tab.href && activeTab === tab.id ? 0 : -1"
           @keydown="onKeyDown($event, tab)"
         >
           <span :class="['verein-tab-icon', 'icon-' + tab.icon]"></span>
           <span class="verein-tab-label">{{ tab.label }}</span>
-        </button>
+        </component>
       </div>
     </nav>
 
@@ -43,14 +45,15 @@
 </template>
 
 <script>
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, reactive, computed, defineAsyncComponent, onMounted } from 'vue'
+import { generateUrl } from '@nextcloud/router'
+import { api } from '../api'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
 // Lazy-load Statistics (includes Chart.js ~500KB) for better initial load
 const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
-import Calendar from './Calendar.vue'
-import Deck from './Deck.vue'
-import Documents from './Documents.vue'
+import Roles from './Roles.vue'
+import SepaExport from './SepaExport.vue'
 import Settings from './Settings.vue'
 
 export default {
@@ -59,32 +62,47 @@ export default {
     Members,
     Finance,
     Statistics,
-    Calendar,
-    Deck,
-    Documents,
+    Roles,
+    SepaExport,
     Settings
   },
   setup() {
     const activeTab = ref('dashboard')
     const notification = ref(null)
 
-    const tabs = [
+    // 'Dokumente'/'Termine' deliberately deep-link into the official Files/Calendar
+    // apps instead of a custom in-app view (Files + Group folders + OCR handle
+    // document management; Calendar app handles events) - see project decision.
+    const tabs = reactive([
       { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
       { id: 'members', label: 'Mitglieder', icon: 'users' },
       { id: 'finance', label: 'Finanzen', icon: 'finance' },
-      { id: 'calendar', label: 'Termine', icon: 'calendar' },
-      { id: 'deck', label: 'Aufgaben', icon: 'deck' },
-      { id: 'documents', label: 'Dokumente', icon: 'documents' },
+      { id: 'roles', label: 'Rollen', icon: 'roles' },
+      { id: 'sepa', label: 'SEPA-Export', icon: 'sepa' },
+      { id: 'documents', label: 'Dokumente', icon: 'documents', href: generateUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')) },
+      { id: 'calendar', label: 'Termine', icon: 'calendar', href: generateUrl('/apps/calendar/') },
       { id: 'settings', label: 'Einstellungen', icon: 'settings' }
-    ]
+    ])
+
+    onMounted(async () => {
+      try {
+        const res = await api.getAppSettings()
+        const path = res.data?.data?.documents_path
+        if (path) {
+          const documentsTab = tabs.find(t => t.id === 'documents')
+          if (documentsTab) documentsTab.href = generateUrl('/apps/files/files?dir=' + encodeURIComponent(path))
+        }
+      } catch (e) {
+        // keep the default documents href on error
+      }
+    })
 
     const componentMap = {
       dashboard: 'Statistics',
       members: 'Members',
       finance: 'Finance',
-      calendar: 'Calendar',
-      deck: 'Deck',
-      documents: 'Documents',
+      roles: 'Roles',
+      sepa: 'SepaExport',
       settings: 'Settings'
     }
 
@@ -103,7 +121,7 @@ export default {
       const index = tabs.findIndex(t => t.id === tab.id)
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         const next = (index + 1) % tabs.length
-        activeTab.value = tabs[next].id
+        if (!tabs[next].href) activeTab.value = tabs[next].id
         setTimeout(() => {
           const nodes = document.querySelectorAll('.verein-tab')
           if (nodes[next]) nodes[next].focus()
@@ -111,13 +129,13 @@ export default {
         event.preventDefault()
       } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         const prev = (index - 1 + tabs.length) % tabs.length
-        activeTab.value = tabs[prev].id
+        if (!tabs[prev].href) activeTab.value = tabs[prev].id
         setTimeout(() => {
           const nodes = document.querySelectorAll('.verein-tab')
           if (nodes[prev]) nodes[prev].focus()
         }, 0)
         event.preventDefault()
-      } else if (event.key === 'Enter' || event.key === ' ') {
+      } else if ((event.key === 'Enter' || event.key === ' ') && !tab.href) {
         activeTab.value = tab.id
         event.preventDefault()
       }

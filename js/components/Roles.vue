@@ -132,7 +132,7 @@ export default {
   methods: {
     async loadRoles() {
       try {
-        const res = await axios.get(generateUrl('/apps/verein/api/roles'))
+        const res = await axios.get(generateUrl('/apps/verein/roles'))
         this.roles = res.data || []
       } catch (e) {
         console.error('Error loading roles', e)
@@ -141,7 +141,7 @@ export default {
     },
     async loadPermissions() {
       try {
-        const res = await axios.get(generateUrl('/apps/verein/api/permissions'))
+        const res = await axios.get(generateUrl('/apps/verein/permissions'))
         const data = res.data || {}
         // API returns { permissions: [...], templates: [...] }
         this.permissionsList = data.permissions || []
@@ -153,7 +153,7 @@ export default {
     async loadMembers() {
       // kept for backwards compatibility; prefer using searchMembers
       try {
-        const res = await axios.get(generateUrl('/apps/verein/api/members'))
+        const res = await axios.get(generateUrl('/apps/verein/members'))
         this.assign.searchResults = Array.isArray(res.data) ? res.data : (res.data.members || [])
       } catch (e) {
         console.error('Error loading members', e)
@@ -165,7 +165,7 @@ export default {
           this.assign.searchResults = []
           return
         }
-        const res = await axios.get(generateUrl('/apps/verein/api/members'), { params: { query } })
+        const res = await axios.get(generateUrl('/apps/verein/members'), { params: { query } })
         const payload = res.data
         this.assign.searchResults = Array.isArray(payload) ? payload : (payload.members || [])
       } catch (e) {
@@ -199,10 +199,10 @@ export default {
         }
 
         if (this.editingRole) {
-          await axios.put(generateUrl(`/apps/verein/api/roles/${this.editingRole.id}`), payload)
+          await axios.put(generateUrl(`/apps/verein/roles/${this.editingRole.id}`), payload)
           this.showToast('Rolle aktualisiert', 'success')
         } else {
-          await axios.post(generateUrl('/apps/verein/api/roles'), payload)
+          await axios.post(generateUrl('/apps/verein/roles'), payload)
           this.showToast('Rolle angelegt', 'success')
         }
 
@@ -233,7 +233,7 @@ export default {
           roleId: this.assign.roleId,
           clubId: this.assign.clubId ? parseInt(this.assign.clubId) : 0
         }
-        await axios.post(generateUrl('/apps/verein/api/roles/users'), payload)
+        await axios.post(generateUrl('/apps/verein/roles/users'), payload)
         this.showToast('Rolle zugewiesen', 'success')
         // clear selection but keep search results
         this.assign.userId = ''
@@ -248,7 +248,7 @@ export default {
     async deleteRole(id) {
       if (!confirm('Rolle wirklich löschen?')) return
       try {
-        await axios.delete(generateUrl(`/apps/verein/api/roles/${id}`))
+        await axios.delete(generateUrl(`/apps/verein/roles/${id}`))
         this.showToast('Rolle gelöscht', 'success')
         this.loadRoles()
       } catch (e) {
