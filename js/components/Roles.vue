@@ -263,7 +263,7 @@ export default {
         this.toast.show = false
       }, timeout)
     }
-  ,
+  },
   computed: {
     filteredAssignMembers() {
       // kept for compatibility; prefer assign.searchResults
