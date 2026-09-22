@@ -7,6 +7,7 @@ yarn.lock
 js/dist/
 dist/
 build/
+bundle-stats.html
 
 # IDE
 .vscode/
