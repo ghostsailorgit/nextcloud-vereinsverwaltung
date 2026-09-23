@@ -75,19 +75,13 @@
     <div class="form-card">
       <h3>Rolle einem Benutzer zuweisen</h3>
       <div class="assign-row">
-        <NcSelect
-          v-model="assign.userId"
+        <NcSelectUsers
+          v-model="assign.selectedUser"
           :options="assign.searchResults"
-          :reduce="m => m.id"
-          label="name"
-          input-label="Benutzer"
-          placeholder="Name oder E-Mail eingeben"
-          filterable
-          :filter-by="() => true"
+          input-label="Benutzer (Nextcloud-Konto)"
+          placeholder="Name oder Benutzername eingeben"
           @search="onAssignQueryInput"
-        >
-          <template #option="m">{{ m.name }} ({{ m.email }})</template>
-        </NcSelect>
+        />
 
         <NcSelect
           v-model="assign.roleId"
@@ -118,20 +112,21 @@
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
+import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
+import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 
 export default {
   name: 'Roles',
-  components: { NcButton, NcTextField, NcSelect, NcCheckboxRadioSwitch },
+  components: { NcButton, NcTextField, NcSelect, NcSelectUsers, NcCheckboxRadioSwitch },
   data() {
     return {
       roles: [],
       permissionsList: [],
       permissionTemplates: [],
-      // members are searched remotely for autocomplete
       showForm: false,
       editingRole: null,
       form: {
@@ -141,10 +136,11 @@ export default {
       },
       // assign role form
       assign: {
-        userId: '',
+        // the picked Nextcloud account ({ id, user, displayName, ... }), not a club Member
+        selectedUser: null,
         roleId: null,
         clubId: '',
-        // remote search results
+        // remote Nextcloud-account search results (NcSelectUsersModel[])
         searchResults: [],
         // debounce timer
         searchTimer: null
@@ -162,7 +158,7 @@ export default {
         this.roles = res.data || []
       } catch (e) {
         console.error('Error loading roles', e)
-        showError('Fehler beim Laden der Rollen')
+        showError(extractErrorMessage(e, 'Fehler beim Laden der Rollen'))
       }
     },
     async loadPermissions() {
@@ -174,36 +170,28 @@ export default {
         this.permissionTemplates = data.templates || []
       } catch (e) {
         console.error('Error loading permissions', e)
+        showError(extractErrorMessage(e, 'Fehler beim Laden der Berechtigungen'))
       }
     },
-    async loadMembers() {
-      // kept for backwards compatibility; prefer using searchMembers
-      try {
-        const res = await axios.get(generateUrl('/apps/verein/members'))
-        this.assign.searchResults = Array.isArray(res.data) ? res.data : (res.data.members || [])
-      } catch (e) {
-        console.error('Error loading members', e)
-      }
-    },
-    async searchMembers(query) {
+    async searchUsers(query) {
       try {
         if (!query || query.trim() === '') {
           this.assign.searchResults = []
           return
         }
-        const res = await axios.get(generateUrl('/apps/verein/members'), { params: { query } })
-        const payload = res.data
-        this.assign.searchResults = Array.isArray(payload) ? payload : (payload.members || [])
+        const res = await axios.get(generateUrl('/apps/verein/roles/search-users'), { params: { query } })
+        this.assign.searchResults = Array.isArray(res.data) ? res.data : []
       } catch (e) {
-        console.error('Error searching members', e)
+        console.error('Error searching users', e)
         this.assign.searchResults = []
+        showError(extractErrorMessage(e, 'Fehler bei der Benutzersuche'))
       }
     },
     onAssignQueryInput(query) {
       // debounce remote calls
       if (this.assign.searchTimer) clearTimeout(this.assign.searchTimer)
       this.assign.searchTimer = setTimeout(() => {
-        this.searchMembers(query)
+        this.searchUsers(query)
       }, 300)
     },
     openCreate() {
@@ -235,7 +223,7 @@ export default {
         this.closeForm()
       } catch (e) {
         console.error('Error saving role', e)
-        showError('Fehler beim Speichern der Rolle')
+        showError(extractErrorMessage(e, 'Fehler beim Speichern der Rolle'))
       }
     },
     editRole(role) {
@@ -248,25 +236,26 @@ export default {
       this.showForm = true
     },
     async assignRoleToUser() {
-      if (!this.assign.userId || !this.assign.roleId) {
+      const userId = this.assign.selectedUser?.user
+      if (!userId || !this.assign.roleId) {
         showError('Benutzer und Rolle erforderlich')
         return
       }
       try {
         const payload = {
-          userId: this.assign.userId,
+          userId,
           roleId: this.assign.roleId,
           clubId: this.assign.clubId ? parseInt(this.assign.clubId) : 0
         }
         await axios.post(generateUrl('/apps/verein/roles/users'), payload)
         showSuccess('Rolle zugewiesen')
         // clear selection but keep search results
-        this.assign.userId = ''
+        this.assign.selectedUser = null
         this.assign.roleId = null
         this.assign.clubId = ''
       } catch (e) {
         console.error('Error assigning role', e)
-        showError('Fehler beim Zuweisen der Rolle')
+        showError(extractErrorMessage(e, 'Fehler beim Zuweisen der Rolle'))
       }
     },
     async deleteRole(id) {
@@ -277,7 +266,7 @@ export default {
         this.loadRoles()
       } catch (e) {
         console.error('Error deleting role', e)
-        showError('Fehler beim Löschen der Rolle')
+        showError(extractErrorMessage(e, 'Fehler beim Löschen der Rolle'))
       }
     }
   }

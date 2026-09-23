@@ -65,12 +65,7 @@
       <div class="section-header">
         <h2>Mitgliederliste</h2>
         <div class="export-buttons">
-          <NcButton @click="exportMembersAsCsv" variant="secondary" title="Mitglieder als CSV herunterladen">
-            📊 CSV Export
-          </NcButton>
-          <NcButton @click="exportMembersAsPdf" variant="secondary" title="Mitglieder als PDF herunterladen">
-            📄 PDF Export
-          </NcButton>
+          <ExportButtons resource="members" inline />
         </div>
       </div>
       <div class="table-wrapper">
@@ -163,13 +158,14 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { api } from '../api'
+import { showSuccess, showError } from '@nextcloud/dialogs'
+import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import Alert from './Alert.vue'
+import ExportButtons from './ExportButtons.vue'
 
 export default {
   name: 'Members',
@@ -177,7 +173,8 @@ export default {
     NcButton,
     NcTextField,
     NcSelect,
-    Alert
+    Alert,
+    ExportButtons
   },
   setup() {
     const members = ref([])
@@ -215,6 +212,7 @@ export default {
         members.value = response.data.members || []
       } catch (error) {
         console.error('Error fetching members:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Laden der Mitglieder'))
       } finally {
         loading.value = false
       }
@@ -232,6 +230,7 @@ export default {
           if (alertRef.value) alertRef.value.open()
         } else {
           formData.value = { name: '', email: '', address: '', iban: '', bic: '', role: 'member' }
+          showSuccess('Mitglied hinzugefügt')
           await fetchMembers()
         }
       } catch (error) {
@@ -257,9 +256,7 @@ export default {
         }
       } catch (error) {
         console.error('Error loading member details:', error)
-        alertError.value = 'Fehler beim Laden des Mitglieds'
-        alertErrors.value = []
-        if (alertRef.value) alertRef.value.open()
+        showError(extractErrorMessage(error, 'Fehler beim Laden des Mitglieds'))
       }
     }
 
@@ -268,9 +265,11 @@ export default {
       try {
         await api.put(`members/${id}`, editData.value)
         editingId.value = null
+        showSuccess('Mitglied aktualisiert')
         await fetchMembers()
       } catch (error) {
         console.error('Error updating member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Aktualisieren des Mitglieds'))
       } finally {
         loading.value = false
       }
@@ -283,53 +282,18 @@ export default {
 
     const deleteMember = async (id) => {
       if (!confirm('Soll dieses Mitglied wirklich gelöscht werden?')) return
-      
+
       loading.value = true
       try {
         await api.delete(`members/${id}`)
+        showSuccess('Mitglied gelöscht')
         await fetchMembers()
       } catch (error) {
         console.error('Error deleting member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Löschen des Mitglieds'))
       } finally {
         loading.value = false
       }
-    }
-
-    const exportMembersAsCsv = async () => {
-      try {
-        const response = await axios.get(generateUrl('/apps/verein/export/members/csv'), {
-          responseType: 'blob'
-        })
-        downloadFile(response.data, 'members.csv', 'text/csv')
-        alert('Mitglieder als CSV exportiert')
-      } catch (error) {
-        console.error('Error exporting CSV:', error)
-        alert('Fehler beim CSV-Export')
-      }
-    }
-
-    const exportMembersAsPdf = async () => {
-      try {
-        const response = await axios.get(generateUrl('/apps/verein/export/members/pdf'), {
-          responseType: 'blob'
-        })
-        downloadFile(response.data, 'members.pdf', 'application/pdf')
-        alert('Mitglieder als PDF exportiert')
-      } catch (error) {
-        console.error('Error exporting PDF:', error)
-        alert('Fehler beim PDF-Export')
-      }
-    }
-
-    const downloadFile = (blob, filename, mimeType) => {
-      const url = window.URL.createObjectURL(new Blob([blob], { type: mimeType }))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', filename)
-      document.body.appendChild(link)
-      link.click()
-      link.parentNode.removeChild(link)
-      window.URL.revokeObjectURL(url)
     }
 
     return {
@@ -344,8 +308,6 @@ export default {
       saveEdit,
       cancelEdit,
       deleteMember,
-      exportMembersAsCsv,
-      exportMembersAsPdf,
       alertRef,
       alertError,
       alertErrors

@@ -32,13 +32,16 @@ return [
         // RBAC & permissions
         ['name' => 'role#index', 'url' => '/roles', 'verb' => 'GET'],
         ['name' => 'role#store', 'url' => '/roles', 'verb' => 'POST'],
+        // literal single-segment routes must come before /roles/{id}, which
+        // would otherwise greedily match them (e.g. id='search-users')
+        ['name' => 'role#searchUsers', 'url' => '/roles/search-users', 'verb' => 'GET'],
+        ['name' => 'role#assignRole', 'url' => '/roles/users', 'verb' => 'POST'],
+        ['name' => 'role#removeRoles', 'url' => '/roles/users', 'verb' => 'DELETE'],
+        ['name' => 'role#indexByClubType', 'url' => '/roles/club/{clubType}', 'verb' => 'GET'],
+        ['name' => 'role#getUserRoles', 'url' => '/roles/users/{userId}', 'verb' => 'GET'],
         ['name' => 'role#show', 'url' => '/roles/{id}', 'verb' => 'GET'],
         ['name' => 'role#update', 'url' => '/roles/{id}', 'verb' => 'PUT'],
         ['name' => 'role#destroy', 'url' => '/roles/{id}', 'verb' => 'DELETE'],
-        ['name' => 'role#indexByClubType', 'url' => '/roles/club/{clubType}', 'verb' => 'GET'],
-        ['name' => 'role#getUserRoles', 'url' => '/roles/users/{userId}', 'verb' => 'GET'],
-        ['name' => 'role#assignRole', 'url' => '/roles/users', 'verb' => 'POST'],
-        ['name' => 'role#removeRoles', 'url' => '/roles/users', 'verb' => 'DELETE'],
 
         ['name' => 'permission#index', 'url' => '/permissions', 'verb' => 'GET'],
 

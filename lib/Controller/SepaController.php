@@ -3,8 +3,10 @@ namespace OCA\Verein\Controller;
 
 use OCA\Verein\Attributes\RequirePermission;
 use OCP\IRequest;
+use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
-use OCP\AppFramework\Http\StreamResponse;
+use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\ApiController;
 use OCA\Verein\Service\SepaService;
 
@@ -40,19 +42,30 @@ class SepaController extends ApiController {
         string $creditorIban,
         string $creditorBic,
         string $creditorId
-    ): StreamResponse {
-        $xml = $this->service->generateSepaXml(
-            $creditorName,
-            $creditorIban,
-            $creditorBic,
-            $creditorId
-        );
+    ): Response {
+        try {
+            $xml = $this->service->generateSepaXml(
+                $creditorName,
+                $creditorIban,
+                $creditorBic,
+                $creditorId
+            );
+        } catch (\Exception $e) {
+            return new JSONResponse([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
 
-        $response = new StreamResponse($xml);
-        $response->addHeader('Content-Type', 'application/xml');
-        $response->addHeader('Content-Disposition', 'attachment; filename="sepa_export_' . date('Y-m-d') . '.xml"');
-        
-        return $response;
+        // StreamResponse expects a file path/resource, not raw string content
+        // (that's what silently 404'd here); DataDownloadResponse is the
+        // class for handing back generated content as a download, same as
+        // ExportController's CSV/PDF endpoints already do.
+        return new DataDownloadResponse(
+            $xml,
+            'sepa_export_' . date('Y-m-d') . '.xml',
+            'application/xml'
+        );
     }
 
     /**
@@ -67,12 +80,19 @@ class SepaController extends ApiController {
         string $creditorBic,
         string $creditorId
     ): DataResponse {
-        $preview = $this->service->previewSepaExport(
-            $creditorName,
-            $creditorIban,
-            $creditorBic,
-            $creditorId
-        );
+        try {
+            $preview = $this->service->previewSepaExport(
+                $creditorName,
+                $creditorIban,
+                $creditorBic,
+                $creditorId
+            );
+        } catch (\Exception $e) {
+            return new DataResponse([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
 
         return new DataResponse($preview);
     }

@@ -24,7 +24,11 @@ class Role extends Entity implements JsonSerializable {
     }
 
     public function setPermissionsArray(array $permissions): void {
-        $this->permissions = json_encode(array_values($permissions));
+        // Must go through the generated setter (not a raw property write) so
+        // Entity::getUpdatedFields() marks 'permissions' dirty - otherwise
+        // QBMapper::insert()/update() silently omit the column entirely,
+        // which fails on a NOT NULL column with no default.
+        $this->setPermissions(json_encode(array_values($permissions)));
     }
 
     public function getPermissionsArray(): array {

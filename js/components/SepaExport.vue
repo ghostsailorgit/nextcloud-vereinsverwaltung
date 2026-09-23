@@ -92,6 +92,8 @@
 <script>
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
+import { showSuccess, showError } from '@nextcloud/dialogs'
+import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
@@ -119,7 +121,7 @@ export default {
         this.previewData = response.data
       } catch (error) {
         console.error('Error loading preview:', error)
-        alert('Fehler beim Laden der Vorschau')
+        showError(extractErrorMessage(error, 'Fehler beim Laden der Vorschau'))
       }
     },
     async generateSepa() {
@@ -138,9 +140,21 @@ export default {
         a.download = `sepa_export_${new Date().toISOString().split('T')[0]}.xml`
         a.click()
         window.URL.revokeObjectURL(url)
+        showSuccess('SEPA-XML heruntergeladen')
       } catch (error) {
         console.error('Error generating SEPA:', error)
-        alert('Fehler beim Generieren der SEPA-Datei')
+        let message = 'Fehler beim Generieren der SEPA-Datei'
+        if (error.response?.data instanceof Blob) {
+          try {
+            const parsed = JSON.parse(await error.response.data.text())
+            message = parsed.message || message
+          } catch (parseError) {
+            // response wasn't JSON, keep the fallback message
+          }
+        } else {
+          message = extractErrorMessage(error, message)
+        }
+        showError(message)
       }
     }
   }

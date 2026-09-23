@@ -149,6 +149,8 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
+import { showSuccess, showError } from '@nextcloud/dialogs'
+import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -165,17 +167,18 @@ export default {
     const loading = ref(false)
     const editingId = ref(null)
 
+    // backend (ValidationService::validateFeeStatus) only accepts these 4 values
     const statusOptions = [
-      { id: 'pending', label: 'Ausstehend' },
       { id: 'open', label: 'Offen' },
       { id: 'paid', label: 'Bezahlt' },
-      { id: 'overdue', label: 'Überfällig' }
+      { id: 'overdue', label: 'Überfällig' },
+      { id: 'cancelled', label: 'Storniert' }
     ]
 
     const formData = ref({
       memberId: '',
       amount: '',
-      status: 'pending',
+      status: 'open',
       dueDate: ''
     })
 
@@ -192,6 +195,7 @@ export default {
         members.value = response.data.members || []
       } catch (error) {
         console.error('Error fetching members:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Laden der Mitglieder'))
       }
     }
 
@@ -202,6 +206,7 @@ export default {
         fees.value = response.data.fees || []
       } catch (error) {
         console.error('Error fetching fees:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Laden der Gebühren'))
       } finally {
         loading.value = false
       }
@@ -211,10 +216,12 @@ export default {
       loading.value = true
       try {
         await api.post('finance', formData.value)
-        formData.value = { memberId: '', amount: '', status: 'pending', dueDate: '' }
+        formData.value = { memberId: '', amount: '', status: 'open', dueDate: '' }
+        showSuccess('Gebühr hinzugefügt')
         await fetchFees()
       } catch (error) {
         console.error('Error adding fee:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Hinzufügen der Gebühr'))
       } finally {
         loading.value = false
       }
@@ -230,9 +237,11 @@ export default {
       try {
         await api.put(`finance/${id}`, editData.value)
         editingId.value = null
+        showSuccess('Gebühr aktualisiert')
         await fetchFees()
       } catch (error) {
         console.error('Error updating fee:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Aktualisieren der Gebühr'))
       } finally {
         loading.value = false
       }
@@ -245,13 +254,15 @@ export default {
 
     const deleteFee = async (id) => {
       if (!confirm('Soll diese Gebühr wirklich gelöscht werden?')) return
-      
+
       loading.value = true
       try {
         await api.delete(`finance/${id}`)
+        showSuccess('Gebühr gelöscht')
         await fetchFees()
       } catch (error) {
         console.error('Error deleting fee:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Löschen der Gebühr'))
       } finally {
         loading.value = false
       }
@@ -264,10 +275,10 @@ export default {
 
     const getStatusLabel = (status) => {
       const labels = {
-        pending: 'Ausstehend',
         open: 'Offen',
         paid: 'Bezahlt',
-        overdue: 'Überfällig'
+        overdue: 'Überfällig',
+        cancelled: 'Storniert'
       }
       return labels[status] || status
     }
@@ -490,7 +501,6 @@ export default {
   font-weight: 600;
   text-transform: uppercase;
 
-  &.pending,
   &.open {
     background: var(--color-warning-light);
     color: var(--color-warning);
@@ -504,6 +514,11 @@ export default {
   &.overdue {
     background: var(--color-error-light);
     color: var(--color-error);
+  }
+
+  &.cancelled {
+    background: var(--color-background-darker);
+    color: var(--color-text-secondary);
   }
 }
 

@@ -36,6 +36,8 @@
 
 <script>
 import { api } from '../api'
+import { showError } from '@nextcloud/dialogs'
+import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
@@ -56,6 +58,7 @@ export default {
       this.documentsPath = res.data?.data?.documents_path || '/Verein'
     } catch (e) {
       console.error('Error loading app settings', e)
+      showError(extractErrorMessage(e, 'Fehler beim Laden der Einstellungen'))
     }
   },
   methods: {
@@ -67,6 +70,7 @@ export default {
         this.saved = true
       } catch (e) {
         console.error('Error saving documents path', e)
+        showError(extractErrorMessage(e, 'Fehler beim Speichern des Ordnerpfads'))
       } finally {
         this.saving = false
       }

@@ -13,7 +13,12 @@ class RoleMapper extends QBMapper {
     }
 
     public function find(int $id): Role {
-        return parent::find($id);
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+
+        return $this->findEntity($qb);
     }
 
     public function findByName(string $name): Role {

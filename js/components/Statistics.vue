@@ -118,6 +118,7 @@ import {
 } from 'chart.js'
 import api from '../api'
 import Alert from './Alert.vue'
+import { extractErrorMessage } from '../errorMessage'
 
 // allow widgets to ask the parent to navigate to a different tab
 const emit = defineEmits(['navigate'])
@@ -298,9 +299,7 @@ const loadStatistics = async () => {
   } catch (error) {
     loading.value = false
     errorMessage.value = 'Fehler beim Laden der Statistiken'
-    errorList.value = [
-      error instanceof Error ? error.message : 'Unbekannter Fehler',
-    ]
+    errorList.value = [extractErrorMessage(error, 'Unbekannter Fehler')]
     console.error('Statistics Error:', error)
   }
 }

@@ -7,22 +7,54 @@ use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
+use OCP\IUserManager;
 
 class RoleController extends ApiController {
     private RoleService $roleService;
     private RoleMapper $roleMapper;
-    
+    private IUserManager $userManager;
+
     public function __construct(
         string $appName,
         IRequest $request,
         RoleService $roleService,
-        RoleMapper $roleMapper
+        RoleMapper $roleMapper,
+        IUserManager $userManager
     ) {
         parent::__construct($appName, $request);
         $this->roleService = $roleService;
         $this->roleMapper = $roleMapper;
+        $this->userManager = $userManager;
     }
-    
+
+    /**
+     * Search real Nextcloud accounts for the "assign role" picker.
+     * (Role assignments are keyed on the Nextcloud user ID, not on our
+     * own Member records, since permission checks compare against
+     * IUserSession::getUser()->getUID().)
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.role.manage')]
+    public function searchUsers(string $query = ''): DataResponse {
+        if (trim($query) === '') {
+            return new DataResponse([]);
+        }
+
+        $users = $this->userManager->search($query, 10);
+        $result = array_map(static function ($user) {
+            return [
+                'id' => $user->getUID(),
+                'user' => $user->getUID(),
+                'displayName' => $user->getDisplayName(),
+                'subname' => $user->getUID(),
+            ];
+        }, array_values($users));
+
+        return new DataResponse($result);
+    }
+
     /**
      * @NoAdminRequired
      * @NoCSRFRequired

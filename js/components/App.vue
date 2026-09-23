@@ -25,11 +25,6 @@
         />
       </div>
     </NcAppContent>
-
-    <!-- Notifications -->
-    <div v-if="notification" :class="['verein-notification', notification.type]" role="alert">
-      {{ notification.message }}
-    </div>
   </NcContent>
 </template>
 
@@ -67,7 +62,6 @@ export default {
   },
   setup() {
     const activeTab = ref('dashboard')
-    const notification = ref(null)
 
     // 'Dokumente'/'Termine' deliberately deep-link into the official Files/Calendar
     // apps instead of a custom in-app view (Files + Group folders + OCR handle
@@ -105,13 +99,6 @@ export default {
       settings: 'Settings'
     }
 
-    const showNotification = (message, type = 'success') => {
-      notification.value = { message, type }
-      setTimeout(() => {
-        notification.value = null
-      }, 3000)
-    }
-
     const currentComponent = computed(() => {
       return componentMap[activeTab.value]
     })
@@ -127,8 +114,6 @@ export default {
     return {
       activeTab,
       tabs,
-      notification,
-      showNotification,
       currentComponent,
       onTabClick
     }
@@ -145,37 +130,5 @@ export default {
 .verein-container {
   padding: 2rem;
   width: 100%;
-}
-
-.verein-notification {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  padding: 12px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  z-index: 10000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  max-width: calc(100% - 40px);
-
-  &.success {
-    background: var(--color-success, #388e3c);
-    color: white;
-  }
-
-  &.error {
-    background: var(--color-error, #d32f2f);
-    color: white;
-  }
-
-  &.warning {
-    background: var(--color-warning, #f57f17);
-    color: white;
-  }
-
-  &.info {
-    background: var(--color-info, #1976d2);
-    color: white;
-  }
 }
 </style>

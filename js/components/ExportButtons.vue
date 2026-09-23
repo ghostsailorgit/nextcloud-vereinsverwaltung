@@ -24,7 +24,7 @@
 <script>
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
-import * as notify from '../notify'
+import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 
 export default {
@@ -46,8 +46,23 @@ export default {
     }
   },
   methods: {
-    toastSuccess(msg) { notify.success(msg); this.$emit('success', msg) },
-    toastError(msg) { notify.error(msg); this.$emit('error', msg) },
+    toastSuccess(msg) { showSuccess(msg); this.$emit('success', msg) },
+    toastError(msg) { showError(msg); this.$emit('error', msg) },
+    // Both requests use responseType:'blob', so an error body (JSON) also
+    // arrives as a Blob instead of being auto-parsed by axios - unwrap it
+    // to surface the backend's real message instead of a generic one.
+    async extractBlobErrorMessage(e, fallback) {
+      const raw = e.response?.data instanceof Blob
+        ? await e.response.data.text()
+        : e.message
+      if (!raw) return fallback
+      try {
+        const parsed = JSON.parse(raw)
+        return parsed.message || parsed.error || fallback
+      } catch (parseError) {
+        return raw
+      }
+    },
     async handleCsv() {
       if (this.busyCsv) return
       this.busyCsv = true
@@ -63,7 +78,7 @@ export default {
         this.toastSuccess(`${this.labelBase} als CSV exportiert`)
       } catch (e) {
         console.error('CSV export failed', e)
-        this.toastError('Fehler beim CSV-Export')
+        this.toastError(await this.extractBlobErrorMessage(e, 'Fehler beim CSV-Export'))
       } finally {
         this.busyCsv = false
       }
@@ -83,7 +98,7 @@ export default {
         this.toastSuccess(`${this.labelBase} als PDF exportiert`)
       } catch (e) {
         console.error('PDF export failed', e)
-        this.toastError('Fehler beim PDF-Export')
+        this.toastError(await this.extractBlobErrorMessage(e, 'Fehler beim PDF-Export'))
       } finally {
         this.busyPdf = false
       }
