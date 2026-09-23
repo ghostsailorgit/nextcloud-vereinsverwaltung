@@ -235,8 +235,9 @@ export default {
           await fetchMembers()
         }
       } catch (error) {
-        alertError.value = error.message || 'Fehler beim Hinzufügen des Mitglieds'
-        alertErrors.value = []
+        const data = error.response?.data
+        alertError.value = data?.message || error.message || 'Fehler beim Hinzufügen des Mitglieds'
+        alertErrors.value = data?.errors || []
         if (alertRef.value) alertRef.value.open()
         console.error('Error adding member:', error)
       } finally {
