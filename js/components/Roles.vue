@@ -3,7 +3,7 @@
     <h2>Rollenverwaltung</h2>
 
     <div class="controls">
-      <button @click="openCreate" class="button primary">➕ Neue Rolle</button>
+      <NcButton @click="openCreate" variant="primary">➕ Neue Rolle</NcButton>
     </div>
 
     <div v-if="showForm" class="modal-overlay">
@@ -26,8 +26,8 @@
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="button primary">Speichern</button>
-          <button type="button" class="button" @click="closeForm">Abbrechen</button>
+          <NcButton type="submit" variant="primary">Speichern</NcButton>
+          <NcButton type="button" variant="tertiary" @click="closeForm">Abbrechen</NcButton>
         </div>
       </form>
     </div>
@@ -49,8 +49,8 @@
             <td>{{ role.description || '-' }}</td>
             <td class="permissions"><small>{{ (role.permissions || []).join(', ') }}</small></td>
             <td class="actions">
-              <button @click="editRole(role)" class="button-small">✏️</button>
-              <button @click="deleteRole(role.id)" class="button-small danger">🗑️</button>
+              <NcButton @click="editRole(role)" variant="secondary" aria-label="Rolle bearbeiten">✏️</NcButton>
+              <NcButton @click="deleteRole(role.id)" variant="error" aria-label="Rolle löschen">🗑️</NcButton>
             </td>
           </tr>
         </tbody>
@@ -78,7 +78,7 @@
         <input id="assign-club" v-model="assign.clubId" placeholder="z.B. 1" />
 
         <div class="form-actions">
-          <button class="button primary" @click="assignRoleToUser">Zuweisen</button>
+          <NcButton variant="primary" @click="assignRoleToUser">Zuweisen</NcButton>
         </div>
       </div>
     </div>
@@ -90,9 +90,11 @@
 <script>
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
+import NcButton from '@nextcloud/vue/components/NcButton'
 
 export default {
   name: 'Roles',
+  components: { NcButton },
   data() {
     return {
       roles: [],
@@ -285,8 +287,6 @@ export default {
 .form-actions { display:flex; gap:8px }
 .permissions { max-width: 420px }
 .actions { display:flex; gap:8px }
-.button-small { padding:6px 8px; border-radius:4px; border:none; cursor:pointer }
-.button-small.danger { background: #f44336; color: white }
 
 /* modal */
 .modal-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index: 1200 }

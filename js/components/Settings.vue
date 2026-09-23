@@ -6,13 +6,13 @@
       <div class="card">
         <h3>Rollen & Berechtigungen</h3>
         <p>Verwalte Rollen und die zugehörigen Berechtigungen.</p>
-        <button class="button" @click="$emit('navigate', 'roles')">Zu Rollen</button>
+        <NcButton variant="secondary" @click="$emit('navigate', 'roles')">Zu Rollen</NcButton>
       </div>
 
       <div class="card">
         <h3>SEPA / Exporte</h3>
         <p>Export-Optionen verwalten und SEPA-Export erstellen.</p>
-        <button class="button" @click="$emit('navigate', 'sepa')">Zu SEPA</button>
+        <NcButton variant="secondary" @click="$emit('navigate', 'sepa')">Zu SEPA</NcButton>
       </div>
 
       <div class="card">
@@ -20,7 +20,7 @@
         <p>Ordner in den Dateien, auf den der "Dokumente"-Reiter verlinkt.</p>
         <div class="documents-path-form">
           <input v-model="documentsPath" placeholder="/Verein" />
-          <button class="button" :disabled="saving" @click="saveDocumentsPath">Speichern</button>
+          <NcButton variant="primary" :disabled="saving" @click="saveDocumentsPath">Speichern</NcButton>
         </div>
         <p v-if="saved" class="hint">Gespeichert.</p>
       </div>
@@ -30,9 +30,11 @@
 
 <script>
 import { api } from '../api'
+import NcButton from '@nextcloud/vue/components/NcButton'
 
 export default {
   name: 'Settings',
+  components: { NcButton },
   emits: ['navigate'],
   data() {
     return {
@@ -70,7 +72,6 @@ export default {
 .settings-page { padding: 20px }
 .settings-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:16px }
 .card { background: var(--color-main-background); border:1px solid var(--color-border); padding:16px; border-radius:8px }
-.button { margin-top:12px; display:inline-block }
 .documents-path-form { display:flex; gap:8px; margin-top:12px }
 .documents-path-form input { flex:1; padding:8px; border:1px solid var(--color-border); border-radius:4px }
 .hint { color: var(--color-success); font-size: 12px; margin-top: 8px }

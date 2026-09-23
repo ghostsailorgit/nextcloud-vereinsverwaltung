@@ -46,8 +46,8 @@
         </div>
         
         <div class="form-buttons">
-          <button type="button" @click="preview" class="button">Vorschau</button>
-          <button type="submit" class="button primary">SEPA-XML herunterladen</button>
+          <NcButton type="button" variant="secondary" @click="preview">Vorschau</NcButton>
+          <NcButton type="submit" variant="primary">SEPA-XML herunterladen</NcButton>
         </div>
       </form>
     </div>
@@ -88,9 +88,11 @@
 <script>
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
+import NcButton from '@nextcloud/vue/components/NcButton'
 
 export default {
   name: 'SepaExport',
+  components: { NcButton },
   data() {
     return {
       form: {
@@ -147,7 +149,7 @@ export default {
 
 .form-container,
 .preview-container {
-  background: #f5f5f5;
+  background: var(--color-background-hover);
   padding: 20px;
   margin: 20px 0;
   border-radius: 8px;
@@ -173,20 +175,8 @@ export default {
   margin-top: 15px;
 }
 
-button {
-  margin-right: 10px;
-  padding: 8px 16px;
-  cursor: pointer;
-}
-
-.button.primary {
-  background-color: #0082c9;
-  color: white;
-  border: none;
-}
-
 .preview-summary {
-  background: white;
+  background: var(--color-main-background);
   padding: 15px;
   border-radius: 4px;
   margin-bottom: 20px;
@@ -200,18 +190,18 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
-  background: white;
+  background: var(--color-main-background);
 }
 
 th,
 td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-border);
 }
 
 th {
-  background-color: #f5f5f5;
+  background-color: var(--color-background-hover);
   font-weight: bold;
 }
 </style>
