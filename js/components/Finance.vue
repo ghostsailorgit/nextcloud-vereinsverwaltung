@@ -20,12 +20,15 @@
           placeholder="0.00"
           required
         />
-        <input
-          v-model="formData.dueDate"
-          type="datetime-local"
-          required
-          class="form-input"
-        />
+        <label class="date-field">
+          <span>Fälligkeitsdatum</span>
+          <input
+            v-model="formData.dueDate"
+            type="datetime-local"
+            required
+            class="form-input"
+          />
+        </label>
         <NcSelect
           v-model="formData.status"
           :options="statusOptions"
@@ -101,7 +104,10 @@
 
               <td v-if="editingId !== fee.id">{{ formatDate(fee.dueDate) }}</td>
               <td v-if="editingId === fee.id" class="cell-field">
-                <input v-model="editData.dueDate" type="datetime-local" class="form-input-inline" />
+                <label class="date-field">
+                  <span>Fälligkeitsdatum</span>
+                  <input v-model="editData.dueDate" type="datetime-local" class="form-input-inline" />
+                </label>
               </td>
 
               <td>{{ fee.paidDate ? formatDate(fee.paidDate) : '-' }}</td>
@@ -391,6 +397,14 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .form-input,
