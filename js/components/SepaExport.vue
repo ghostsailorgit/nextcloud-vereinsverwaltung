@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sepa-export">
     <h2>SEPA-Export</h2>
     
@@ -6,42 +6,46 @@
       <h3>SEPA-Lastschrift Daten</h3>
       <form @submit.prevent="generateSepa">
         <div class="form-group">
-          <label for="creditorName">Gläubiger Name (Verein):</label>
-          <input 
+          <NcTextField
             id="creditorName"
-            v-model="form.creditorName" 
-            placeholder="Vereinsname" 
-            required 
+            :model-value="form.creditorName"
+            @update:model-value="form.creditorName = $event"
+            label="Gläubiger Name (Verein)"
+            placeholder="Vereinsname"
+            required
           />
         </div>
-        
+
         <div class="form-group">
-          <label for="creditorIban">Gläubiger IBAN:</label>
-          <input 
+          <NcTextField
             id="creditorIban"
-            v-model="form.creditorIban" 
-            placeholder="DE89370400440532013000" 
-            required 
+            :model-value="form.creditorIban"
+            @update:model-value="form.creditorIban = $event"
+            label="Gläubiger IBAN"
+            placeholder="DE89370400440532013000"
+            required
           />
         </div>
-        
+
         <div class="form-group">
-          <label for="creditorBic">Gläubiger BIC:</label>
-          <input 
+          <NcTextField
             id="creditorBic"
-            v-model="form.creditorBic" 
-            placeholder="COBADEFFXXX" 
-            required 
+            :model-value="form.creditorBic"
+            @update:model-value="form.creditorBic = $event"
+            label="Gläubiger BIC"
+            placeholder="COBADEFFXXX"
+            required
           />
         </div>
-        
+
         <div class="form-group">
-          <label for="creditorId">Gläubiger-ID (SEPA):</label>
-          <input 
+          <NcTextField
             id="creditorId"
-            v-model="form.creditorId" 
-            placeholder="DE98ZZZ09999999999" 
-            required 
+            :model-value="form.creditorId"
+            @update:model-value="form.creditorId = $event"
+            label="Gläubiger-ID (SEPA)"
+            placeholder="DE98ZZZ09999999999"
+            required
           />
         </div>
         
@@ -89,10 +93,11 @@
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 export default {
   name: 'SepaExport',
-  components: { NcButton },
+  components: { NcButton, NcTextField },
   data() {
     return {
       form: {
@@ -157,18 +162,6 @@ export default {
 
 .form-group {
   margin-bottom: 15px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.form-group input {
-  display: block;
-  width: 100%;
-  padding: 8px;
 }
 
 .form-buttons {

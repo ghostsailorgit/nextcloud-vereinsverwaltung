@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="roles-page">
     <h2>Rollenverwaltung</h2>
 
@@ -10,19 +10,33 @@
       <div class="modal">
       <h3>{{ editingRole ? 'Rolle bearbeiten' : 'Neue Rolle' }}</h3>
       <form @submit.prevent="saveRole">
-        <label for="name">Name *</label>
-        <input id="name" v-model="form.name" required />
+        <NcTextField
+          id="name"
+          :model-value="form.name"
+          @update:model-value="form.name = $event"
+          label="Name"
+          required
+        />
 
-        <label for="description">Beschreibung</label>
-        <input id="description" v-model="form.description" />
+        <NcTextField
+          id="description"
+          :model-value="form.description"
+          @update:model-value="form.description = $event"
+          label="Beschreibung"
+        />
 
-        <label>Berechtigungen</label>
+        <label class="permissions-label">Berechtigungen</label>
         <div class="permissions-list">
           <div v-if="permissionsList.length === 0">Lade Berechtigungen...</div>
-          <label v-for="perm in permissionsList" :key="perm" class="perm-item">
-            <input type="checkbox" :value="(perm.key || perm)" v-model="form.permissions" />
-            <span class="perm-name">{{ (perm.label || perm.name || perm) }}</span>
-          </label>
+          <NcCheckboxRadioSwitch
+            v-for="perm in permissionsList"
+            :key="(perm.key || perm)"
+            type="checkbox"
+            :value="(perm.key || perm)"
+            v-model="form.permissions"
+          >
+            {{ (perm.label || perm.name || perm) }}
+          </NcCheckboxRadioSwitch>
         </div>
 
         <div class="form-actions">
@@ -61,40 +75,57 @@
     <div class="form-card">
       <h3>Rolle einem Benutzer zuweisen</h3>
       <div class="assign-row">
-        <label for="assign-user">Benutzer</label>
-        <input id="assign-user" v-model="assign.userQuery" @input="onAssignQueryInput" placeholder="Name oder E-Mail eingeben" autocomplete="off" />
-        <select id="assign-user-select" v-model="assign.userId" size="6">
-          <option value="">-- Benutzer wählen --</option>
-          <option v-for="m in assign.searchResults" :key="m.id" :value="m.id">{{ m.name }} ({{ m.email }})</option>
-        </select>
+        <NcSelect
+          v-model="assign.userId"
+          :options="assign.searchResults"
+          :reduce="m => m.id"
+          label="name"
+          input-label="Benutzer"
+          placeholder="Name oder E-Mail eingeben"
+          filterable
+          :filter-by="() => true"
+          @search="onAssignQueryInput"
+        >
+          <template #option="m">{{ m.name }} ({{ m.email }})</template>
+        </NcSelect>
 
-        <label for="assign-role">Rolle</label>
-        <select id="assign-role" v-model="assign.roleId">
-          <option value="">-- Rolle wählen --</option>
-          <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
-        </select>
+        <NcSelect
+          v-model="assign.roleId"
+          :options="roles"
+          :reduce="r => r.id"
+          label="name"
+          input-label="Rolle"
+          placeholder="-- Rolle wählen --"
+        />
 
-        <label for="assign-club">Club ID (optional)</label>
-        <input id="assign-club" v-model="assign.clubId" placeholder="z.B. 1" />
+        <NcTextField
+          id="assign-club"
+          :model-value="assign.clubId"
+          @update:model-value="assign.clubId = $event"
+          label="Club ID (optional)"
+          placeholder="z.B. 1"
+        />
 
         <div class="form-actions">
           <NcButton variant="primary" @click="assignRoleToUser">Zuweisen</NcButton>
         </div>
       </div>
     </div>
-    <!-- toasts -->
-    <div v-if="toast.show" :class="['toast', toast.type]">{{ toast.message }}</div>
   </div>
 </template>
 
 <script>
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
+import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 
 export default {
   name: 'Roles',
-  components: { NcButton },
+  components: { NcButton, NcTextField, NcSelect, NcCheckboxRadioSwitch },
   data() {
     return {
       roles: [],
@@ -103,12 +134,6 @@ export default {
       // members are searched remotely for autocomplete
       showForm: false,
       editingRole: null,
-      // toast state
-      toast: {
-        show: false,
-        message: '',
-        type: 'info'
-      },
       form: {
         name: '',
         description: '',
@@ -119,7 +144,6 @@ export default {
         userId: '',
         roleId: null,
         clubId: '',
-        userQuery: '',
         // remote search results
         searchResults: [],
         // debounce timer
@@ -138,7 +162,7 @@ export default {
         this.roles = res.data || []
       } catch (e) {
         console.error('Error loading roles', e)
-        this.showToast('Fehler beim Laden der Rollen', 'error')
+        showError('Fehler beim Laden der Rollen')
       }
     },
     async loadPermissions() {
@@ -175,12 +199,11 @@ export default {
         this.assign.searchResults = []
       }
     },
-    onAssignQueryInput() {
+    onAssignQueryInput(query) {
       // debounce remote calls
       if (this.assign.searchTimer) clearTimeout(this.assign.searchTimer)
-      const q = this.assign.userQuery
       this.assign.searchTimer = setTimeout(() => {
-        this.searchMembers(q)
+        this.searchMembers(query)
       }, 300)
     },
     openCreate() {
@@ -202,17 +225,17 @@ export default {
 
         if (this.editingRole) {
           await axios.put(generateUrl(`/apps/verein/roles/${this.editingRole.id}`), payload)
-          this.showToast('Rolle aktualisiert', 'success')
+          showSuccess('Rolle aktualisiert')
         } else {
           await axios.post(generateUrl('/apps/verein/roles'), payload)
-          this.showToast('Rolle angelegt', 'success')
+          showSuccess('Rolle angelegt')
         }
 
         this.loadRoles()
         this.closeForm()
       } catch (e) {
         console.error('Error saving role', e)
-        this.showToast('Fehler beim Speichern der Rolle', 'error')
+        showError('Fehler beim Speichern der Rolle')
       }
     },
     editRole(role) {
@@ -226,7 +249,7 @@ export default {
     },
     async assignRoleToUser() {
       if (!this.assign.userId || !this.assign.roleId) {
-        this.showToast('Benutzer und Rolle erforderlich', 'error')
+        showError('Benutzer und Rolle erforderlich')
         return
       }
       try {
@@ -236,44 +259,26 @@ export default {
           clubId: this.assign.clubId ? parseInt(this.assign.clubId) : 0
         }
         await axios.post(generateUrl('/apps/verein/roles/users'), payload)
-        this.showToast('Rolle zugewiesen', 'success')
+        showSuccess('Rolle zugewiesen')
         // clear selection but keep search results
         this.assign.userId = ''
         this.assign.roleId = null
         this.assign.clubId = ''
-        this.assign.userQuery = ''
       } catch (e) {
         console.error('Error assigning role', e)
-        this.showToast('Fehler beim Zuweisen der Rolle', 'error')
+        showError('Fehler beim Zuweisen der Rolle')
       }
     },
     async deleteRole(id) {
       if (!confirm('Rolle wirklich löschen?')) return
       try {
         await axios.delete(generateUrl(`/apps/verein/roles/${id}`))
-        this.showToast('Rolle gelöscht', 'success')
+        showSuccess('Rolle gelöscht')
         this.loadRoles()
       } catch (e) {
         console.error('Error deleting role', e)
-        this.showToast('Fehler beim Löschen der Rolle', 'error')
+        showError('Fehler beim Löschen der Rolle')
       }
-    }
-    ,
-    showToast(message, type = 'info', timeout = 3000) {
-      this.toast = { show: true, message, type }
-      setTimeout(() => {
-        this.toast.show = false
-      }, timeout)
-    }
-  },
-  computed: {
-    filteredAssignMembers() {
-      // kept for compatibility; prefer assign.searchResults
-      const q = (this.assign.userQuery || '').toLowerCase().trim()
-      if (!q) return this.assign.searchResults
-      return this.assign.searchResults.filter(m => {
-        return (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)
-      })
     }
   }
 }
@@ -283,18 +288,13 @@ export default {
 .roles-page { padding: 20px }
 .controls { margin-bottom: 12px }
 .form-card, .table-card { background: var(--color-main-background); border: 1px solid var(--color-border); padding: 16px; border-radius: 6px; margin-bottom: 16px }
-.form-card input { width: 100%; padding: 8px 10px; margin-bottom: 8px; border: 1px solid var(--color-border); border-radius: 4px }
 .form-actions { display:flex; gap:8px }
+.assign-row { display: grid; gap: 12px; max-width: 480px }
 .permissions { max-width: 420px }
 .actions { display:flex; gap:8px }
+.permissions-label { display: block; margin-top: 8px; margin-bottom: 4px; font-weight: bold }
 
 /* modal */
 .modal-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index: 1200 }
 .modal { background: var(--color-main-background); border-radius:8px; padding:18px; width: 720px; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,0.25) }
-
-/* toast */
-.toast { position: fixed; right: 20px; bottom: 20px; padding: 10px 14px; border-radius: 6px; color: white; z-index: 1300 }
-.toast.success { background: #4caf50 }
-.toast.error { background: #f44336 }
-.toast.info { background: #2196f3 }
 </style>

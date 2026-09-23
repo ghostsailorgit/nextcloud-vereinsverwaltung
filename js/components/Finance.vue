@@ -1,26 +1,24 @@
-<template>
+﻿<template>
   <div class="finance-container">
     <!-- Form für neue Gebühr -->
     <div class="form-section">
       <h2>Neue Gebühr hinzufügen</h2>
       <form @submit.prevent="addFee" class="fee-form">
-        <select
+        <NcSelect
           v-model="formData.memberId"
-          required
-          class="form-input"
-        >
-          <option value="">-- Mitglied wählen --</option>
-          <option v-for="member in members" :key="member.id" :value="member.id">
-            {{ member.name }}
-          </option>
-        </select>
-        <input
-          v-model.number="formData.amount"
+          :options="members"
+          :reduce="member => member.id"
+          label="name"
+          input-label="Mitglied"
+          placeholder="-- Mitglied wählen --"
+        />
+        <NcTextField
+          :model-value="formData.amount"
+          @update:model-value="formData.amount = Number($event)"
           type="number"
-          step="0.01"
-          placeholder="Betrag"
+          label="Betrag"
+          placeholder="0.00"
           required
-          class="form-input"
         />
         <input
           v-model="formData.dueDate"
@@ -28,12 +26,14 @@
           required
           class="form-input"
         />
-        <select v-model="formData.status" class="form-input">
-          <option value="pending">Ausstehend</option>
-          <option value="open">Offen</option>
-          <option value="paid">Bezahlt</option>
-          <option value="overdue">Überfällig</option>
-        </select>
+        <NcSelect
+          v-model="formData.status"
+          :options="statusOptions"
+          :reduce="option => option.id"
+          label="label"
+          input-label="Status"
+          :clearable="false"
+        />
         <NcButton type="submit" variant="primary" :disabled="loading">
           {{ loading ? 'Wird gespeichert...' : 'Hinzufügen' }}
         </NcButton>
@@ -81,24 +81,26 @@
               <td>{{ getMemberName(fee.memberId) }}</td>
 
               <td v-if="editingId !== fee.id">{{ fee.amount.toFixed(2) }} €</td>
-              <td v-if="editingId === fee.id">
-                <input v-model.number="editData.amount" type="number" step="0.01" class="form-input-inline" />
+              <td v-if="editingId === fee.id" class="cell-field">
+                <NcTextField :model-value="editData.amount" @update:model-value="editData.amount = Number($event)" type="number" label="Betrag" />
               </td>
 
               <td v-if="editingId !== fee.id">
                 <span :class="['status-badge', fee.status]">{{ getStatusLabel(fee.status) }}</span>
               </td>
-              <td v-if="editingId === fee.id">
-                <select v-model="editData.status" class="form-input-inline">
-                  <option value="pending">Ausstehend</option>
-                  <option value="open">Offen</option>
-                  <option value="paid">Bezahlt</option>
-                  <option value="overdue">Überfällig</option>
-                </select>
+              <td v-if="editingId === fee.id" class="cell-field">
+                <NcSelect
+                  v-model="editData.status"
+                  :options="statusOptions"
+                  :reduce="option => option.id"
+                  label="label"
+                  input-label="Status"
+                  :clearable="false"
+                />
               </td>
 
               <td v-if="editingId !== fee.id">{{ formatDate(fee.dueDate) }}</td>
-              <td v-if="editingId === fee.id">
+              <td v-if="editingId === fee.id" class="cell-field">
                 <input v-model="editData.dueDate" type="datetime-local" class="form-input-inline" />
               </td>
 
@@ -148,18 +150,27 @@
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
 import ExportButtons from './ExportButtons.vue'
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
-  components: { NcButton, ExportButtons },
+  components: { NcButton, NcTextField, NcSelect, ExportButtons },
   setup() {
     const fees = ref([])
     const members = ref([])
     const loading = ref(false)
     const editingId = ref(null)
+
+    const statusOptions = [
+      { id: 'pending', label: 'Ausstehend' },
+      { id: 'open', label: 'Offen' },
+      { id: 'paid', label: 'Bezahlt' },
+      { id: 'overdue', label: 'Überfällig' }
+    ]
 
     const formData = ref({
       memberId: '',
@@ -291,6 +302,7 @@ export default {
       editingId,
       formData,
       editData,
+      statusOptions,
       totalOutstanding,
       totalPaid,
       addFee,
@@ -366,6 +378,10 @@ export default {
 
 .form-input-inline {
   width: 100%;
+}
+
+.cell-field {
+  min-width: 160px;
 }
 
 .stats-section {

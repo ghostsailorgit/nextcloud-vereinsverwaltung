@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="members-container">
     <!-- Alert Komponente -->
     <Alert
@@ -12,43 +12,48 @@
     <div class="form-section">
       <h2>Neues Mitglied hinzufügen</h2>
       <form @submit.prevent="addMember" class="member-form">
-        <input
-          v-model="formData.name"
+        <NcTextField
+          :model-value="formData.name"
+          @update:model-value="formData.name = $event"
           type="text"
-          placeholder="Name"
+          label="Name"
+          placeholder="Max Mustermann"
           required
-          class="form-input"
         />
-        <input
-          v-model="formData.email"
+        <NcTextField
+          :model-value="formData.email"
+          @update:model-value="formData.email = $event"
           type="email"
-          placeholder="E-Mail"
+          label="E-Mail"
+          placeholder="max@example.com"
           required
-          class="form-input"
         />
-        <input
-          v-model="formData.address"
+        <NcTextField
+          :model-value="formData.address"
+          @update:model-value="formData.address = $event"
           type="text"
-          placeholder="Adresse"
-          class="form-input"
+          label="Adresse"
         />
-        <input
-          v-model="formData.iban"
+        <NcTextField
+          :model-value="formData.iban"
+          @update:model-value="formData.iban = $event"
           type="text"
-          placeholder="IBAN"
-          class="form-input"
+          label="IBAN"
         />
-        <input
-          v-model="formData.bic"
+        <NcTextField
+          :model-value="formData.bic"
+          @update:model-value="formData.bic = $event"
           type="text"
-          placeholder="BIC"
-          class="form-input"
+          label="BIC"
         />
-        <select v-model="formData.role" class="form-input">
-          <option value="member">Mitglied</option>
-          <option value="admin">Administrator</option>
-          <option value="treasurer">Kassierer</option>
-        </select>
+        <NcSelect
+          v-model="formData.role"
+          :options="roleOptions"
+          :reduce="option => option.id"
+          label="label"
+          input-label="Rolle"
+          :clearable="false"
+        />
         <NcButton type="submit" variant="primary" :disabled="loading">
           {{ loading ? 'Wird gespeichert...' : 'Hinzufügen' }}
         </NcButton>
@@ -83,34 +88,37 @@
           <tbody>
             <tr v-for="member in members" :key="member.id" :class="{ editing: editingId === member.id }">
               <td v-if="editingId !== member.id">{{ member.name }}</td>
-              <td v-if="editingId === member.id">
-                <input v-model="editData.name" class="form-input-inline" />
+              <td v-if="editingId === member.id" class="cell-field">
+                <NcTextField :model-value="editData.name" @update:model-value="editData.name = $event" label="Name" />
               </td>
 
               <td v-if="editingId !== member.id">{{ member.email }}</td>
-              <td v-if="editingId === member.id">
-                <input v-model="editData.email" type="email" class="form-input-inline" />
+              <td v-if="editingId === member.id" class="cell-field">
+                <NcTextField :model-value="editData.email" @update:model-value="editData.email = $event" type="email" label="E-Mail" />
               </td>
 
               <td v-if="editingId !== member.id">{{ member.address || '-' }}</td>
-              <td v-if="editingId === member.id">
-                <input v-model="editData.address" class="form-input-inline" />
+              <td v-if="editingId === member.id" class="cell-field">
+                <NcTextField :model-value="editData.address" @update:model-value="editData.address = $event" label="Adresse" />
               </td>
 
               <td v-if="editingId !== member.id">{{ member.iban || '-' }}</td>
-              <td v-if="editingId === member.id">
-                <input v-model="editData.iban" class="form-input-inline" />
+              <td v-if="editingId === member.id" class="cell-field">
+                <NcTextField :model-value="editData.iban" @update:model-value="editData.iban = $event" label="IBAN" />
               </td>
 
               <td v-if="editingId !== member.id">
                 <span :class="['role-badge', member.role]">{{ member.role }}</span>
               </td>
-              <td v-if="editingId === member.id">
-                <select v-model="editData.role" class="form-input-inline">
-                  <option value="member">Mitglied</option>
-                  <option value="admin">Administrator</option>
-                  <option value="treasurer">Kassierer</option>
-                </select>
+              <td v-if="editingId === member.id" class="cell-field">
+                <NcSelect
+                  v-model="editData.role"
+                  :options="roleOptions"
+                  :reduce="option => option.id"
+                  label="label"
+                  input-label="Rolle"
+                  :clearable="false"
+                />
               </td>
 
               <td class="actions">
@@ -159,12 +167,16 @@ import axios from 'axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { api } from '../api'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
 import Alert from './Alert.vue'
 
 export default {
   name: 'Members',
   components: {
     NcButton,
+    NcTextField,
+    NcSelect,
     Alert
   },
   setup() {
@@ -174,6 +186,12 @@ export default {
     const alertError = ref('')
     const alertErrors = ref([])
     const alertRef = ref(null)
+
+    const roleOptions = [
+      { id: 'member', label: 'Mitglied' },
+      { id: 'admin', label: 'Administrator' },
+      { id: 'treasurer', label: 'Kassierer' }
+    ]
 
     const formData = ref({
       name: '',
@@ -319,6 +337,7 @@ export default {
       editingId,
       formData,
       editData,
+      roleOptions,
       addMember,
       startEdit,
       saveEdit,
@@ -398,24 +417,8 @@ export default {
   align-items: end;
 }
 
-.form-input,
-.form-input-inline {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-main-background);
-  color: var(--color-text);
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-primary-light);
-  }
-}
-
-.form-input-inline {
-  width: 100%;
+.cell-field {
+  min-width: 160px;
 }
 
 .table-wrapper {
