@@ -6,13 +6,21 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCA\Verein\Service\AppSettingsService;
+use OCA\Verein\Service\MemberCalendarService;
 
 class SettingsController extends Controller {
     private AppSettingsService $settingsService;
+    private MemberCalendarService $calendarService;
 
-    public function __construct(string $appName, IRequest $request, AppSettingsService $settingsService) {
+    public function __construct(
+        string $appName,
+        IRequest $request,
+        AppSettingsService $settingsService,
+        MemberCalendarService $calendarService
+    ) {
         parent::__construct($appName, $request);
         $this->settingsService = $settingsService;
+        $this->calendarService = $calendarService;
     }
 
     /**
@@ -20,9 +28,24 @@ class SettingsController extends Controller {
      * @NoCSRFRequired
      */
     public function getAppSettings(): JSONResponse {
+        $data = $this->settingsService->getAppSettings();
+        $data['calendar_owner_user'] = $this->calendarService->getOwnerUser();
         return new JSONResponse([
             'status' => 'ok',
-            'data' => $this->settingsService->getAppSettings()
+            'data' => $data
+        ]);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function setCalendarOwner(string $user = ''): JSONResponse {
+        $user = $this->request->getParam('user', $user);
+        $this->calendarService->setOwnerUser($user);
+        return new JSONResponse([
+            'status' => 'ok',
+            'data' => ['calendar_owner_user' => $this->calendarService->getOwnerUser()]
         ]);
     }
 

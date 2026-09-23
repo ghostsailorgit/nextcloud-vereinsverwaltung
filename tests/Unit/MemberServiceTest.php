@@ -85,14 +85,14 @@ class MemberServiceTest extends TestCase {
             ->willReturn($member);
         
         // Act
-        $result = $this->memberService->create(
-            'John Doe',
-            '123 Main St',
-            'john@example.com',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'member'
-        );
+        $result = $this->memberService->create([
+            'name' => 'John Doe',
+            'address' => '123 Main St',
+            'email' => 'john@example.com',
+            'iban' => 'DE89370400440532013000',
+            'bic' => 'COBADEFFXXX',
+            'role' => 'member'
+        ]);
         
         // Assert
         $this->assertEquals('John Doe', $result->getName());
@@ -121,15 +121,14 @@ class MemberServiceTest extends TestCase {
             ->willReturn($member);
         
         // Act
-        $result = $this->memberService->update(
-            1,
-            'John Doe Updated',
-            '456 New St',
-            'john.new@example.com',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'board'
-        );
+        $result = $this->memberService->update(1, [
+            'name' => 'John Doe Updated',
+            'address' => '456 New St',
+            'email' => 'john.new@example.com',
+            'iban' => 'DE89370400440532013000',
+            'bic' => 'COBADEFFXXX',
+            'role' => 'board'
+        ]);
         
         // Assert
         $this->assertEquals('John Doe Updated', $result->getName());

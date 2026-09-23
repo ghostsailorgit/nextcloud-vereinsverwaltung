@@ -62,8 +62,8 @@ class PdfExporter {
         $pdf->SetFont('helvetica', 'B', 10);
         $pdf->SetFillColor(200, 220, 255);
 
-        $w = [15, 35, 35, 20, 30, 25, 30];
-        $headers = ['ID', 'Name', 'Email', 'Rolle', 'IBAN', 'BIC', 'Erstellt'];
+        $w = [10, 15, 30, 25, 25, 20, 15, 20, 20];
+        $headers = ['ID', 'Nr.', 'Name', 'Vorname', 'Ort', 'Rolle', 'Alter', 'Mitgl.-Jahre', 'Status'];
 
         foreach ($headers as $i => $header) {
             $pdf->Cell($w[$i], 7, $header, 1, 0, 'C', true);
@@ -76,39 +76,19 @@ class PdfExporter {
 
         $fill = false;
         foreach ($members as $member) {
-            // Handle both array and object formats
-            $id = is_array($member) ? ($member['id'] ?? '') : $member->getId();
-            $name = is_array($member) ? ($member['name'] ?? '') : $member->getName();
-            $email = is_array($member) ? ($member['email'] ?? '') : $member->getEmail();
-            $role = is_array($member) ? ($member['role'] ?? '') : $member->getRole();
-            $iban = is_array($member) ? ($member['iban'] ?? '') : ($member->getIban() ?? '');
-            $bic = is_array($member) ? ($member['bic'] ?? '') : ($member->getBic() ?? '');
-            $createdAt = is_array($member) ? ($member['created_at'] ?? '') : ($member->getCreatedAt() ?? '');
+            $m = is_array($member) ? $member : $member->jsonSerialize();
 
-            // Format IBAN/BIC (truncate if too long)
-            $iban = strlen((string)$iban) > 20 ? substr((string)$iban, 0, 20) . '...' : (string)$iban;
-            $bic = strlen((string)$bic) > 12 ? substr((string)$bic, 0, 12) . '...' : (string)$bic;
+            $status = !empty($m['deceased']) ? 'Verstorben' : (!empty($m['isFormer']) ? 'Ehemalig' : 'Aktiv');
 
-            // Format created date
-            if ($createdAt instanceof \DateTime) {
-                $createdAt = $createdAt->format('d.m.Y');
-            } elseif (is_string($createdAt)) {
-                try {
-                    $createdAt = (new \DateTime($createdAt))->format('d.m.Y');
-                } catch (\Exception $e) {
-                    $createdAt = (string)$createdAt;
-                }
-            } else {
-                $createdAt = (string)$createdAt;
-            }
-
-            $pdf->Cell($w[0], 6, (string)$id, 1, 0, 'C', $fill);
-            $pdf->Cell($w[1], 6, substr((string)$name, 0, 25), 1, 0, 'L', $fill);
-            $pdf->Cell($w[2], 6, substr((string)$email, 0, 25), 1, 0, 'L', $fill);
-            $pdf->Cell($w[3], 6, substr((string)$role, 0, 12), 1, 0, 'C', $fill);
-            $pdf->Cell($w[4], 6, (string)$iban, 1, 0, 'L', $fill);
-            $pdf->Cell($w[5], 6, (string)$bic, 1, 0, 'L', $fill);
-            $pdf->Cell($w[6], 6, (string)$createdAt, 1, 0, 'C', $fill);
+            $pdf->Cell($w[0], 6, (string)($m['id'] ?? ''), 1, 0, 'C', $fill);
+            $pdf->Cell($w[1], 6, substr((string)($m['memberNumber'] ?? ''), 0, 10), 1, 0, 'C', $fill);
+            $pdf->Cell($w[2], 6, substr((string)($m['name'] ?? ''), 0, 20), 1, 0, 'L', $fill);
+            $pdf->Cell($w[3], 6, substr((string)($m['firstName'] ?? ''), 0, 16), 1, 0, 'L', $fill);
+            $pdf->Cell($w[4], 6, substr((string)($m['city'] ?? ''), 0, 16), 1, 0, 'L', $fill);
+            $pdf->Cell($w[5], 6, substr((string)($m['role'] ?? ''), 0, 12), 1, 0, 'C', $fill);
+            $pdf->Cell($w[6], 6, (string)($m['age'] ?? '-'), 1, 0, 'C', $fill);
+            $pdf->Cell($w[7], 6, (string)($m['membershipYears'] ?? '-'), 1, 0, 'C', $fill);
+            $pdf->Cell($w[8], 6, $status, 1, 0, 'C', $fill);
             $pdf->Ln();
 
             $fill = !$fill;

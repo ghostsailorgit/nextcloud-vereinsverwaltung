@@ -72,33 +72,52 @@ class CsvExporter {
     public function formatMembers(array $members): array {
         $headers = [
             'ID',
+            'Nummer',
+            'Anrede',
+            'Vorname',
             'Name',
+            'Straße',
+            'PLZ',
+            'Ort',
             'Email',
-            'Role',
+            'Rolle',
             'IBAN',
             'BIC',
-            'Created At',
+            'Geburtsdatum',
+            'Alter',
+            'Eintrittsdatum',
+            'Mitglied seit (Jahre)',
+            'Austrittsdatum',
+            'Gründungsmitglied',
+            'Verstorben',
+            'Erstellt am',
         ];
 
         $data = [];
         foreach ($members as $member) {
-            // Handle both array and object formats
-            $id = is_array($member) ? ($member['id'] ?? '') : $member->getId();
-            $name = is_array($member) ? ($member['name'] ?? '') : $member->getName();
-            $email = is_array($member) ? ($member['email'] ?? '') : $member->getEmail();
-            $role = is_array($member) ? ($member['role'] ?? '') : $member->getRole();
-            $iban = is_array($member) ? ($member['iban'] ?? '') : $member->getIban();
-            $bic = is_array($member) ? ($member['bic'] ?? '') : $member->getBic();
-            $createdAt = is_array($member) ? ($member['created_at'] ?? '') : $member->getCreatedAt();
+            $m = is_array($member) ? $member : $member->jsonSerialize();
 
             $data[] = [
-                $id ?? '',
-                $name ?? '',
-                $email ?? '',
-                $role ?? '',
-                $iban ?? '',
-                $bic ?? '',
-                $createdAt ?? '',
+                $m['id'] ?? '',
+                $m['memberNumber'] ?? '',
+                $m['salutation'] ?? '',
+                $m['firstName'] ?? '',
+                $m['name'] ?? '',
+                $m['street'] ?? '',
+                $m['postalCode'] ?? '',
+                $m['city'] ?? '',
+                $m['email'] ?? '',
+                $m['role'] ?? '',
+                $m['iban'] ?? '',
+                $m['bic'] ?? '',
+                $m['birthDate'] ?? '',
+                $m['age'] ?? '',
+                $m['joinDate'] ?? '',
+                $m['membershipYears'] ?? '',
+                $m['leaveDate'] ?? '',
+                !empty($m['foundingMember']) ? 'Ja' : 'Nein',
+                !empty($m['deceased']) ? 'Ja' : 'Nein',
+                $m['createdAt'] ?? ($m['created_at'] ?? ''),
             ];
         }
 

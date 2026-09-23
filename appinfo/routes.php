@@ -49,5 +49,6 @@ return [
         ['name' => 'settings#getAppSettings', 'url' => '/settings', 'verb' => 'GET'],
         ['name' => 'settings#setChartsEnabled', 'url' => '/settings/charts', 'verb' => 'PUT'],
         ['name' => 'settings#setDocumentsPath', 'url' => '/settings/documents-path', 'verb' => 'PUT'],
+        ['name' => 'settings#setCalendarOwner', 'url' => '/settings/calendar-owner', 'verb' => 'PUT'],
     ]
 ];

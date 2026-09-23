@@ -338,11 +338,34 @@ export default {
   gap: 2rem;
 
   @media (min-width: 1200px) {
-    /* two-column layout for wide screens: form on the left, stats/table on the right */
+    /* two-column layout for wide screens: form on the left, stats+table
+       stacked on the right. Explicit placement is required here - with 3
+       direct children (form/stats/table) but only 2 grid columns, default
+       grid auto-flow wraps the table onto a new row starting back at
+       column 1, trapping it in the narrow 320px track instead of the wide
+       one (it then only grows via its own internal horizontal scrollbar). */
     display: grid;
     grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr;
     gap: 2rem;
     align-items: start;
+  }
+}
+
+@media (min-width: 1200px) {
+  .form-section {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+
+  .stats-section {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .table-section {
+    grid-column: 2;
+    grid-row: 2;
   }
 }
 

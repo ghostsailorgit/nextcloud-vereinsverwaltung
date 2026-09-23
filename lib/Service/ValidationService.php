@@ -5,19 +5,30 @@ namespace OCA\Verein\Service;
 
 class ValidationService {
     /**
-     * Validiert ein Mitglied auf Pflichtfelder
+     * Anrede-Optionen, die im Formular angeboten werden.
+     */
+    public const SALUTATIONS = ['Herr', 'Frau', 'Divers', 'Firma'];
+
+    /**
+     * Validiert ein Mitglied auf Pflicht- und Formatfelder.
      *
-     * @param string $name
-     * @param string $email
-     * @param string|null $iban
+     * @param array $data Erwartete Schlüssel: name, email, iban, firstName,
+     *   salutation, memberNumber, postalCode, birthDate, joinDate, leaveDate
+     *   (alle außer name/email optional)
      * @return array Mit 'valid' (bool) und 'errors' (array)
      */
-    public function validateMember(
-        string $name,
-        string $email,
-        ?string $iban = null
-    ): array {
+    public function validateMember(array $data): array {
         $errors = [];
+
+        $name = (string)($data['name'] ?? '');
+        $email = (string)($data['email'] ?? '');
+        $iban = $data['iban'] ?? null;
+        $salutation = $data['salutation'] ?? null;
+        $memberNumber = $data['memberNumber'] ?? null;
+        $postalCode = $data['postalCode'] ?? null;
+        $birthDate = $data['birthDate'] ?? null;
+        $joinDate = $data['joinDate'] ?? null;
+        $leaveDate = $data['leaveDate'] ?? null;
 
         // Name validieren
         if (empty(trim($name))) {
@@ -40,10 +51,49 @@ class ValidationService {
             $errors[] = 'IBAN ist ungültig (z.B. DE89370400440532013000)';
         }
 
+        if (!empty($memberNumber) && strlen((string)$memberNumber) > 50) {
+            $errors[] = 'Mitgliedsnummer darf maximal 50 Zeichen lang sein';
+        }
+
+        if (!empty($salutation) && !in_array($salutation, self::SALUTATIONS, true)) {
+            $errors[] = 'Anrede ist ungültig';
+        }
+
+        if (!empty($postalCode) && strlen((string)$postalCode) > 10) {
+            $errors[] = 'Postleitzahl darf maximal 10 Zeichen lang sein';
+        }
+
+        $birthDateObj = $this->validateOptionalDate($birthDate, 'Geburtsdatum', $errors);
+        if ($birthDateObj !== null && $birthDateObj > new \DateTime()) {
+            $errors[] = 'Geburtsdatum darf nicht in der Zukunft liegen';
+        }
+
+        $joinDateObj = $this->validateOptionalDate($joinDate, 'Eintrittsdatum', $errors);
+        $leaveDateObj = $this->validateOptionalDate($leaveDate, 'Austrittsdatum', $errors);
+        if ($joinDateObj !== null && $leaveDateObj !== null && $leaveDateObj < $joinDateObj) {
+            $errors[] = 'Austrittsdatum darf nicht vor dem Eintrittsdatum liegen';
+        }
+
         return [
             'valid' => count($errors) === 0,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Parses an optional Y-m-d date, appending an error for the given label
+     * if it's present but malformed. Returns null if absent or invalid.
+     */
+    private function validateOptionalDate(mixed $value, string $label, array &$errors): ?\DateTime {
+        if (empty($value)) {
+            return null;
+        }
+        try {
+            return new \DateTime((string)$value);
+        } catch (\Exception $e) {
+            $errors[] = $label . ' ist ungültig';
+            return null;
+        }
     }
 
     /**

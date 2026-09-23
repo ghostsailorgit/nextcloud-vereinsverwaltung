@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="members-container">
     <!-- Alert Komponente -->
     <Alert
@@ -8,17 +8,61 @@
       :errors="alertErrors"
     />
 
-    <!-- Form für neues Mitglied -->
+    <!-- Form für neues/zu bearbeitendes Mitglied -->
     <div class="form-section">
-      <h2>Neues Mitglied hinzufügen</h2>
-      <form @submit.prevent="addMember" class="member-form">
+      <h2>{{ editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen' }}</h2>
+      <form @submit.prevent="saveMember" class="member-form">
+        <h3 class="form-subheader">Persönliche Daten</h3>
+        <NcSelect
+          v-model="formData.salutation"
+          :options="salutationOptions"
+          input-label="Anrede"
+          placeholder="-- wählen --"
+        />
+        <NcTextField
+          :model-value="formData.firstName"
+          @update:model-value="formData.firstName = $event"
+          type="text"
+          label="Vorname"
+          placeholder="Max"
+        />
         <NcTextField
           :model-value="formData.name"
           @update:model-value="formData.name = $event"
           type="text"
           label="Name"
-          placeholder="Max Mustermann"
+          placeholder="Mustermann"
           required
+        />
+        <NcTextField
+          :model-value="formData.memberNumber"
+          @update:model-value="formData.memberNumber = $event"
+          type="text"
+          label="Mitgliedsnummer"
+        />
+        <label class="date-field">
+          <span>Geburtsdatum</span>
+          <input v-model="formData.birthDate" type="date" class="form-input" />
+        </label>
+
+        <h3 class="form-subheader">Adresse</h3>
+        <NcTextField
+          :model-value="formData.street"
+          @update:model-value="formData.street = $event"
+          type="text"
+          label="Straße"
+        />
+        <NcTextField
+          :model-value="formData.postalCode"
+          @update:model-value="formData.postalCode = $event"
+          type="text"
+          label="PLZ"
+        />
+        <NcTextField
+          :model-value="formData.city"
+          @update:model-value="formData.city = $event"
+          type="text"
+          label="Ort"
         />
         <NcTextField
           :model-value="formData.email"
@@ -28,12 +72,34 @@
           placeholder="max@example.com"
           required
         />
-        <NcTextField
-          :model-value="formData.address"
-          @update:model-value="formData.address = $event"
-          type="text"
-          label="Adresse"
+
+        <h3 class="form-subheader">Mitgliedschaft</h3>
+        <label class="date-field">
+          <span>Eintrittsdatum</span>
+          <input v-model="formData.joinDate" type="date" class="form-input" />
+        </label>
+        <label class="date-field">
+          <span>Austrittsdatum</span>
+          <input v-model="formData.leaveDate" type="date" class="form-input" />
+        </label>
+        <NcSelect
+          v-model="formData.role"
+          :options="roleOptions"
+          :reduce="option => option.id"
+          label="label"
+          input-label="Rolle"
+          :clearable="false"
         />
+        <label class="checkbox-field">
+          <input v-model="formData.foundingMember" type="checkbox" />
+          <span>Gründungsmitglied</span>
+        </label>
+        <label class="checkbox-field">
+          <input v-model="formData.deceased" type="checkbox" />
+          <span>Verstorben</span>
+        </label>
+
+        <h3 class="form-subheader">Bankverbindung</h3>
         <NcTextField
           :model-value="formData.iban"
           @update:model-value="formData.iban = $event"
@@ -46,17 +112,15 @@
           type="text"
           label="BIC"
         />
-        <NcSelect
-          v-model="formData.role"
-          :options="roleOptions"
-          :reduce="option => option.id"
-          label="label"
-          input-label="Rolle"
-          :clearable="false"
-        />
-        <NcButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Wird gespeichert...' : 'Hinzufügen' }}
-        </NcButton>
+
+        <div class="form-actions">
+          <NcButton type="submit" variant="primary" :disabled="loading">
+            {{ loading ? 'Wird gespeichert...' : (editingId ? 'Speichern' : 'Hinzufügen') }}
+          </NcButton>
+          <NcButton v-if="editingId" type="button" variant="tertiary" @click="cancelEdit">
+            Abbrechen
+          </NcButton>
+        </div>
       </form>
     </div>
 
@@ -68,76 +132,54 @@
           <ExportButtons resource="members" inline />
         </div>
       </div>
+
+      <div class="category-filter">
+        <button
+          v-for="cat in categories"
+          :key="cat.id"
+          type="button"
+          :class="['category-button', { active: category === cat.id }]"
+          @click="category = cat.id"
+        >
+          {{ cat.label }} ({{ cat.count }})
+        </button>
+      </div>
+
       <div class="table-wrapper">
         <table class="members-table">
           <thead>
             <tr>
+              <th>Nr.</th>
               <th>Name</th>
               <th>E-Mail</th>
-              <th>Adresse</th>
-              <th>IBAN</th>
+              <th>Ort</th>
+              <th>Alter</th>
+              <th>Mitglied seit</th>
               <th>Rolle</th>
+              <th>Status</th>
               <th>Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="member in members" :key="member.id" :class="{ editing: editingId === member.id }">
-              <td v-if="editingId !== member.id">{{ member.name }}</td>
-              <td v-if="editingId === member.id" class="cell-field">
-                <NcTextField :model-value="editData.name" @update:model-value="editData.name = $event" label="Name" />
-              </td>
-
-              <td v-if="editingId !== member.id">{{ member.email }}</td>
-              <td v-if="editingId === member.id" class="cell-field">
-                <NcTextField :model-value="editData.email" @update:model-value="editData.email = $event" type="email" label="E-Mail" />
-              </td>
-
-              <td v-if="editingId !== member.id">{{ member.address || '-' }}</td>
-              <td v-if="editingId === member.id" class="cell-field">
-                <NcTextField :model-value="editData.address" @update:model-value="editData.address = $event" label="Adresse" />
-              </td>
-
-              <td v-if="editingId !== member.id">{{ member.iban || '-' }}</td>
-              <td v-if="editingId === member.id" class="cell-field">
-                <NcTextField :model-value="editData.iban" @update:model-value="editData.iban = $event" label="IBAN" />
-              </td>
-
-              <td v-if="editingId !== member.id">
+            <tr v-for="member in filteredMembers" :key="member.id" :class="{ editing: editingId === member.id }">
+              <td>{{ member.memberNumber || '-' }}</td>
+              <td>{{ displayName(member) }}</td>
+              <td>{{ member.email }}</td>
+              <td>{{ member.city || '-' }}</td>
+              <td>{{ member.age !== null && member.age !== undefined ? member.age + ' J.' : '-' }}</td>
+              <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? member.membershipYears + ' J.' : '-' }}</td>
+              <td>
                 <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
               </td>
-              <td v-if="editingId === member.id" class="cell-field">
-                <NcSelect
-                  v-model="editData.role"
-                  :options="roleOptions"
-                  :reduce="option => option.id"
-                  label="label"
-                  input-label="Rolle"
-                  :clearable="false"
-                />
+              <td class="status-cell">
+                <span v-if="member.deceased" class="status-badge deceased">Verstorben</span>
+                <span v-else-if="member.isFormer" class="status-badge former">Ehemalig</span>
+                <span v-else class="status-badge active">Aktiv</span>
+                <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
               </td>
-
               <td class="actions">
-                <NcButton
-                  v-if="editingId !== member.id"
-                  @click="startEdit(member)"
-                  variant="secondary"
-                >
+                <NcButton @click="startEdit(member)" variant="secondary">
                   Bearbeiten
-                </NcButton>
-                <NcButton
-                  v-else
-                  @click="saveEdit(member.id)"
-                  variant="primary"
-                  :disabled="loading"
-                >
-                  Speichern
-                </NcButton>
-                <NcButton
-                  v-if="editingId === member.id"
-                  @click="cancelEdit"
-                  variant="tertiary"
-                >
-                  Abbrechen
                 </NcButton>
                 <NcButton
                   @click="deleteMember(member.id)"
@@ -151,13 +193,13 @@
           </tbody>
         </table>
       </div>
-      <p v-if="members.length === 0" class="empty-state">Keine Mitglieder vorhanden</p>
+      <p v-if="filteredMembers.length === 0" class="empty-state">Keine Mitglieder in dieser Kategorie</p>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { api } from '../api'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
@@ -166,6 +208,25 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import Alert from './Alert.vue'
 import ExportButtons from './ExportButtons.vue'
+
+const emptyFormData = () => ({
+  salutation: null,
+  firstName: '',
+  name: '',
+  memberNumber: '',
+  birthDate: '',
+  street: '',
+  postalCode: '',
+  city: '',
+  email: '',
+  joinDate: '',
+  leaveDate: '',
+  role: 'member',
+  foundingMember: false,
+  deceased: false,
+  iban: '',
+  bic: ''
+})
 
 export default {
   name: 'Members',
@@ -183,6 +244,7 @@ export default {
     const alertError = ref('')
     const alertErrors = ref([])
     const alertRef = ref(null)
+    const category = ref('active')
 
     const roleOptions = [
       { id: 'member', label: 'Mitglied' },
@@ -190,16 +252,9 @@ export default {
       { id: 'treasurer', label: 'Kassierer' }
     ]
 
-    const formData = ref({
-      name: '',
-      email: '',
-      address: '',
-      iban: '',
-  bic: '',
-  role: 'member'
-    })
+    const salutationOptions = ['Herr', 'Frau', 'Divers', 'Firma']
 
-    const editData = ref({})
+    const formData = reactive(emptyFormData())
 
     onMounted(async () => {
       await fetchMembers()
@@ -218,27 +273,51 @@ export default {
       }
     }
 
-    const addMember = async () => {
+    const categories = computed(() => {
+      const active = members.value.filter(m => !m.isFormer).length
+      const former = members.value.filter(m => m.isFormer).length
+      return [
+        { id: 'active', label: 'Aktiv', count: active },
+        { id: 'former', label: 'Ehemalig', count: former },
+        { id: 'all', label: 'Alle', count: members.value.length }
+      ]
+    })
+
+    const filteredMembers = computed(() => {
+      if (category.value === 'active') return members.value.filter(m => !m.isFormer)
+      if (category.value === 'former') return members.value.filter(m => m.isFormer)
+      return members.value
+    })
+
+    const displayName = (member) => {
+      const prefix = member.salutation ? member.salutation + ' ' : ''
+      return prefix + (member.firstName ? member.firstName + ' ' : '') + member.name
+    }
+
+    const saveMember = async () => {
       loading.value = true
       alertError.value = ''
       alertErrors.value = []
       try {
-        const response = await api.post('members', formData.value)
+        const response = editingId.value
+          ? await api.put(`members/${editingId.value}`, formData)
+          : await api.post('members', formData)
+
         if (response.data.status === 'error') {
           alertError.value = response.data.message
           alertErrors.value = response.data.errors || []
           if (alertRef.value) alertRef.value.open()
         } else {
-          formData.value = { name: '', email: '', address: '', iban: '', bic: '', role: 'member' }
-          showSuccess('Mitglied hinzugefügt')
+          showSuccess(editingId.value ? 'Mitglied aktualisiert' : 'Mitglied hinzugefügt')
+          cancelEdit()
           await fetchMembers()
         }
       } catch (error) {
         const data = error.response?.data
-        alertError.value = data?.message || error.message || 'Fehler beim Hinzufügen des Mitglieds'
+        alertError.value = data?.message || error.message || 'Fehler beim Speichern des Mitglieds'
         alertErrors.value = data?.errors || []
         if (alertRef.value) alertRef.value.open()
-        console.error('Error adding member:', error)
+        console.error('Error saving member:', error)
       } finally {
         loading.value = false
       }
@@ -246,13 +325,13 @@ export default {
 
     const startEdit = async (member) => {
       editingId.value = member.id
-      editData.value = { ...member }
+      Object.assign(formData, emptyFormData(), member)
 
       try {
         const response = await api.getMember(member.id)
         const latest = response.data?.data || response.data?.member
         if (latest) {
-          editData.value = { ...latest }
+          Object.assign(formData, emptyFormData(), latest)
         }
       } catch (error) {
         console.error('Error loading member details:', error)
@@ -260,24 +339,9 @@ export default {
       }
     }
 
-    const saveEdit = async (id) => {
-      loading.value = true
-      try {
-        await api.put(`members/${id}`, editData.value)
-        editingId.value = null
-        showSuccess('Mitglied aktualisiert')
-        await fetchMembers()
-      } catch (error) {
-        console.error('Error updating member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Aktualisieren des Mitglieds'))
-      } finally {
-        loading.value = false
-      }
-    }
-
     const cancelEdit = () => {
       editingId.value = null
-      editData.value = {}
+      Object.assign(formData, emptyFormData())
     }
 
     const deleteMember = async (id) => {
@@ -287,6 +351,7 @@ export default {
       try {
         await api.delete(`members/${id}`)
         showSuccess('Mitglied gelöscht')
+        if (editingId.value === id) cancelEdit()
         await fetchMembers()
       } catch (error) {
         console.error('Error deleting member:', error)
@@ -305,12 +370,15 @@ export default {
       loading,
       editingId,
       formData,
-      editData,
       roleOptions,
+      salutationOptions,
+      category,
+      categories,
+      filteredMembers,
+      displayName,
       roleLabel,
-      addMember,
+      saveMember,
       startEdit,
-      saveEdit,
       cancelEdit,
       deleteMember,
       alertRef,
@@ -330,9 +398,9 @@ export default {
   gap: 2rem;
 
   @media (min-width: 1200px) {
-    /* three-column layout: form + two lists on wide screens */
+    /* two-column layout: form + list on wide screens */
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 360px 1fr;
     gap: 2rem;
     align-items: start;
   }
@@ -384,8 +452,82 @@ export default {
   align-items: end;
 }
 
-.cell-field {
-  min-width: 160px;
+.form-subheader {
+  grid-column: 1 / -1;
+  margin: 8px 0 -4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.date-field,
+.checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+
+  span {
+    color: var(--color-text);
+    font-size: 14px;
+  }
+}
+
+.form-input {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-main-background);
+  color: var(--color-text);
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+  }
+}
+
+.category-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.category-button {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-hover);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+
+  &.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-text, #fff);
+  }
 }
 
 .table-wrapper {
@@ -451,6 +593,42 @@ export default {
   &.treasurer {
     background: var(--color-success-light);
     color: var(--color-success);
+  }
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.active {
+    background: var(--color-success-light);
+    color: var(--color-success);
+  }
+
+  &.former {
+    background: var(--color-warning-light);
+    color: var(--color-warning);
+  }
+
+  &.deceased {
+    background: var(--color-background-darker);
+    color: var(--color-text-secondary);
+  }
+
+  &.founding {
+    background: none;
+    padding: 0;
+    color: var(--color-warning);
+    font-size: 14px;
   }
 }
 

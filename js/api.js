@@ -66,6 +66,9 @@ export const api = {
   setDocumentsPath(path) {
     return instance.put('settings/documents-path', { path })
   },
+  setCalendarOwner(user) {
+    return instance.put('settings/calendar-owner', { user })
+  },
 
   // Fees
   getFees() {

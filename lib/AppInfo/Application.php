@@ -11,6 +11,7 @@ use OCA\Verein\Service\RBAC\RoleService;
 use OCA\Verein\Service\Export\CsvExporter;
 use OCA\Verein\Service\Export\PdfExporter;
 use OCA\Verein\Service\MemberService;
+use OCA\Verein\Service\MemberCalendarService;
 use OCA\Verein\Service\FeeService;
 use OCA\Verein\Service\StatisticsService;
 use OCA\Verein\Settings\AdminSection;
@@ -64,7 +65,8 @@ class Application extends App implements IBootstrap {
         // Register member and fee services
         $context->registerService(MemberService::class, function (IAppContainer $container): MemberService {
             return new MemberService(
-                $container->query(MemberMapper::class)
+                $container->query(MemberMapper::class),
+                $container->query(MemberCalendarService::class)
             );
         });
 

@@ -23,6 +23,8 @@ class MemberMapper extends QBMapper {
             ->from($this->getTableName())
             ->where($qb->expr()->orX(
                 $qb->expr()->like('name', $qb->createNamedParameter($like)),
+                $qb->expr()->like('first_name', $qb->createNamedParameter($like)),
+                $qb->expr()->like('member_number', $qb->createNamedParameter($like)),
                 $qb->expr()->like('email', $qb->createNamedParameter($like))
             ))
             ->setMaxResults($limit);

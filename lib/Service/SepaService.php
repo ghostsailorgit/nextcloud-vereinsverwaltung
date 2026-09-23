@@ -57,7 +57,7 @@ class SepaService {
             
             $totalAmount += $fee->getAmount();
             $transactions[] = [
-                'name' => $member->getName(),
+                'name' => $member->getFullName(),
                 'iban' => $member->getIban(),
                 'bic' => $member->getBic(),
                 'amount' => $fee->getAmount(),
@@ -102,7 +102,7 @@ class SepaService {
             
             $totalAmount += $fee->getAmount();
             $transactions[] = [
-                'memberName' => $member->getName(),
+                'memberName' => $member->getFullName(),
                 'iban' => $member->getIban(),
                 'amount' => $fee->getAmount(),
                 'dueDate' => $fee->getDueDate()
