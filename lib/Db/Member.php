@@ -68,6 +68,19 @@ class Member extends Entity implements JsonSerializable {
     protected ?string $updatedAt = null;
 
     /**
+     * Without an explicit type, QBMapper binds a changed bool property as a
+     * raw PHP value - (string)false is '', which MySQL then rejects for the
+     * integer-backed boolean column ("Incorrect integer value: ''"). Only
+     * bites on UPDATE (a real true->false change survives Entity's dirty
+     * check), not on the initial INSERT, since a fresh entity's boolean
+     * already equals its PHP default and never gets marked dirty at all.
+     */
+    public function __construct() {
+        $this->addType('foundingMember', 'bool');
+        $this->addType('deceased', 'bool');
+    }
+
+    /**
      * "Vorname Name", falling back to just "Name" if no first name is set.
      */
     public function getFullName(): string {
