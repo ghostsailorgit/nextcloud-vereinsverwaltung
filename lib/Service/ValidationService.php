@@ -37,7 +37,7 @@ class ValidationService {
 
         // IBAN validieren (wenn angegeben)
         if (!empty($iban) && !$this->validateIBAN($iban)) {
-            $errors[] = 'IBAN ist ungültig (Format: DE89370400440532013000)';
+            $errors[] = 'IBAN ist ungültig (z.B. DE89370400440532013000)';
         }
 
         return [
@@ -93,8 +93,22 @@ class ValidationService {
     }
 
     /**
-     * Validiert eine IBAN
-     * Basis-Check: DE + 20 Ziffern
+     * IBAN length per country (ISO 13616 / SEPA + common non-SEPA countries).
+     * Only used to reject obviously wrong lengths early; the real
+     * correctness check is the Mod-97 checksum below.
+     */
+    private const IBAN_LENGTHS = [
+        'AD' => 24, 'AT' => 20, 'BE' => 16, 'BG' => 22, 'CH' => 21,
+        'CY' => 28, 'CZ' => 24, 'DE' => 22, 'DK' => 18, 'EE' => 20,
+        'ES' => 24, 'FI' => 18, 'FR' => 27, 'GB' => 22, 'GR' => 27,
+        'HR' => 21, 'HU' => 28, 'IE' => 22, 'IS' => 26, 'IT' => 27,
+        'LI' => 21, 'LT' => 20, 'LU' => 20, 'LV' => 21, 'MC' => 27,
+        'MT' => 31, 'NL' => 18, 'NO' => 15, 'PL' => 28, 'PT' => 25,
+        'RO' => 24, 'SE' => 24, 'SI' => 19, 'SK' => 24, 'SM' => 27,
+    ];
+
+    /**
+     * Validiert eine IBAN (beliebiges SEPA-/ISO-13616-Land, nicht nur DE)
      *
      * @param string $iban
      * @return bool
@@ -103,8 +117,18 @@ class ValidationService {
         // Leerzeichen entfernen und zu Großbuchstaben
         $iban = str_replace(' ', '', strtoupper($iban));
 
-        // Deutsche IBAN: DE + 2 Prüfziffern + 18 Ziffern
-        if (!preg_match('/^DE\d{20}$/', $iban)) {
+        if (!preg_match('/^([A-Z]{2})(\d{2})([A-Z0-9]+)$/', $iban, $matches)) {
+            return false;
+        }
+        $country = $matches[1];
+
+        $expectedLength = self::IBAN_LENGTHS[$country] ?? null;
+        if ($expectedLength !== null) {
+            if (strlen($iban) !== $expectedLength) {
+                return false;
+            }
+        } elseif (strlen($iban) < 15 || strlen($iban) > 34) {
+            // Unknown country: fall back to the general IBAN length range
             return false;
         }
 

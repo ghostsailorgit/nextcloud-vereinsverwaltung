@@ -413,12 +413,11 @@ $breakpoint-mobile: 480px;
 }
 
 .stat-widget {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--color-main-background);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
@@ -545,12 +544,11 @@ $breakpoint-mobile: 480px;
 }
 
 .chart-container {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--color-main-background);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
   display: flex;
   flex-direction: column;
   min-width: 0;

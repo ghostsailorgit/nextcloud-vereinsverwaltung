@@ -103,7 +103,7 @@
               </td>
 
               <td v-if="editingId !== member.id">
-                <span :class="['role-badge', member.role]">{{ member.role }}</span>
+                <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
               </td>
               <td v-if="editingId === member.id" class="cell-field">
                 <NcSelect
@@ -186,7 +186,7 @@ export default {
 
     const roleOptions = [
       { id: 'member', label: 'Mitglied' },
-      { id: 'admin', label: 'Administrator' },
+      { id: 'admin', label: 'Vorstand' },
       { id: 'treasurer', label: 'Kassierer' }
     ]
 
@@ -296,6 +296,10 @@ export default {
       }
     }
 
+    const roleLabel = (role) => {
+      return roleOptions.find(r => r.id === role)?.label || role
+    }
+
     return {
       members,
       loading,
@@ -303,6 +307,7 @@ export default {
       formData,
       editData,
       roleOptions,
+      roleLabel,
       addMember,
       startEdit,
       saveEdit,
@@ -335,13 +340,12 @@ export default {
 
 .form-section,
 .table-section {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
+  background: var(--color-main-background);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
 
   h2 {
     margin-top: 0;

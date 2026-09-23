@@ -348,13 +348,12 @@ export default {
 
 .form-section,
 .table-section {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
+  background: var(--color-main-background);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
 
   h2 {
     margin-top: 0;
