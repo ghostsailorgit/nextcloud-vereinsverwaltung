@@ -4,13 +4,12 @@ declare(strict_types=1);
 namespace OCA\Verein\Service;
 
 use OCA\DAV\CalDAV\CalDavBackend;
+use OCA\DAV\CalDAV\Sharing\Service as CalendarSharingService;
+use OCA\DAV\DAV\Sharing\Backend as SharingBackend;
 use OCA\Verein\Db\Member;
-use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IConfig;
-use OCP\IDBConnection;
 use OCP\IGroupManager;
-use OCP\IURLGenerator;
-use OCP\Security\ISecureRandom;
+use OCP\IUserManager;
 use OCP\Server;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -21,36 +20,47 @@ use Throwable;
  * calendar - no admin configuration needed. The calendar technically has to
  * belong to some real Nextcloud user principal, so the first account in the
  * "admin" group is picked automatically the first time it's needed and
- * cached in app config; nobody has to enter a username anywhere. Members
- * subscribe to it themselves via a public read-only ICS link (see
- * getSubscribeUrl()) - shown on the Dashboard - rather than the app writing
- * into anyone's private calendar or requiring per-user setup.
+ * cached in app config; nobody has to enter a username anywhere.
+ *
+ * The calendar is shared read-only with this deployment's club groups (see
+ * SHARE_GROUPS) via Nextcloud's normal internal CalDAV group sharing -
+ * exactly what the Calendar app's own "share with group" feature does, the
+ * same way any logged-in club member would see any other shared calendar:
+ * it shows up under "Weitere Kalender" for them to enable. Deliberately NOT
+ * a public/unauthenticated link - only real Nextcloud accounts in those
+ * groups can ever see it.
  *
  * Uses OCA\DAV\CalDAV\CalDavBackend directly (the same internal API apps
  * like Tasks/Deck use) because the public OCP\Calendar API only supports
  * creating events, not updating/removing them - both required here so
  * reminders stay in sync and disappear once a member leaves or passes away.
- * The public-link share is created the same way Nextcloud's own "copy
- * public link" feature does (a row in dav_shares with access=ACCESS_PUBLIC),
- * replicated directly via IDBConnection since that plumbing is normally
- * only reachable through a full CalDAV POST request cycle.
  *
  * Every operation is wrapped and logged rather than thrown, so a CalDAV
- * hiccup never blocks saving a member or loading the Dashboard.
+ * hiccup never blocks saving a member.
  */
 class MemberCalendarService {
     private const CALENDAR_URI = 'vereinstermine';
     private const CALENDAR_DISPLAY_NAME = 'Vereinstermine';
-    private const ACCESS_PUBLIC = 4; // OCA\DAV\CalDAV\CalDavBackend::ACCESS_PUBLIC
+
+    /**
+     * The Nextcloud groups that get read access to the calendar - every
+     * tier of this specific club's existing group structure (see
+     * the groupfolders setup), i.e.
+     * every member with a Nextcloud account. Groups that don't exist (yet)
+     * are silently skipped.
+     */
+    private const SHARE_GROUPS = [
+        'exec-board-read', 'exec-board-write',
+        'board-read', 'board-write',
+        'members-read', 'members-write',
+    ];
 
     public function __construct(
         private IConfig $config,
         private string $appName,
         private LoggerInterface $logger,
         private IGroupManager $groupManager,
-        private IDBConnection $db,
-        private ISecureRandom $random,
-        private IURLGenerator $urlGenerator
+        private IUserManager $userManager
     ) {
     }
 
@@ -115,44 +125,21 @@ class MemberCalendarService {
         }
     }
 
-    /**
-     * A public, read-only ICS subscribe link for the "Vereinstermine"
-     * calendar - members paste this into their own calendar app (Nextcloud,
-     * phone, Outlook, ...) to add it themselves. Null if it couldn't be
-     * created (e.g. no admin account exists yet to own the calendar).
-     */
-    public function getSubscribeUrl(): ?string {
-        try {
-            $calendarId = $this->getOrCreateCalendarId();
-            if ($calendarId === null) {
-                return null;
-            }
-            $token = $this->getOrCreatePublicShareToken($calendarId, $this->principalUri());
-            return $this->urlGenerator->getAbsoluteURL('/remote.php/dav/public-calendars/') . $token . '?export';
-        } catch (Throwable $e) {
-            $this->logger->warning('Verein: Öffentlicher Kalender-Link konnte nicht erstellt werden', [
-                'exception' => $e,
-            ]);
-            return null;
-        }
-    }
-
     private function getBackend(): CalDavBackend {
         return Server::get(CalDavBackend::class);
-    }
-
-    private function principalUri(): string {
-        return 'principals/users/' . $this->resolveOwnerUid();
     }
 
     /**
      * The Nextcloud account that technically owns the "Vereinstermine"
      * calendar. Auto-picked once (first account in the "admin" group) and
-     * cached in app config - never asked of anyone.
+     * cached in app config - never asked of anyone. Re-validated on every
+     * call (userExists() is a cheap lookup) rather than trusted blindly:
+     * if that account is later deleted, a stale cached UID would silently
+     * orphan the calendar under a principal nobody can reach anymore.
      */
     private function resolveOwnerUid(): ?string {
         $cached = trim($this->config->getAppValue($this->appName, 'calendar_owner_user', ''));
-        if ($cached !== '') {
+        if ($cached !== '' && $this->userManager->userExists($cached)) {
             return $cached;
         }
 
@@ -183,48 +170,44 @@ class MemberCalendarService {
 
         $existing = $backend->getCalendarByUri($principal, self::CALENDAR_URI);
         if ($existing !== null) {
-            return (int)$existing['id'];
+            $calendarId = (int)$existing['id'];
+            $this->ensureGroupShares($calendarId);
+            return $calendarId;
         }
 
         if (!$create) {
             return null;
         }
 
-        return $backend->createCalendar($principal, self::CALENDAR_URI, [
+        $calendarId = $backend->createCalendar($principal, self::CALENDAR_URI, [
             '{DAV:}displayname' => self::CALENDAR_DISPLAY_NAME,
         ]);
+        $this->ensureGroupShares($calendarId);
+        return $calendarId;
     }
 
     /**
-     * Mirrors what Nextcloud's own "copy public link" calendar sharing does
-     * (OCA\DAV\CalDAV\CalDavBackend::setPublishStatus()) - a dav_shares row
-     * with access=ACCESS_PUBLIC - done directly via IDBConnection since that
-     * method expects a full Sabre Calendar DAV node we don't have here.
+     * Shares the calendar read-only with every SHARE_GROUPS group that
+     * exists, skipping ones already shared. Cheap no-op once all groups
+     * are shared; self-heals if a group is created later.
      */
-    private function getOrCreatePublicShareToken(int $calendarId, string $principalUri): string {
-        $qb = $this->db->getQueryBuilder();
-        $qb->select('publicuri')
-            ->from('dav_shares')
-            ->where($qb->expr()->eq('resourceid', $qb->createNamedParameter($calendarId, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('type', $qb->createNamedParameter('calendar')))
-            ->andWhere($qb->expr()->eq('access', $qb->createNamedParameter(self::ACCESS_PUBLIC, IQueryBuilder::PARAM_INT)));
-        $existing = $qb->executeQuery()->fetchOne();
-        if ($existing !== false) {
-            return (string)$existing;
-        }
+    private function ensureGroupShares(int $calendarId): void {
+        $sharingService = Server::get(CalendarSharingService::class);
+        $existing = array_map(
+            static fn (array $share) => $share['{http://owncloud.org/ns}principal'] ?? null,
+            $sharingService->getShares($calendarId)
+        );
 
-        $token = $this->random->generate(16, ISecureRandom::CHAR_HUMAN_READABLE);
-        $insert = $this->db->getQueryBuilder();
-        $insert->insert('dav_shares')
-            ->values([
-                'principaluri' => $insert->createNamedParameter($principalUri),
-                'type' => $insert->createNamedParameter('calendar'),
-                'access' => $insert->createNamedParameter(self::ACCESS_PUBLIC, IQueryBuilder::PARAM_INT),
-                'resourceid' => $insert->createNamedParameter($calendarId, IQueryBuilder::PARAM_INT),
-                'publicuri' => $insert->createNamedParameter($token),
-            ]);
-        $insert->executeStatement();
-        return $token;
+        foreach (self::SHARE_GROUPS as $gid) {
+            if (!$this->groupManager->groupExists($gid)) {
+                continue;
+            }
+            $principal = 'principals/groups/' . $gid;
+            if (in_array($principal, $existing, true)) {
+                continue;
+            }
+            $sharingService->shareWith($calendarId, $principal, SharingBackend::ACCESS_READ);
+        }
     }
 
     private function objectUri(int $memberId, string $kind): string {

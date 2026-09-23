@@ -121,19 +121,16 @@
         <p v-else class="upcoming-empty">Keine Eintrittsdaten hinterlegt</p>
       </div>
 
-      <!-- Kalender abonnieren -->
-      <div v-if="calendarSubscribeUrl" class="chart-container">
-        <h3 class="chart-title">📅 Kalender abonnieren</h3>
+      <!-- Vereinskalender -->
+      <div class="chart-container">
+        <h3 class="chart-title">📅 Vereinskalender</h3>
         <p class="subscribe-hint">
           Geburtstage und Jubiläen werden automatisch im Kalender
-          "Vereinstermine" gepflegt. Mit diesem Link kann sich jeder das
-          selbst in seiner eigenen Kalender-App hinzufügen (Nextcloud,
-          Handy, Outlook, ...).
+          "Vereinstermine" gepflegt und intern für Vorstand und Mitglieder
+          freigegeben - kein öffentlicher Link. Nach Login unter
+          "Weitere Kalender" in der Nextcloud-Kalender-App aktivieren.
         </p>
-        <div class="subscribe-row">
-          <input readonly class="subscribe-url" :value="calendarSubscribeUrl" @focus="onSubscribeUrlFocus" />
-          <NcButton variant="secondary" @click="copySubscribeUrl">{{ copyLabel }}</NcButton>
-        </div>
+        <NcButton variant="secondary" @click="openCalendarApp">Zur Kalender-App</NcButton>
       </div>
     </div>
   </div>
@@ -159,6 +156,7 @@ import api from '../api'
 import Alert from './Alert.vue'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { extractErrorMessage } from '../errorMessage'
+import { absoluteUrl } from '../absoluteUrl'
 
 // allow widgets to ask the parent to navigate to a different tab
 const emit = defineEmits(['navigate'])
@@ -222,8 +220,6 @@ const statistics = reactive<Statistics>({
 
 const upcomingBirthdays = ref<UpcomingBirthday[]>([])
 const upcomingAnniversaries = ref<UpcomingAnniversary[]>([])
-const calendarSubscribeUrl = ref<string | null>(null)
-const copyLabel = ref('Link kopieren')
 
 // Chart Daten und Optionen
 const feeStatusChartData = ref({
@@ -321,19 +317,8 @@ const formatDay = (dateString: string): string => {
   })
 }
 
-const onSubscribeUrlFocus = (event: Event) => {
-  (event.target as HTMLInputElement).select()
-}
-
-const copySubscribeUrl = async () => {
-  if (!calendarSubscribeUrl.value) return
-  try {
-    await navigator.clipboard.writeText(calendarSubscribeUrl.value)
-    copyLabel.value = 'Kopiert!'
-    setTimeout(() => { copyLabel.value = 'Link kopieren' }, 2000)
-  } catch (error) {
-    console.error('Clipboard error:', error)
-  }
+const openCalendarApp = () => {
+  window.location.href = absoluteUrl('/apps/calendar/')
 }
 
 const loadStatistics = async () => {
@@ -353,7 +338,6 @@ const loadStatistics = async () => {
       }
       upcomingBirthdays.value = memberStatsResponse.data.data.upcomingBirthdays || []
       upcomingAnniversaries.value = memberStatsResponse.data.data.upcomingAnniversaries || []
-      calendarSubscribeUrl.value = memberStatsResponse.data.data.calendarSubscribeUrl || null
     }
 
     // Lade Gebühren-Statistiken
@@ -707,22 +691,6 @@ $breakpoint-mobile: 480px;
   margin: 0 0 12px 0;
   font-size: 13px;
   color: var(--color-text-secondary);
-}
-
-.subscribe-row {
-  display: flex;
-  gap: 8px;
-}
-
-.subscribe-url {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-background-hover);
-  color: var(--color-text);
-  font-size: 13px;
 }
 
 .chart-wrapper {
