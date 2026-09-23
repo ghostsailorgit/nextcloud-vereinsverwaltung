@@ -8,7 +8,7 @@
           v-model="formData.memberId"
           :options="members"
           :reduce="member => member.id"
-          label="name"
+          label="fullName"
           input-label="Mitglied"
           placeholder="-- Mitglied wählen --"
         />
@@ -276,7 +276,7 @@ export default {
 
     const getMemberName = (memberId) => {
       const member = members.value.find(m => m.id === memberId)
-      return member ? member.name : `Mitglied #${memberId}`
+      return member ? member.fullName : `Mitglied #${memberId}`
     }
 
     const getStatusLabel = (status) => {
