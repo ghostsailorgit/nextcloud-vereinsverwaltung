@@ -20,7 +20,7 @@ class StatisticsService {
     public function getMemberStatistics(): array {
         $members = $this->memberMapper->findAll();
         $total = count($members);
-        
+
         // Group by role
         $byRole = [];
         foreach ($members as $member) {
@@ -36,8 +36,92 @@ class StatisticsService {
             'byRole' => $byRole,
             'active' => $total, // Assuming all are active for now
             'newThisMonth' => $this->countNewMembersThisMonth($members),
-            'growthByMonth' => $this->computeMemberGrowth($members)
+            'growthByMonth' => $this->computeMemberGrowth($members),
+            'upcomingBirthdays' => $this->getUpcomingBirthdays($members),
+            'upcomingAnniversaries' => $this->getUpcomingAnniversaries($members)
         ];
+    }
+
+    /**
+     * The next N birthdays among active (non-former) members with a
+     * birthDate set, soonest first.
+     */
+    private function getUpcomingBirthdays(array $members, int $limit = 5): array {
+        $today = new \DateTime('today');
+        $upcoming = [];
+
+        foreach ($members as $member) {
+            if ($member->isFormer() || empty($member->getBirthDate())) {
+                continue;
+            }
+            try {
+                $birthDate = new \DateTime($member->getBirthDate());
+            } catch (\Exception $e) {
+                continue;
+            }
+            $nextDate = $this->nextOccurrence($today, (int)$birthDate->format('n'), (int)$birthDate->format('j'));
+
+            $upcoming[] = [
+                'memberId' => $member->getId(),
+                'name' => $member->getFullName(),
+                'nextDate' => $nextDate->format('Y-m-d'),
+                'turningAge' => (int)$nextDate->format('Y') - (int)$birthDate->format('Y')
+            ];
+        }
+
+        usort($upcoming, fn($a, $b) => $a['nextDate'] <=> $b['nextDate']);
+        return array_slice($upcoming, 0, $limit);
+    }
+
+    /**
+     * The next N membership anniversaries among active (non-former) members
+     * with a joinDate set, soonest first.
+     */
+    private function getUpcomingAnniversaries(array $members, int $limit = 5): array {
+        $today = new \DateTime('today');
+        $upcoming = [];
+
+        foreach ($members as $member) {
+            if ($member->isFormer() || empty($member->getJoinDate())) {
+                continue;
+            }
+            try {
+                $joinDate = new \DateTime($member->getJoinDate());
+            } catch (\Exception $e) {
+                continue;
+            }
+            $nextDate = $this->nextOccurrence($today, (int)$joinDate->format('n'), (int)$joinDate->format('j'));
+            $years = (int)$nextDate->format('Y') - (int)$joinDate->format('Y');
+            if ($years <= 0) {
+                // Joined this year - no anniversary to reach yet
+                continue;
+            }
+
+            $upcoming[] = [
+                'memberId' => $member->getId(),
+                'name' => $member->getFullName(),
+                'nextDate' => $nextDate->format('Y-m-d'),
+                'years' => $years
+            ];
+        }
+
+        usort($upcoming, fn($a, $b) => $a['nextDate'] <=> $b['nextDate']);
+        return array_slice($upcoming, 0, $limit);
+    }
+
+    /**
+     * The next occurrence of a given month/day on or after $today (this
+     * year if it hasn't passed yet, otherwise next year).
+     */
+    private function nextOccurrence(\DateTime $today, int $month, int $day): \DateTime {
+        $year = (int)$today->format('Y');
+        $candidate = new \DateTime();
+        $candidate->setDate($year, $month, $day);
+        $candidate->setTime(0, 0, 0);
+        if ($candidate < $today) {
+            $candidate->setDate($year + 1, $month, $day);
+        }
+        return $candidate;
     }
 
     /**

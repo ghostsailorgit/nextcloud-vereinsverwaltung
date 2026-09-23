@@ -96,6 +96,45 @@
           />
         </div>
       </div>
+
+      <!-- Nächste Geburtstage -->
+      <div class="chart-container">
+        <h3 class="chart-title">🎂 Nächste Geburtstage</h3>
+        <ul v-if="upcomingBirthdays.length" class="upcoming-list">
+          <li v-for="entry in upcomingBirthdays" :key="entry.memberId" class="upcoming-item">
+            <span class="upcoming-name">{{ entry.name }}</span>
+            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · wird {{ entry.turningAge }}</span>
+          </li>
+        </ul>
+        <p v-else class="upcoming-empty">Keine Geburtstage hinterlegt</p>
+      </div>
+
+      <!-- Nächste Jubiläen -->
+      <div class="chart-container">
+        <h3 class="chart-title">🎉 Nächste Jubiläen</h3>
+        <ul v-if="upcomingAnniversaries.length" class="upcoming-list">
+          <li v-for="entry in upcomingAnniversaries" :key="entry.memberId" class="upcoming-item">
+            <span class="upcoming-name">{{ entry.name }}</span>
+            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · {{ entry.years }} {{ entry.years === 1 ? 'Jahr' : 'Jahre' }} dabei</span>
+          </li>
+        </ul>
+        <p v-else class="upcoming-empty">Keine Eintrittsdaten hinterlegt</p>
+      </div>
+
+      <!-- Kalender abonnieren -->
+      <div v-if="calendarSubscribeUrl" class="chart-container">
+        <h3 class="chart-title">📅 Kalender abonnieren</h3>
+        <p class="subscribe-hint">
+          Geburtstage und Jubiläen werden automatisch im Kalender
+          "Vereinstermine" gepflegt. Mit diesem Link kann sich jeder das
+          selbst in seiner eigenen Kalender-App hinzufügen (Nextcloud,
+          Handy, Outlook, ...).
+        </p>
+        <div class="subscribe-row">
+          <input readonly class="subscribe-url" :value="calendarSubscribeUrl" @focus="onSubscribeUrlFocus" />
+          <NcButton variant="secondary" @click="copySubscribeUrl">{{ copyLabel }}</NcButton>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -118,6 +157,7 @@ import {
 } from 'chart.js'
 import api from '../api'
 import Alert from './Alert.vue'
+import NcButton from '@nextcloud/vue/components/NcButton'
 import { extractErrorMessage } from '../errorMessage'
 
 // allow widgets to ask the parent to navigate to a different tab
@@ -149,6 +189,20 @@ interface Statistics {
   dueCount: number
 }
 
+interface UpcomingBirthday {
+  memberId: number
+  name: string
+  nextDate: string
+  turningAge: number
+}
+
+interface UpcomingAnniversary {
+  memberId: number
+  name: string
+  nextDate: string
+  years: number
+}
+
 const loading = ref(true)
 const errorMessage = ref('')
 const errorList = ref<string[]>([])
@@ -165,6 +219,11 @@ const statistics = reactive<Statistics>({
   overdueCount: 0,
   dueCount: 0,
 })
+
+const upcomingBirthdays = ref<UpcomingBirthday[]>([])
+const upcomingAnniversaries = ref<UpcomingAnniversary[]>([])
+const calendarSubscribeUrl = ref<string | null>(null)
+const copyLabel = ref('Link kopieren')
 
 // Chart Daten und Optionen
 const feeStatusChartData = ref({
@@ -255,6 +314,28 @@ const formatCurrency = (amount: number): string => {
   }).format(amount)
 }
 
+const formatDay = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: 'long',
+  })
+}
+
+const onSubscribeUrlFocus = (event: Event) => {
+  (event.target as HTMLInputElement).select()
+}
+
+const copySubscribeUrl = async () => {
+  if (!calendarSubscribeUrl.value) return
+  try {
+    await navigator.clipboard.writeText(calendarSubscribeUrl.value)
+    copyLabel.value = 'Kopiert!'
+    setTimeout(() => { copyLabel.value = 'Link kopieren' }, 2000)
+  } catch (error) {
+    console.error('Clipboard error:', error)
+  }
+}
+
 const loadStatistics = async () => {
   try {
     loading.value = true
@@ -270,6 +351,9 @@ const loadStatistics = async () => {
         memberGrowthChartData.value.labels = growth.labels
         memberGrowthChartData.value.datasets[0].data = growth.data
       }
+      upcomingBirthdays.value = memberStatsResponse.data.data.upcomingBirthdays || []
+      upcomingAnniversaries.value = memberStatsResponse.data.data.upcomingAnniversaries || []
+      calendarSubscribeUrl.value = memberStatsResponse.data.data.calendarSubscribeUrl || null
     }
 
     // Lade Gebühren-Statistiken
@@ -577,6 +661,68 @@ $breakpoint-mobile: 480px;
       margin-bottom: 10px;
     }
   }
+}
+
+.upcoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upcoming-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.upcoming-name {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.upcoming-detail {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.upcoming-empty {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  margin: 0;
+}
+
+.subscribe-hint {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.subscribe-row {
+  display: flex;
+  gap: 8px;
+}
+
+.subscribe-url {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-background-hover);
+  color: var(--color-text);
+  font-size: 13px;
 }
 
 .chart-wrapper {

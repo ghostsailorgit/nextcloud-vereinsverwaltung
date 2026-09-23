@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="settings-page">
     <h2>Einstellungen</h2>
 
@@ -34,24 +34,11 @@
       <div class="card">
         <h3>Geburtstags- &amp; Jubiläums-Erinnerungen</h3>
         <p>
-          Trägt Geburtstage und Eintritts-Jubiläen automatisch als
-          jährlich wiederkehrende Termine in den Kalender des angegebenen
-          Nextcloud-Benutzers ein (Kalender "Vereinstermine"). Wird ein
-          Mitglied als ausgetreten oder verstorben markiert, werden dessen
-          Erinnerungen automatisch entfernt. Leer lassen, um die Funktion
-          zu deaktivieren.
+          Geburtstage und Eintritts-Jubiläen werden automatisch als jährlich
+          wiederkehrende Termine im Kalender "Vereinstermine" gepflegt -
+          ohne Einrichtung hier. Den Abo-Link zum selbst Hinzufügen findest
+          du auf dem <a href="#" @click.prevent="$emit('navigate', 'dashboard')">Dashboard</a>.
         </p>
-        <div class="documents-path-form">
-          <NcTextField
-            class="path-field"
-            :model-value="calendarOwnerUser"
-            @update:model-value="calendarOwnerUser = $event"
-            label="Nextcloud-Benutzername"
-            placeholder="z.B. admin"
-          />
-          <NcButton variant="primary" :disabled="savingCalendar" @click="saveCalendarOwner">Speichern</NcButton>
-        </div>
-        <p v-if="savedCalendar" class="hint">Gespeichert.</p>
       </div>
     </div>
   </div>
@@ -72,17 +59,13 @@ export default {
     return {
       documentsPath: '',
       saving: false,
-      saved: false,
-      calendarOwnerUser: '',
-      savingCalendar: false,
-      savedCalendar: false
+      saved: false
     }
   },
   async mounted() {
     try {
       const res = await api.getAppSettings()
       this.documentsPath = res.data?.data?.documents_path || '/Verein'
-      this.calendarOwnerUser = res.data?.data?.calendar_owner_user || ''
     } catch (e) {
       console.error('Error loading app settings', e)
       showError(extractErrorMessage(e, 'Fehler beim Laden der Einstellungen'))
@@ -100,19 +83,6 @@ export default {
         showError(extractErrorMessage(e, 'Fehler beim Speichern des Ordnerpfads'))
       } finally {
         this.saving = false
-      }
-    },
-    async saveCalendarOwner() {
-      this.savingCalendar = true
-      this.savedCalendar = false
-      try {
-        await api.setCalendarOwner(this.calendarOwnerUser)
-        this.savedCalendar = true
-      } catch (e) {
-        console.error('Error saving calendar owner', e)
-        showError(extractErrorMessage(e, 'Fehler beim Speichern der Kalender-Einstellung'))
-      } finally {
-        this.savingCalendar = false
       }
     }
   }
