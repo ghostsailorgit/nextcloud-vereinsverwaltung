@@ -19,8 +19,8 @@ class MemberService {
     }
 
     /**
-     * Search members by query (name, first name, member number or email),
-     * remote-friendly for autocomplete.
+     * Search members by query (name, first name, email, or exact member
+     * id), remote-friendly for autocomplete.
      *
      * @param string $query
      * @param int $limit
@@ -43,8 +43,8 @@ class MemberService {
 
     /**
      * @param array $data Accepted keys: name, firstName, salutation,
-     *   memberNumber, address, street, postalCode, city, email, iban, bic,
-     *   role, birthDate, joinDate, leaveDate, foundingMember, deceased
+     *   address, street, postalCode, city, email, iban, bic, role,
+     *   birthDate, joinDate, leaveDate, foundingMember, deceased
      */
     public function create(array $data): Member {
         $member = new Member();
@@ -75,7 +75,6 @@ class MemberService {
         $member->setName((string)($data['name'] ?? ''));
         $member->setFirstName($this->nullIfEmpty($data['firstName'] ?? null));
         $member->setSalutation($this->nullIfEmpty($data['salutation'] ?? null));
-        $member->setMemberNumber($this->nullIfEmpty($data['memberNumber'] ?? null));
         $member->setAddress($this->nullIfEmpty($data['address'] ?? null));
         $member->setStreet($this->nullIfEmpty($data['street'] ?? null));
         $member->setPostalCode($this->nullIfEmpty($data['postalCode'] ?? null));

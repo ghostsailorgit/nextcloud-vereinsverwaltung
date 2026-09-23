@@ -13,7 +13,7 @@ class ValidationService {
      * Validiert ein Mitglied auf Pflicht- und Formatfelder.
      *
      * @param array $data Erwartete Schlüssel: name, email, iban, firstName,
-     *   salutation, memberNumber, postalCode, birthDate, joinDate, leaveDate
+     *   salutation, postalCode, birthDate, joinDate, leaveDate
      *   (alle außer name/email optional)
      * @return array Mit 'valid' (bool) und 'errors' (array)
      */
@@ -24,7 +24,6 @@ class ValidationService {
         $email = (string)($data['email'] ?? '');
         $iban = $data['iban'] ?? null;
         $salutation = $data['salutation'] ?? null;
-        $memberNumber = $data['memberNumber'] ?? null;
         $postalCode = $data['postalCode'] ?? null;
         $birthDate = $data['birthDate'] ?? null;
         $joinDate = $data['joinDate'] ?? null;
@@ -49,10 +48,6 @@ class ValidationService {
         // IBAN validieren (wenn angegeben)
         if (!empty($iban) && !$this->validateIBAN($iban)) {
             $errors[] = 'IBAN ist ungültig (z.B. DE89370400440532013000)';
-        }
-
-        if (!empty($memberNumber) && strlen((string)$memberNumber) > 50) {
-            $errors[] = 'Mitgliedsnummer darf maximal 50 Zeichen lang sein';
         }
 
         if (!empty($salutation) && !in_array($salutation, self::SALUTATIONS, true)) {

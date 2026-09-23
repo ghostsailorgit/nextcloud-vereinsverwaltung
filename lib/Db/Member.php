@@ -7,8 +7,6 @@ use OCP\AppFramework\Db\Entity;
 /**
  * @method int getId()
  * @method void setId(int $id)
- * @method ?string getMemberNumber()
- * @method void setMemberNumber(?string $memberNumber)
  * @method ?string getSalutation()
  * @method void setSalutation(?string $salutation)
  * @method string getName()
@@ -49,7 +47,6 @@ use OCP\AppFramework\Db\Entity;
  * @method void setUpdatedAt(?string $updatedAt)
  */
 class Member extends Entity implements JsonSerializable {
-    protected ?string $memberNumber = null;
     protected ?string $salutation = null;
     protected string $name = '';
     protected ?string $firstName = null;
@@ -118,7 +115,6 @@ class Member extends Entity implements JsonSerializable {
     public function jsonSerialize(): array {
         return [
             'id' => $this->id,
-            'memberNumber' => $this->memberNumber,
             'salutation' => $this->salutation,
             'name' => $this->name,
             'firstName' => $this->firstName,

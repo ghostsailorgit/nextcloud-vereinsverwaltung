@@ -118,7 +118,6 @@ class MemberController extends Controller {
             'name' => (string)$this->request->getParam('name', ''),
             'firstName' => $this->request->getParam('firstName'),
             'salutation' => $this->request->getParam('salutation'),
-            'memberNumber' => $this->request->getParam('memberNumber'),
             'address' => $this->request->getParam('address'),
             'street' => $this->request->getParam('street'),
             'postalCode' => $this->request->getParam('postalCode'),

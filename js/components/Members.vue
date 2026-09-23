@@ -34,12 +34,6 @@
           placeholder="Mustermann"
           required
         />
-        <NcTextField
-          :model-value="formData.memberNumber"
-          @update:model-value="formData.memberNumber = $event"
-          type="text"
-          label="Mitgliedsnummer"
-        />
         <label class="date-field">
           <span>Geburtsdatum</span>
           <input v-model="formData.birthDate" type="date" class="form-input" />
@@ -162,7 +156,7 @@
           </thead>
           <tbody>
             <tr v-for="member in filteredMembers" :key="member.id" :class="{ editing: editingId === member.id }">
-              <td>{{ member.memberNumber || '-' }}</td>
+              <td>{{ member.id }}</td>
               <td>{{ displayName(member) }}</td>
               <td>{{ member.email }}</td>
               <td>{{ member.city || '-' }}</td>
@@ -213,7 +207,6 @@ const emptyFormData = () => ({
   salutation: null,
   firstName: '',
   name: '',
-  memberNumber: '',
   birthDate: '',
   street: '',
   postalCode: '',

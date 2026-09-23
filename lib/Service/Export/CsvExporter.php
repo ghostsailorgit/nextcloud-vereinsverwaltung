@@ -72,7 +72,6 @@ class CsvExporter {
     public function formatMembers(array $members): array {
         $headers = [
             'ID',
-            'Nummer',
             'Anrede',
             'Vorname',
             'Name',
@@ -99,7 +98,6 @@ class CsvExporter {
 
             $data[] = [
                 $m['id'] ?? '',
-                $m['memberNumber'] ?? '',
                 $m['salutation'] ?? '',
                 $m['firstName'] ?? '',
                 $m['name'] ?? '',

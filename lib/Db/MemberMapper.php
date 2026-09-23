@@ -19,14 +19,18 @@ class MemberMapper extends QBMapper {
     public function search(string $query, int $limit = 50): array {
         $qb = $this->db->getQueryBuilder();
         $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%';
+        $conditions = [
+            $qb->expr()->like('name', $qb->createNamedParameter($like)),
+            $qb->expr()->like('first_name', $qb->createNamedParameter($like)),
+            $qb->expr()->like('email', $qb->createNamedParameter($like)),
+        ];
+        // The member's id doubles as its member number - allow searching by it directly
+        if (ctype_digit($query)) {
+            $conditions[] = $qb->expr()->eq('id', $qb->createNamedParameter((int)$query, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT));
+        }
         $qb->select('*')
             ->from($this->getTableName())
-            ->where($qb->expr()->orX(
-                $qb->expr()->like('name', $qb->createNamedParameter($like)),
-                $qb->expr()->like('first_name', $qb->createNamedParameter($like)),
-                $qb->expr()->like('member_number', $qb->createNamedParameter($like)),
-                $qb->expr()->like('email', $qb->createNamedParameter($like))
-            ))
+            ->where($qb->expr()->orX(...$conditions))
             ->setMaxResults($limit);
         return $this->findEntities($qb);
     }
