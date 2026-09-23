@@ -35,11 +35,13 @@ class SepaService {
         string $creditorBic,
         string $creditorId
     ): string {
-        // Get all open fees
-        $openFees = $this->feeMapper->findByStatus('open');
-        
+        // Get all fees that still need to be collected (open and overdue -
+        // overdue is a manually-set status, not an automatic transition, so
+        // it still represents money owed that hasn't been debited yet)
+        $openFees = $this->feeMapper->findByStatuses(['open', 'overdue']);
+
         if (empty($openFees)) {
-            throw new \Exception('No open fees found for SEPA export');
+            throw new \Exception('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
         }
 
         // Calculate total amount
@@ -86,7 +88,7 @@ class SepaService {
         string $creditorBic,
         string $creditorId
     ): array {
-        $openFees = $this->feeMapper->findByStatus('open');
+        $openFees = $this->feeMapper->findByStatuses(['open', 'overdue']);
         
         $totalAmount = 0;
         $transactions = [];
