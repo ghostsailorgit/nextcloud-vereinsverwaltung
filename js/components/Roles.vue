@@ -49,6 +49,12 @@
 
     <div class="table-card">
       <table>
+        <colgroup>
+          <col style="width: 15%">
+          <col style="width: 20%">
+          <col style="width: 45%">
+          <col style="width: 20%">
+        </colgroup>
         <thead>
           <tr>
             <th>Name</th>
@@ -279,9 +285,23 @@ export default {
 .form-card, .table-card { background: var(--color-main-background); border: 1px solid var(--color-border); padding: 16px; border-radius: 6px; margin-bottom: 16px }
 .form-actions { display:flex; gap:8px }
 .assign-row { display: grid; gap: 12px; max-width: 480px }
-.permissions { max-width: 420px }
-.actions { display:flex; gap:8px }
 .permissions-label { display: block; margin-top: 8px; margin-bottom: 4px; font-weight: bold }
+
+/* table-layout: fixed + a <colgroup> pinning all 4 column widths (an
+   "auto" column doesn't reliably get squeezed by its neighbors in fixed
+   layout), otherwise the long comma-separated permissions string doesn't
+   wrap inside its own cell and visually bleeds into/under the Aktionen
+   column's buttons */
+.table-card { overflow-x: auto }
+.table-card table { width: 100%; table-layout: fixed; border-collapse: collapse }
+.table-card th, .table-card td { padding: 8px; text-align: left; vertical-align: top }
+/* Nextcloud core CSS sets white-space: nowrap on <small> with higher
+   specificity than this scoped rule - without the override here,
+   word-break/overflow-wrap are moot (nowrap suppresses wrapping outright)
+   and the text paints straight over the Aktionen column instead */
+.permissions { word-break: break-word; overflow-wrap: break-word }
+.permissions small { white-space: normal !important }
+.actions { display: flex; gap: 8px; flex-wrap: wrap }
 
 /* modal */
 .modal-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index: 1200 }
