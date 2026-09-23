@@ -12,26 +12,17 @@ class AppSettingsService {
         $this->appName = $appName;
     }
 
-    public function isChartsEnabled(): bool {
-        return $this->config->getAppValue($this->appName, 'enable_charts', '0') === '1';
-    }
-
-    public function setChartsEnabled(bool $enabled): void {
-        $this->config->setAppValue($this->appName, 'enable_charts', $enabled ? '1' : '0');
-    }
-
+    /**
+     * Not user-editable - App.vue's "Dokumente" tab just links here. Change
+     * via `occ config:app:set verein documents_path --value=/Path` if the
+     * folder is ever renamed.
+     */
     public function getDocumentsPath(): string {
         return $this->config->getAppValue($this->appName, 'documents_path', '/Verein');
     }
 
-    public function setDocumentsPath(string $path): void {
-        $path = '/' . trim($path, '/');
-        $this->config->setAppValue($this->appName, 'documents_path', $path);
-    }
-
     public function getAppSettings(): array {
         return [
-            'enable_charts' => $this->isChartsEnabled(),
             'documents_path' => $this->getDocumentsPath(),
         ];
     }

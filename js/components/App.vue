@@ -43,7 +43,6 @@ import Finance from './Finance.vue'
 const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
 import Roles from './Roles.vue'
 import SepaExport from './SepaExport.vue'
-import Settings from './Settings.vue'
 
 export default {
   name: 'App',
@@ -57,8 +56,7 @@ export default {
     Finance,
     Statistics,
     Roles,
-    SepaExport,
-    Settings
+    SepaExport
   },
   setup() {
     const activeTab = ref('dashboard')
@@ -73,8 +71,7 @@ export default {
       { id: 'roles', label: 'Rollen', emoji: '🛡️' },
       { id: 'sepa', label: 'SEPA-Export', emoji: '🏦' },
       { id: 'documents', label: 'Dokumente', emoji: '📄', href: absoluteUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')) },
-      { id: 'calendar', label: 'Termine', emoji: '📅', href: absoluteUrl('/apps/calendar/') },
-      { id: 'settings', label: 'Einstellungen', emoji: '⚙️' }
+      { id: 'calendar', label: 'Termine', emoji: '📅', href: absoluteUrl('/apps/calendar/') }
     ])
 
     onMounted(async () => {
@@ -95,8 +92,7 @@ export default {
       members: 'Members',
       finance: 'Finance',
       roles: 'Roles',
-      sepa: 'SepaExport',
-      settings: 'Settings'
+      sepa: 'SepaExport'
     }
 
     const currentComponent = computed(() => {
