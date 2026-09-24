@@ -6,6 +6,33 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.9.0-beta] - 2026-09-25
+
+Stand dieses Forks (mehrere Vereine, Rechte, Beiträge). Die älteren Einträge unten stammen vom Upstream-Projekt.
+
+### ✨ Neu
+- **Mehrere Vereine:** Verein → Mitgliedschaft ← Person. Eine Person kann in mehreren Vereinen sein, mit eigenem Eintritt, eigener Funktion und eigenem SEPA-Mandat. Je Verein mehrere Bankkonten (IBAN, BIC, Gläubiger-ID).
+- **Rechte je Verein:** jeder Endpunkt mit `#[RequirePermission]`, Vereinsauswahl im Kopf der App, Übergreifende Suche nur für Personen, die beide Vereine verwalten.
+- **Automatische Rechte:** Vereinsfunktion (Mitglied/Kassierer/Vorstand) wird je Verein einer App-Rolle zugeordnet; gilt nur für aktive Mitglieder mit verknüpftem Nextcloud-Konto.
+- **Nextcloud-Konto mit Mitglied verknüpfen** per Dropdown mit Namensvorschlägen.
+- **Selbstauskunft „Meine Daten“** (nur lesend) inkl. JSON-Download.
+- **SEPA-Lastschrift je Verein und Konto:** Mandatsdaten (Referenz, Datum, Datei im Team-Ordner) je Mitgliedschaft; nicht einziehbare Beiträge werden mit Grund gemeldet; nach dem Export können genau die exportierten Beiträge als bezahlt markiert werden.
+- **Beitragskategorien** je Verein (0 € = beitragsfrei) und **Beitragslauf** mit Vorschau, wiederholbar ohne Doppelbuchungen.
+- **„Überfällige markieren“** für offene Beiträge mit abgelaufener Fälligkeit.
+- **Kalender je Verein**, nur intern mit festgelegten Nextcloud-Gruppen geteilt.
+- E-Mail-Adresse von Mitgliedern ist optional.
+
+### 🐛 Behoben
+- Rechteprüfung wurde von Nextcloud ignoriert (Rückgabewert der Middleware); sie wirft jetzt eine Ausnahme.
+- SEPA-Export übersprang Beiträge ohne IBAN stillschweigend.
+- Beitragsfreie Kategorien (0 €) ließen sich nicht speichern.
+- Massen-Statusänderungen liefen zeilenweise und brauchten Minuten; jetzt eine SQL-Anweisung.
+
+### 🔧 Technik
+- 280 Unit-Tests (PHPUnit 10, `nextcloud/ocp`-Stubs), CI in `.github/workflows/tests.yml`.
+- Migrationen `Version0200xx`; `CLAUDE.md` und `docs/ARCHITEKTUR.md` für Mitarbeitende.
+
+---
 ## [0.2.0-beta] - 2025-12-01
 
 ### ✨ Features

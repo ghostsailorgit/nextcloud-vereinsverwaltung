@@ -71,6 +71,9 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
     public link (member birth dates are personal data).
 
 ## Working conventions
+- **With every feature/fix/release update all three: `CHANGELOG.md` (new entry at the top, matching the
+  `info.xml` version), `ROADMAP.md` (table "Stand dieses Forks" at the top) and the roadmap below.** Also
+  `docs/ARCHITEKTUR.md` when the data model or rules change. Do this in the same commit as the change.
 - Ask before anything hard to reverse or outward-facing (data changes on a live instance, pushing, posting).
 - Personal data: when a request could mean "public", "any user" or "specific group", ask which.
 - Test security-relevant changes with a **real non-admin Nextcloud account** (temporary, deleted afterwards);
