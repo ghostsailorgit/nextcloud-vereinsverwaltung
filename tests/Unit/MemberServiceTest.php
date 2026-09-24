@@ -196,23 +196,24 @@ class MemberServiceTest extends TestCase {
         $this->assertFalse($other->isFormer());
     }
 
-    // --- locking (see RoleService::derivedRoles())
+    // --- deactivating (see RoleService::derivedRoles(), FeeRunService, SepaService, MemberCalendarService)
 
-    public function testLockSetsTheLockedFlag(): void {
+    public function testDeactivateSetsTheFlagOnTheMembershipOfThisClub(): void {
         $this->updatable(8);
 
-        $member = $this->service->lock(1, 8);
+        $member = $this->service->deactivate(1, 8);
 
-        $this->assertTrue($member->getLocked());
+        $this->assertTrue($member->getMembership()->getDeactivated());
+        $this->assertTrue($member->getDeactivated());
     }
 
-    public function testUnlockClearsTheLockedFlag(): void {
+    public function testActivateClearsTheFlag(): void {
         $member = $this->updatable(8);
-        $member->setLocked(true);
+        $member->getMembership()->setDeactivated(true);
 
-        $result = $this->service->unlock(1, 8);
+        $result = $this->service->activate(1, 8);
 
-        $this->assertFalse($result->getLocked());
+        $this->assertFalse($result->getDeactivated());
     }
 
     // --- linking a person to a Nextcloud account

@@ -109,8 +109,8 @@ export const api = {
   },
 
   // Generic methods for component flexibility
-  get(endpoint) {
-    return instance.get(endpoint)
+  get(endpoint, config) {
+    return instance.get(endpoint, config)
   },
   post(endpoint, data) {
     return instance.post(endpoint, data)

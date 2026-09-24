@@ -4,6 +4,7 @@ namespace OCA\Verein\Service;
 use Exception;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
 
@@ -39,7 +40,10 @@ class FeeService {
         string $dueDate,
         ?string $description = null
     ): Fee {
-        $this->assertMemberOfClub($clubId, $memberId);
+        $membership = $this->assertMemberOfClub($clubId, $memberId);
+        if ($membership->getDeactivated()) {
+            throw new Exception('Das Mitglied ist deaktiviert - für deaktivierte Mitglieder werden keine Beiträge angelegt');
+        }
 
         $fee = new Fee();
         $fee->setClubId($clubId);
@@ -125,9 +129,9 @@ class FeeService {
     /**
      * @throws Exception if the person is not a member of the club
      */
-    private function assertMemberOfClub(int $clubId, int $memberId): void {
+    private function assertMemberOfClub(int $clubId, int $memberId): Membership {
         try {
-            $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
+            return $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
         } catch (DoesNotExistException $e) {
             throw new Exception('Das Mitglied gehört nicht zu diesem Verein');
         }

@@ -142,7 +142,6 @@ class MemberController extends Controller {
      * Adds an existing person (from another club) to this club.
      *
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function attach() {
@@ -205,7 +204,6 @@ class MemberController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function create() {
@@ -280,7 +278,6 @@ class MemberController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function update($id) {
@@ -329,7 +326,6 @@ class MemberController extends Controller {
      * no other club has them).
      *
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function destroy($id) {
@@ -348,18 +344,20 @@ class MemberController extends Controller {
     }
 
     /**
-     * Locking/unlocking suppresses automatic rights the same way changing a
-     * member's role or account link does (RoleService::derivedRoles()), so
-     * it needs the same permission (see canManageRoles()) - not just
-     * 'verein.member.manage'.
+     * Deactivating stops payments and birthday reminders and suspends the
+     * automatic rights derived from the membership (RoleService::derivedRoles()).
+     * Like changing a member's role or account link it can take rights away and
+     * give them back, so it needs the same permission (see canManageRoles()) -
+     * not just 'verein.member.manage'.
+     *
+     * Deliberately no @NoCSRFRequired: it changes data (RoutePermissionsTest).
      *
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function lock($id) {
+    public function deactivate($id) {
         try {
-            $member = $this->memberService->lock($this->clubId(), (int)$id);
+            $member = $this->memberService->deactivate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (Exception $e) {
             return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
@@ -368,18 +366,16 @@ class MemberController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function unlock($id) {
+    public function activate($id) {
         try {
-            $member = $this->memberService->unlock($this->clubId(), (int)$id);
+            $member = $this->memberService->activate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (Exception $e) {
             return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
         }
     }
-
     /**
      * The member as JSON plus the display name of the linked Nextcloud
      * account (falls back to the uid if that account no longer exists).

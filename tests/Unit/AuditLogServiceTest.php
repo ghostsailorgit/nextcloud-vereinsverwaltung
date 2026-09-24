@@ -76,4 +76,38 @@ class AuditLogServiceTest extends TestCase {
         $this->assertNull($stored->getActorUserId());
         $this->assertNull($stored->getChanges());
     }
-}
+
+    public function testPeopleRelatedEntityTypesAreKeptLong(): void {
+        foreach (['member', 'membership', 'fee', 'user_role'] as $type) {
+            $this->assertContains($type, AuditLogService::LONG_RETENTION_TYPES, $type);
+        }
+        foreach (['club', 'club_account', 'fee_rate', 'fee_run', 'role'] as $type) {
+            $this->assertNotContains($type, AuditLogService::LONG_RETENTION_TYPES, $type);
+        }
+    }
+
+    public function testCutoffsAreThirtyDaysAndTenYearsBack(): void {
+        $now = strtotime('2026-09-30 12:00:00');
+
+        $cut = AuditLogService::cutoffs($now);
+
+        $this->assertSame('2026-08-31 12:00:00', $cut['short']);
+        $this->assertSame('2016-09-30 12:00:00', $cut['long']);
+    }
+
+    public function testPruneDeletesShortLivedTypesAfterThirtyDaysAndEverythingAfterTenYears(): void {
+        $now = strtotime('2026-09-30 12:00:00');
+        $calls = [];
+        $this->mapper->method('deleteBefore')->willReturnCallback(function (string $cutoff, ?array $types = null, bool $include = true) use (&$calls) {
+            $calls[] = [$cutoff, $types, $include];
+            return count($calls) === 1 ? 5 : 2;
+        });
+
+        $deleted = $this->service->prune($now);
+
+        $this->assertSame(7, $deleted);
+        $this->assertSame([
+            ['2026-08-31 12:00:00', AuditLogService::LONG_RETENTION_TYPES, false],
+            ['2016-09-30 12:00:00', null, true],
+        ], $calls);
+    }}

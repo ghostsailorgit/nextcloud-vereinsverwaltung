@@ -10,24 +10,19 @@ use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
 
 /**
- * Locking a member (revokes automatic role derivation without deleting
- * anything) and a generic audit log for who changed what, when.
+ * A generic audit log for who changed what, when. (The member deactivation flag
+ * lives in Version020007.)
  */
 class Version020006Date20260929000000 extends SimpleMigrationStep {
     #[\Override]
     public function name(): string {
-        return 'Add verein_members.locked and the verein_audit_log table';
+        return 'Add the verein_audit_log table';
     }
 
     #[\Override]
     public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ?ISchemaWrapper {
         /** @var ISchemaWrapper $schema */
         $schema = $schemaClosure();
-
-        $members = $schema->getTable('verein_members');
-        if (!$members->hasColumn('locked')) {
-            $members->addColumn('locked', 'boolean', ['notnull' => true, 'default' => false]);
-        }
 
         if (!$schema->hasTable('verein_audit_log')) {
             $table = $schema->createTable('verein_audit_log');

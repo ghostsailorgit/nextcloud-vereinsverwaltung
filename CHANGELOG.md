@@ -6,17 +6,69 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
-## [0.10.0-beta] - 2026-09-29
+## [0.12.0-beta] - 2026-09-29
 
-Erster Teil von Datenschutz (Roadmap-Punkt 4): Mitglieder sperren, Änderungsprotokoll.
+Erster Teil von Datenschutz (Roadmap-Punkt 4): Mitglieder deaktivieren, Änderungsprotokoll.
 
 ### ✨ Neu
-- **Mitglieder sperren/entsperren** (`verein.role.manage`, wie eine Rollenänderung): setzt die automatisch aus der Vereinsfunktion abgeleiteten Rechte sofort aus, ohne etwas zu löschen; explizit zugewiesene Rollen bleiben bestehen.
-- **Änderungsprotokoll** (`verein_audit_log`): erfasst wer wann was geändert hat, mit Feld-Diff, für Mitglieder/Mitgliedschaften, Beiträge, Beitragskategorien, Vereine (inkl. Bankkonten, Rollen-Mapping) und Rollen/Zuweisungen. Lesbar über `GET /audit-log` (`verein.audit.view`, je Verein).
+- **Mitglieder deaktivieren/aktivieren** (`verein.role.manage`, wie eine Rollenänderung). Ein deaktiviertes Mitglied wird aus dem Beitragslauf und dem SEPA-Export ausgenommen (mit Grund gemeldet), bekommt keine neuen Beiträge, hat keine Geburtstags-/Jubiläumstermine im Kalender mehr und erhält keine automatisch abgeleiteten Rechte; explizit zugewiesene Rollen bleiben. Nichts wird gelöscht.
+- **Änderungsprotokoll** (`verein_audit_log`): erfasst wer wann was geändert hat, mit Feld-Diff, für Mitglieder/Mitgliedschaften, Beiträge, Beitragskategorien, Vereine (inkl. Bankkonten, Rollen-Mapping) und Rollen/Zuweisungen. Abrufbar per API (`verein.audit.view`).
+- **Aufbewahrung:** Einträge zu personenbezogenen Daten (Mitglieder, Mitgliedschaften, Beiträge, Rollenzuweisungen) 10 Jahre, alle übrigen 30 Tage; ein täglicher Hintergrundjob räumt auf.
+- Das Änderungsprotokoll ist Teil der Sicherung; ältere Sicherungen ohne diese Tabelle lassen sich weiter zurückspielen (das Protokoll bleibt dann unberührt).
+
+### 🔒 Sicherheit
+- Die neuen schreibenden Endpunkte verlangen das CSRF-Token.
 
 ### 📋 Noch offen (Rest von Punkt 4)
-- Mitglieder löschen/anonymisieren (bewusst zurückgestellt: Aufbewahrungspflicht für Buchhaltungsbelege).
-- Datenexport einer Person durch einen Admin (bisher nur die Selbstauskunft der Person selbst, `/me/export`).
+- Mitglieder löschen/anonymisieren (zurückgestellt: Aufbewahrungspflicht für Buchhaltungsbelege).
+- Datenexport einer Person durch einen Admin (bisher nur die Selbstauskunft, `/me/export`).
+
+---
+
+## [0.11.2-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Sicherungsliste: fünf Einträge sichtbar, dann Scrollen (die globale Tabellen-Regel der App überschrieb die Zeilenhöhe).
+
+---
+
+## [0.11.1-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Die Sicherungsliste zeigte wegen fremder Tabellen-Styles nur etwa 4 statt 5 Einträge vor dem Scrollen.
+
+---
+
+## [0.11.0-beta] - 2026-09-25
+
+### ✨ Neu
+- **Wiederherstellung aus einer Sicherung** per `occ verein:backup:restore <Dateiname oder Pfad>` (zeigt vorher Zeilenzahlen jetzt/Sicherung, fragt nach, legt automatisch eine Sicherung des aktuellen Stands an und ersetzt alle Vereinsdaten in einer Transaktion; bei einem Fehler bleibt alles unverändert). `occ verein:backup:list` listet die Sicherungen.
+- Die Liste der Sicherungen zeigt 5 Einträge, darüber wird gescrollt.
+
+---
+
+## [0.10.0-beta] - 2026-09-25
+
+### ✨ Neu
+- **Automatische Sicherung:** täglich (Nextcloud-Hintergrundjob) werden alle Vereinstabellen als komprimierte JSON-Datei im App-Datenordner gesichert. Sicherungen älter als 30 Tage werden gelöscht (mindestens die neuesten 7 bleiben immer, höchstens 100).
+- Im Reiter „Verein“ (nur Nextcloud-Administratoren): Liste der Sicherungen, „Jetzt sichern“ und Download.
+- Läuft ohne `mysqldump` oder Shell und damit auf jeder von Nextcloud unterstützten Datenbank.
+
+---
+
+## [0.9.2-beta] - 2026-09-25
+
+### 🔒 Sicherheit
+- Schreibende Endpunkte (Mitglieder, Beiträge, Beitragslauf, Rollenzuweisung) verlangen wieder das CSRF-Token. Vorher war es überall abgeschaltet; ein Test verhindert das künftig.
+- CSV-Export schützt vor Formelinjektion: Text, der mit `=`, `+`, `-` oder `@` beginnt, wird mit einem Apostroph entschärft.
+- Rollen lassen sich nur noch an existierende Nextcloud-Konten vergeben.
+
+---
+
+## [0.9.1-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Die Suche im Dropdown „Verknüpftes Nextcloud-Konto“ und die vereinsübergreifende Personensuche fanden nichts: `api.get()` gab die Suchparameter nicht weiter.
 
 ---
 

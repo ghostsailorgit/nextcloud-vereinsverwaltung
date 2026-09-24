@@ -4,7 +4,7 @@
 
 ---
 
-## Stand dieses Forks (aktuell, Version 0.10.0-beta)
+## Stand dieses Forks (aktuell, Version 0.12.0-beta)
 
 Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind teils überholt. Maßgeblich ist diese Liste.
 
@@ -15,9 +15,10 @@ Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind 
 | 3 | Beiträge im Alltag: Kategorien, Beitragslauf, SEPA-Export mit „bezahlt“-Markierung, Überfällige | ✅ fertig |
 | 3a | Mahnschreiben / Mahnstufen, anteilige Beiträge bei Eintritt im Jahr | 📋 offen |
 | 2 | Echte Daten: Vereinskonto und Gläubiger-ID, echte IBANs und Mandate, offene Importfragen (Verstorbene/Ausgetretene, doppelte Einträge); Testdaten vorher entfernen | 🔧 überwiegend manuell |
-| 4 | Datenschutz: Mitglieder sperren ✅, Änderungsprotokoll (Members/Fees/Rollen/Vereine) ✅ | 🔧 teilweise |
-| 4a | Noch offen: Löschen/Anonymisieren von Mitgliedern, Datenexport je Person durch einen Admin (nicht nur Selbstauskunft) | 📋 offen |
-| 5 | Aufräumen und Veröffentlichung: schlanke README/Doku (viele veraltete Upstream-Dateien), saubere 404/500-Codes, automatische Sicherung der Vereinstabellen, veraltete Integrationstests | 📋 offen |
+| 4 | Datenschutz: Mitglieder deaktivieren ✅, Änderungsprotokoll (Aufbewahrung 10 Jahre bzw. 30 Tage) ✅ | 🔧 teilweise |
+| 4a | Noch offen: Löschen/Anonymisieren von Mitgliedern, Datenexport je Person durch einen Admin (nicht nur Selbstauskunft) | 👤 Kollege |
+| 5a | Automatische Sicherung der Vereinstabellen (täglich, 30 Tage, Knopf „Jetzt sichern“) und Wiederherstellung per `occ` | ✅ fertig |
+| 5 | Aufräumen und Veröffentlichung: schlanke README/Doku (viele veraltete Upstream-Dateien), saubere 404/500-Codes, veraltete Integrationstests | 📋 offen |
 
 Ideen ohne Termin: Vorstand → App-Rolle zuordnen, JS-Bundle (3,3 MB) verkleinern, Reaktion auf GitHub-Issues.
 

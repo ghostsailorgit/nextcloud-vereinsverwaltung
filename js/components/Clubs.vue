@@ -135,6 +135,8 @@
       </form>
     </div>
 
+    <Backups v-if="isAdmin" />
+
     <!-- Nextcloud administrators: add / remove clubs -->
     <div v-if="isAdmin" class="card">
       <h3>Vereine verwalten (Administrator)</h3>
@@ -158,6 +160,7 @@ import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
+import Backups from './Backups.vue'
 import { api } from '../api'
 import { extractErrorMessage } from '../errorMessage'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
@@ -166,7 +169,7 @@ const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId
 
 export default {
   name: 'Clubs',
-  components: { NcButton, NcTextField, NcSelect },
+  components: { NcButton, NcTextField, NcSelect, Backups },
   setup() {
     const busy = ref(false)
     const newClubName = ref('')

@@ -48,6 +48,12 @@ class CsvExporter {
             // Convert to string
             $field = (string)$field;
 
+            // Spreadsheet formula injection: text that Excel/LibreOffice would run as a
+            // formula (names, addresses and notes are typed in by members' managers)
+            if (preg_match('/^[=+\-@\t\r]/', $field) === 1 && !is_numeric($field)) {
+                $field = "'" . $field;
+            }
+
             // Escape quotes by doubling them
             $field = str_replace('"', '""', $field);
 

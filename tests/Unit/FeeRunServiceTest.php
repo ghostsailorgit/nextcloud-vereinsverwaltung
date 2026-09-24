@@ -123,6 +123,18 @@ class FeeRunServiceTest extends TestCase {
         $this->assertStringContainsString('schon vorhanden', $reasons['Schon Bezahlt']);
     }
 
+    public function testDeactivatedMembersGetNoFee(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Ok', 'Aktiv');
+        $this->member(11, 'Pausiert', 'Mitglied');
+        $this->memberList[1]->getMembership()->setDeactivated(true);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Ok Aktiv'], $this->names($plan['included']));
+        $this->assertSame(['Pausiert Mitglied' => 'deaktiviert'], array_column($plan['skipped'], 'reason', 'name'));
+    }
+
     public function testMembersWithoutCategoryAreSkippedWhenNoDefaultExists(): void {
         $this->rate(2, 'Kinder', 8.5);
         $this->member(10, 'Anna', 'Ohne');

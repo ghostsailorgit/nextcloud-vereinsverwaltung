@@ -114,7 +114,9 @@ class SepaService {
             }
 
             $reason = null;
-            if (empty($member->getIban())) {
+            if ($membership !== null && $membership->getDeactivated()) {
+                $reason = 'Mitglied deaktiviert';
+            } elseif (empty($member->getIban())) {
                 $reason = 'keine IBAN hinterlegt';
             } elseif ($membership === null || empty($membership->getMandateDate())) {
                 $reason = 'kein unterschriebenes SEPA-Mandat erfasst';

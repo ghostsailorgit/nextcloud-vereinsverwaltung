@@ -21,7 +21,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 |---|---|
 | `verein_clubs` | Name (eindeutig), Team-Ordner, Kalendergruppen, Zuordnung „Vereinsfunktion → App-Rolle“ |
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
-| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `locked` (siehe „Sperren“) |
+| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
 | `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge |
@@ -45,19 +45,28 @@ Jeder Endpunkt ist mit `#[RequirePermission('verein.…')]` geschützt; ein Test
 vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/delete/export`,
 `verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`.
 
-## Sperren
-Ein Mitglied lässt sich sperren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“ wie eine
-Rollenänderung - eine gesperrte Person könnte sonst durch Entsperren ihre eigenen automatischen Rechte
-wiederherstellen, wenn sie das Sperren selbst dürfte). Gesperrt heißt: die automatische Rechtevergabe aus der
-Vereinsfunktion setzt sofort aus - explizit zugewiesene Rollen bleiben bestehen. Es wird nichts gelöscht;
-Entsperren macht es rückgängig. Vorgesehen z. B. bei ruhendem Konto oder laufender Klärung, nicht als Ersatz
-für Austritt.
+## Mitglieder deaktivieren
+Ein Mitglied lässt sich in einem Verein deaktivieren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“).
+Das gilt für die Mitgliedschaft in diesem Verein, nicht für die Person in allen Vereinen. Ein deaktiviertes Mitglied
+- wird im Beitragslauf übersprungen (mit Grund „deaktiviert“), bekommt keine neuen Beiträge (auch nicht von Hand),
+- wird im SEPA-Export nicht eingezogen (Grund „Mitglied deaktiviert“; bereits offene Beiträge bleiben bestehen),
+- hat keine Geburtstags- und Jubiläumstermine mehr im Vereinskalender,
+- bekommt keine automatisch aus der Vereinsfunktion abgeleiteten Rechte mehr; explizit zugewiesene Rollen bleiben.
+Es wird nichts gelöscht, „Aktivieren“ stellt alles wieder her. Das Recht „Rollen verwalten“ ist nötig, weil sich damit
+Rechte entziehen und zurückgeben lassen (eine deaktivierte Person könnte sich sonst selbst wieder aktivieren).
+Vorgesehen für ruhende Mitgliedschaften oder laufende Klärungen, nicht als Ersatz für den Austritt.
 
 ## Änderungsprotokoll
 Jede Änderung an Mitgliedern/Mitgliedschaften, Beiträgen, Beitragskategorien, Vereinen (inkl. Bankkonten,
 Rollen-Zuordnung) und Rollen/Zuweisungen wird protokolliert: wer (Nextcloud-Konto, Anzeigename zum Zeitpunkt
-der Änderung), wann, welche Aktion (anlegen/ändern/löschen/sperren/entsperren/…) und bei Änderungen welche
-Felder von welchem auf welchen Wert. Rein anfügend, nichts wird nachträglich bearbeitet. Einsehbar je Verein
+der Änderung), wann, welche Aktion (anlegen/ändern/löschen/deaktivieren/aktivieren/…) und bei Änderungen welche
+Felder von welchem auf welchen Wert. Rein anfügend, nichts wird nachträglich bearbeitet.
+**Aufbewahrung:** Einträge zu Mitgliedern, Mitgliedschaften, Beiträgen und Rollenzuweisungen (also zu Personen, ihren
+Zahlungen und Zugriffsrechten) werden 10 Jahre aufbewahrt, alle übrigen (Vereine, Bankkonten, Beitragskategorien,
+Beitragsläufe, Rollendefinitionen) 30 Tage. Ein täglicher Hintergrundjob (`AuditLogCleanupJob`) löscht Abgelaufenes;
+die Zuordnung steht in `AuditLogService::LONG_RETENTION_TYPES`. Das Protokoll ist Teil der Sicherung.
+Hinweis: Es speichert auch die alten und neuen Werte personenbezogener Felder (z. B. IBAN, Anschrift) - bei einer späteren
+Lösch-/Anonymisierungsfunktion müssen die Protokolleinträge der Person mitbehandelt werden. Einsehbar je Verein
 über die API (`GET /audit-log`, Recht „Änderungsprotokoll einsehen“); eine eigene Ansicht in der Oberfläche
 gibt es noch nicht.
 
@@ -84,6 +93,16 @@ selbst geänderten IBANs).
   Datenbank steht nur der Pfad.
 - Sequenztyp immer `RCUR`, fehlende BIC wird als `NOTPROVIDED` (IBAN-only) gesendet.
 
+## Sicherung
+Täglich läuft ein Nextcloud-Hintergrundjob (`DailyBackupJob`), der alle Vereinstabellen als komprimierte JSON-Datei im
+App-Datenordner ablegt (`BackupService`). Alte Sicherungen werden nach 30 Tagen gelöscht, die neuesten 7 bleiben immer erhalten,
+höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im Reiter „Verein“, können sofort sichern und
+herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
+Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` (nur per Kommandozeile, bewusst nicht in der
+Weboberfläche). Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
+Kalender und ihre Freigaben sind nicht Teil der Sicherung; sie werden beim nächsten Speichern eines Mitglieds angeglichen.
+Getestet ist das Zurückspielen mit MariaDB/MySQL; für PostgreSQL werden die ID-Zähler nachgezogen, aber nicht praktisch geprüft.
+
 ## Kalender
 Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Jubiläen aktiver
 Mitglieder. Er wird nur intern mit den je Verein festgelegten Nextcloud-Gruppen geteilt, nie öffentlich.
@@ -106,3 +125,9 @@ vergleichen. Für jede Veröffentlichung `<version>` in `appinfo/info.xml` erhö
 
 ## Datenschutz im Repo
 Keine echten Mitgliederdaten, Domains, Servernamen oder Firmenbezüge in Code, Tests, Doku oder Commit-Texten.
+
+## Sicherheit
+- Rechte je Endpunkt (`#[RequirePermission]`), Mandantentrennung über `clubId` (jede ID-Abfrage prüft die Vereinszugehörigkeit).
+- Schreibende Endpunkte behalten den CSRF-Schutz von Nextcloud; nur lesende Endpunkte und Downloads dürfen `@NoCSRFRequired` tragen (Test).
+- SQL nur über Query-Builder mit Parametern, SEPA-XML mit Escaping, CSV-Export gegen Formelinjektion geschützt.
+- Entscheidung (bewusst so belassen): Personen sind vereinsübergreifend geteilt. Wer in Verein A Mitglieder verwalten darf, kann die Stammdaten einer Person ändern, die auch in Verein B ist (Name, IBAN, „verstorben“).

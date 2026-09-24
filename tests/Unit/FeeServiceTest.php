@@ -36,6 +36,16 @@ class FeeServiceTest extends TestCase {
         );
     }
 
+    public function testNoNewFeeForADeactivatedMember(): void {
+        $ms = new Membership();
+        $ms->setDeactivated(true);
+        $this->memberships->method('findByMemberAndClub')->willReturn($ms);
+        $this->fees->expects($this->never())->method('insert');
+
+        $this->expectExceptionMessage('deaktiviert');
+        $this->service->create(4, 9, 12.0, 'open', '2026-03-31');
+    }
+
     public function testFindAllOnlyAsksForTheGivenClub(): void {
         $this->fees->expects($this->once())->method('findByClub')->with(4)->willReturn([]);
 

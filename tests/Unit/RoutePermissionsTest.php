@@ -30,6 +30,9 @@ class RoutePermissionsTest extends TestCase {
         'role#store',
         'role#update',
         'role#destroy',
+        'backup#index',
+        'backup#create',
+        'backup#download',
     ];
 
     /** @return array<string, array{string, string}> */
@@ -81,6 +84,28 @@ class RoutePermissionsTest extends TestCase {
         foreach (array_merge(array_keys(self::OPEN), self::ADMIN_ONLY) as $key) {
             $this->assertContains($key, $known, "$key is on an exception list but is not a route anymore");
         }
+    }
+
+    /**
+     * @dataProvider routes
+     */
+    public function testStateChangingRoutesKeepTheCsrfCheck(string $controller, string $method): void {
+        $config = require __DIR__ . '/../../appinfo/routes.php';
+        foreach ($config['routes'] as $route) {
+            if ($route['name'] !== $controller . '#' . $method) {
+                continue;
+            }
+            if (strtoupper($route['verb']) === 'GET') {
+                $this->addToAssertionCount(1);
+                return;
+            }
+        }
+        $doc = (string)$this->reflect($controller, $method)->getDocComment();
+        $this->assertSame(
+            0,
+            preg_match('/^\s*\*\s*@NoCSRFRequired\b/m', $doc),
+            "$controller#$method changes data, so it must not be marked @NoCSRFRequired (a sibling site could forge requests)"
+        );
     }
 
     public function testClubScopedRoutesCanGetTheirClubId(): void {

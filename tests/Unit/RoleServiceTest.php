@@ -262,25 +262,24 @@ class RoleServiceTest extends TestCase {
         $this->assertFalse($this->service->userHasPermission('dead', 'verein.member.manage', 10), 'deceased');
     }
 
-    public function testLockingAMemberSuspendsDerivedRightsWithoutTouchingExplicitAssignments(): void {
+    public function testDeactivatingSuspendsDerivedRightsOfThatMembershipAndKeepsExplicitAssignments(): void {
         $this->role(1, ['verein.member.manage']);
         $this->role(2, ['verein.finance.read']);
         $this->club(10, ['admin' => 1]);
-        $locked = $this->person(6, 'locked');
-        $locked->setLocked(true);
-        $this->linkedPerson('locked', $locked, $this->membershipIn(6, 10, 'admin'));
+        $ms = $this->membershipIn(6, 10, 'admin');
+        $ms->setDeactivated(true);
+        $this->linkedPerson('paused', $this->person(6, 'paused'), $ms);
         $this->assignments[] = (function () {
             $a = new UserRole();
-            $a->setUserId('locked');
+            $a->setUserId('paused');
             $a->setRoleId(2);
             $a->setClubId(10);
             return $a;
         })();
 
-        $this->assertFalse($this->service->userHasPermission('locked', 'verein.member.manage', 10), 'derived right suspended while locked');
-        $this->assertTrue($this->service->userHasPermission('locked', 'verein.finance.read', 10), 'explicit assignment still applies');
+        $this->assertFalse($this->service->userHasPermission('paused', 'verein.member.manage', 10), 'derived right suspended while deactivated');
+        $this->assertTrue($this->service->userHasPermission('paused', 'verein.finance.read', 10), 'explicit assignment still applies');
     }
-
     public function testMappingToAMissingRoleGrantsNothing(): void {
         $this->club(10, ['admin' => 99]);
         $this->linkedPerson('max', $this->person(5, 'max'), $this->membershipIn(5, 10, 'admin'));

@@ -84,6 +84,10 @@ class FeeRunService {
                 $skip('ausgetreten oder verstorben');
                 continue;
             }
+            if ($member->getDeactivated()) {
+                $skip('deaktiviert');
+                continue;
+            }
             $join = $member->getJoinDate();
             if (!empty($join) && (int)substr($join, 0, 4) > $year) {
                 $skip('Eintritt erst nach ' . $year);

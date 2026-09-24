@@ -329,14 +329,14 @@ class RoleService {
      * membership roles (Mitglied/Kassierer/Vorstand) to an app role (see
      * Club::getRoleMappingArray()). Nothing is derived unless a club has
      * configured such a mapping, and nothing once the person has left,
-     * passed away, or been locked (MemberService::lock()) - the rights
-     * disappear together with the membership.
+     * passed away, or the membership was deactivated (MemberService::deactivate())
+     * - the rights disappear together with the membership.
      *
      * @return Role[]
      */
     private function derivedRoles(string $userId, ?int $clubId): array {
         $person = $this->memberMapper->findByUserId($userId);
-        if ($person === null || $person->getDeceased() || $person->getLocked()) {
+        if ($person === null || $person->getDeceased()) {
             return [];
         }
 
@@ -345,7 +345,7 @@ class RoleService {
             if ($clubId !== null && $membership->getClubId() !== $clubId) {
                 continue;
             }
-            if (!empty($membership->getLeaveDate())) {
+            if (!empty($membership->getLeaveDate()) || $membership->getDeactivated()) {
                 continue;
             }
             $role = $this->mappedRole($membership->getClubId(), $membership->getRole());

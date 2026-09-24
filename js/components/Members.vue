@@ -246,33 +246,33 @@
               <td class="status-cell">
                 <span v-if="member.deceased" class="status-badge deceased">Verstorben</span>
                 <span v-else-if="member.isFormer" class="status-badge former">Ehemalig</span>
+                <span
+                  v-else-if="member.deactivated"
+                  class="status-badge deactivated"
+                  title="Keine Beiträge, keine Geburtstagstermine und keine automatischen Rechte, bis das Mitglied wieder aktiviert wird"
+                >Deaktiviert</span>
                 <span v-else class="status-badge active">Aktiv</span>
                 <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
-                <span
-                  v-if="member.locked"
-                  class="status-badge locked"
-                  title="Automatische Rechte sind ausgesetzt, solange das Mitglied gesperrt ist"
-                >Gesperrt</span>
               </td>
               <td v-if="canManage" class="actions">
                 <NcButton @click="startEdit(member)" variant="secondary">
                   Bearbeiten
                 </NcButton>
                 <NcButton
-                  v-if="canManageRoles && member.locked"
-                  @click="unlockMember(member.id)"
+                  v-if="canManageRoles && member.deactivated"
+                  @click="activateMember(member.id)"
                   variant="secondary"
                   :disabled="loading"
                 >
-                  Entsperren
+                  Aktivieren
                 </NcButton>
                 <NcButton
                   v-else-if="canManageRoles"
-                  @click="lockMember(member.id)"
+                  @click="deactivateMember(member.id)"
                   variant="secondary"
                   :disabled="loading"
                 >
-                  Sperren
+                  Deaktivieren
                 </NcButton>
                 <NcButton
                   @click="deleteMember(member.id)"
@@ -588,31 +588,31 @@ export default {
       }
     }
 
-    const lockMember = async (id) => {
-      if (!confirm('Dieses Mitglied sperren? Automatisch abgeleitete Rechte (aus der Vereinsfunktion) entfallen sofort; explizit zugewiesene Rollen bleiben bestehen. Nichts wird gelöscht.')) return
+    const deactivateMember = async (id) => {
+      if (!confirm('Dieses Mitglied deaktivieren? Es wird nicht mehr für Beiträge und SEPA-Einzug berücksichtigt, die Geburtstags- und Jubiläumstermine entfallen und automatisch abgeleitete Rechte (aus der Vereinsfunktion) werden ausgesetzt. Nichts wird gelöscht; mit „Aktivieren“ ist alles wieder da.')) return
 
       loading.value = true
       try {
-        await api.post(`members/${id}/lock`)
-        showSuccess('Mitglied gesperrt')
+        await api.post(`members/${id}/deactivate`)
+        showSuccess('Mitglied deaktiviert')
         await fetchMembers()
       } catch (error) {
-        console.error('Error locking member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Sperren des Mitglieds'))
+        console.error('Error deactivating member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Deaktivieren des Mitglieds'))
       } finally {
         loading.value = false
       }
     }
 
-    const unlockMember = async (id) => {
+    const activateMember = async (id) => {
       loading.value = true
       try {
-        await api.post(`members/${id}/unlock`)
-        showSuccess('Mitglied entsperrt')
+        await api.post(`members/${id}/activate`)
+        showSuccess('Mitglied aktiviert')
         await fetchMembers()
       } catch (error) {
-        console.error('Error unlocking member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Entsperren des Mitglieds'))
+        console.error('Error activating member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Aktivieren des Mitglieds'))
       } finally {
         loading.value = false
       }
@@ -638,8 +638,8 @@ export default {
       startEdit,
       cancelEdit,
       deleteMember,
-      lockMember,
-      unlockMember,
+      deactivateMember,
+      activateMember,
       canManage,
       canManageRoles,
       feeRateOptions,
@@ -945,9 +945,9 @@ export default {
     color: var(--color-text-secondary);
   }
 
-  &.locked {
-    background: var(--color-error);
-    color: var(--color-primary-element-text);
+  &.deactivated {
+    background: var(--color-background-darker);
+    color: var(--color-text-maxcontrast);
   }
 
   &.founding {

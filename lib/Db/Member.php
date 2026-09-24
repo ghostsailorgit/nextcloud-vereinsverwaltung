@@ -31,8 +31,6 @@ use OCP\AppFramework\Db\Entity;
  * @method void setBirthDate(?string $birthDate)
  * @method bool getDeceased()
  * @method void setDeceased(bool $deceased)
- * @method bool getLocked()
- * @method void setLocked(bool $locked)
  * @method ?string getUserId()
  * @method void setUserId(?string $userId)
  * @method ?string getCreatedAt()
@@ -53,7 +51,6 @@ class Member extends Entity implements JsonSerializable {
     protected ?string $bic = null;
     protected ?string $birthDate = null;
     protected bool $deceased = false;
-    protected bool $locked = false;
     protected ?string $userId = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
@@ -68,7 +65,6 @@ class Member extends Entity implements JsonSerializable {
      */
     public function __construct() {
         $this->addType('deceased', 'bool');
-        $this->addType('locked', 'bool');
     }
 
     /**
@@ -97,6 +93,11 @@ class Member extends Entity implements JsonSerializable {
 
     public function getLeaveDate(): ?string {
         return $this->membership?->getLeaveDate();
+    }
+
+    /** Deactivated in the club this member was loaded for (see Membership::$deactivated). */
+    public function getDeactivated(): bool {
+        return $this->membership?->getDeactivated() ?? false;
     }
 
     public function getFoundingMember(): bool {
@@ -166,13 +167,13 @@ class Member extends Entity implements JsonSerializable {
             // Linked Nextcloud account (uid) or null; the display name is added by MemberController
             'userId' => $this->userId,
             'deceased' => $this->deceased,
-            'locked' => $this->locked,
             // Club-specific part (defaults when no club context is attached)
             'clubId' => $this->membership?->getClubId(),
             'role' => $this->getRole(),
             'joinDate' => $this->getJoinDate(),
             'leaveDate' => $this->getLeaveDate(),
             'foundingMember' => $this->getFoundingMember(),
+            'deactivated' => $this->getDeactivated(),
             'mandateReference' => $this->membership?->getMandateReference(),
             'mandateDate' => $this->membership?->getMandateDate(),
             'mandateFile' => $this->membership?->getMandateFile(),

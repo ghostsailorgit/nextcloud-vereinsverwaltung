@@ -7,6 +7,10 @@ return [
         // Dashboard data endpoints
         // Clubs (Vereine) and their bank accounts
         ['name' => 'club#index', 'url' => '/clubs', 'verb' => 'GET'],
+        // Backups of the club tables (Nextcloud administrators only)
+        ['name' => 'backup#index', 'url' => '/backups', 'verb' => 'GET'],
+        ['name' => 'backup#create', 'url' => '/backups', 'verb' => 'POST'],
+        ['name' => 'backup#download', 'url' => '/backups/{name}', 'verb' => 'GET', 'requirements' => ['name' => 'verein-backup-[0-9]{8}-[0-9]{6}\.json\.gz']],
         ['name' => 'club#create', 'url' => '/clubs', 'verb' => 'POST'],
         ['name' => 'club#update', 'url' => '/clubs/{clubId}', 'verb' => 'PUT'],
         ['name' => 'club#destroy', 'url' => '/clubs/{clubId}', 'verb' => 'DELETE'],
@@ -32,8 +36,8 @@ return [
         ['name' => 'member#show', 'url' => '/members/{id}', 'verb' => 'GET'],
         ['name' => 'member#update', 'url' => '/members/{id}', 'verb' => 'PUT'],
         ['name' => 'member#destroy', 'url' => '/members/{id}', 'verb' => 'DELETE'],
-        ['name' => 'member#lock', 'url' => '/members/{id}/lock', 'verb' => 'POST'],
-        ['name' => 'member#unlock', 'url' => '/members/{id}/unlock', 'verb' => 'POST'],
+        ['name' => 'member#deactivate', 'url' => '/members/{id}/deactivate', 'verb' => 'POST'],
+        ['name' => 'member#activate', 'url' => '/members/{id}/activate', 'verb' => 'POST'],
         
         ['name' => 'finance#index', 'url' => '/finance', 'verb' => 'GET'],
         ['name' => 'finance#markPaid', 'url' => '/finance/mark-paid', 'verb' => 'POST'],

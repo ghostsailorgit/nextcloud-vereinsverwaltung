@@ -18,6 +18,14 @@ use OCP\IUserSession;
  * construct a service directly are unaffected.
  */
 class AuditLogService {
+    /**
+     * Entity types about people - their data, payments and access rights. Entries of these
+     * types are kept for LONG_RETENTION_YEARS, everything else (clubs, bank accounts, fee
+     * categories, fee runs, role definitions) only for SHORT_RETENTION_DAYS.
+     */
+    public const LONG_RETENTION_TYPES = ['member', 'membership', 'fee', 'user_role'];
+    public const LONG_RETENTION_YEARS = 10;
+    public const SHORT_RETENTION_DAYS = 30;
     public function __construct(
         private AuditLogMapper $mapper,
         private IUserSession $userSession
@@ -42,6 +50,32 @@ class AuditLogService {
         $entry->setChanges($changes === [] ? null : json_encode($changes, JSON_UNESCAPED_UNICODE));
         $entry->setCreatedAt(date('Y-m-d H:i:s'));
         $this->mapper->insert($entry);
+    }
+
+    /**
+     * Cut-off timestamps ("Y-m-d H:i:s"): entries older than 'short' are deleted for the
+     * short-lived entity types, entries older than 'long' for all types.
+     *
+     * @return array{short: string, long: string}
+     */
+    public static function cutoffs(int $now): array {
+        $t = (new \DateTimeImmutable('@' . $now))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+        return [
+            'short' => $t->modify('-' . self::SHORT_RETENTION_DAYS . ' days')->format('Y-m-d H:i:s'),
+            'long' => $t->modify('-' . self::LONG_RETENTION_YEARS . ' years')->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Deletes entries past their retention period (see LONG_RETENTION_TYPES).
+     *
+     * @return int number of deleted entries
+     */
+    public function prune(?int $now = null): int {
+        $cut = self::cutoffs($now ?? time());
+        $deleted = $this->mapper->deleteBefore($cut['short'], self::LONG_RETENTION_TYPES, false);
+        $deleted += $this->mapper->deleteBefore($cut['long']);
+        return $deleted;
     }
 
     /**

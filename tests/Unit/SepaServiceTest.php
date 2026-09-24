@@ -114,6 +114,21 @@ class SepaServiceTest extends TestCase {
         $this->assertStringContainsString('Mandat', $reasons['Carla OhneMandat']);
     }
 
+    public function testDeactivatedMembersAreNotCollectedEvenWithIbanAndMandate(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 12.5);
+        $this->person(2, 'Paula', 'Pausiert', 'DE02120300000000202051');
+        $this->mandate(2, '2021-01-05');
+        $this->membershipsByMember[2]->setDeactivated(true);
+        $this->fee(11, 2, 7.0);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(1, $preview['transactionCount']);
+        $this->assertSame(['Paula Pausiert' => 'Mitglied deaktiviert'], array_column($preview['skipped'], 'reason', 'memberName'));
+    }
+
     public function testMemberWithoutAnyMembershipInTheClubIsSkipped(): void {
         $this->person(1, 'Anna', 'Fremd', 'DE02120300000000202051');
         $this->fee(10, 1, 5.0); // no membership registered for anna in this club

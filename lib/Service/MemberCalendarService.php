@@ -57,7 +57,7 @@ class MemberCalendarService {
      * Creates/updates the birthday + join-anniversary reminders for a member
      * in the given club (the member must carry that club's membership - see
      * MemberMapper::findInClub()), or removes both once the member is
-     * former (left or deceased).
+     * former (left or deceased) or deactivated.
      */
     public function syncMember(Club $club, Member $member): void {
         try {
@@ -67,7 +67,7 @@ class MemberCalendarService {
             }
             $backend = $this->getBackend();
 
-            if ($member->isFormer()) {
+            if ($member->isFormer() || $member->getDeactivated()) {
                 $this->removeEvent($backend, $calendarId, $this->objectUri($member->getId(), 'birthday'));
                 $this->removeEvent($backend, $calendarId, $this->objectUri($member->getId(), 'anniversary'));
                 return;

@@ -11,6 +11,24 @@ class AuditLogMapper extends QBMapper {
     }
 
     /**
+     * Deletes entries created before $cutoff. With $types the deletion is limited to
+     * those entity types ($include = true) or spares them ($include = false).
+     *
+     * @param string[]|null $types
+     * @return int number of deleted entries
+     */
+    public function deleteBefore(string $cutoff, ?array $types = null, bool $include = true): int {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete($this->getTableName())
+            ->where($qb->expr()->lt('created_at', $qb->createNamedParameter($cutoff)));
+        if ($types !== null && $types !== []) {
+            $in = $qb->createNamedParameter($types, IQueryBuilder::PARAM_STR_ARRAY);
+            $qb->andWhere($include ? $qb->expr()->in('entity_type', $in) : $qb->expr()->notIn('entity_type', $in));
+        }
+        return $qb->executeStatement();
+    }
+
+    /**
      * Entries for one club, newest first, optionally narrowed to one entity
      * type and/or one entity id.
      *

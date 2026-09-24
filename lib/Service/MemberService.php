@@ -205,27 +205,33 @@ class MemberService {
     }
 
     /**
-     * Locks a member: their linked Nextcloud account (if any) immediately
-     * loses roles derived from club membership (RoleService::derivedRoles()).
-     * Explicit role assignments are untouched. Nothing is deleted; unlock()
-     * reverses it.
+     * Deactivates the member in this club. From then on the club no longer
+     * collects money from them (fee run, SEPA export, new fees), the birthday
+     * and anniversary reminders leave the calendar, and their linked
+     * Nextcloud account loses the roles derived from this membership
+     * (RoleService::derivedRoles()); explicit role assignments stay.
+     * Nothing is deleted, activate() reverses it.
      */
-    public function lock(int $clubId, int $id): Member {
-        $member = $this->find($clubId, $id);
-        $member->setLocked(true);
-        $member = $this->mapper->update($member);
-        $this->auditLog?->record($clubId, 'member', $id, 'lock');
-        return $member;
+    public function deactivate(int $clubId, int $id): Member {
+        return $this->setDeactivated($clubId, $id, true);
     }
 
-    public function unlock(int $clubId, int $id): Member {
-        $member = $this->find($clubId, $id);
-        $member->setLocked(false);
-        $member = $this->mapper->update($member);
-        $this->auditLog?->record($clubId, 'member', $id, 'unlock');
-        return $member;
+    public function activate(int $clubId, int $id): Member {
+        return $this->setDeactivated($clubId, $id, false);
     }
 
+    private function setDeactivated(int $clubId, int $id, bool $deactivated): Member {
+        $member = $this->find($clubId, $id);
+        $membership = $member->getMembership();
+        if ($membership->getDeactivated() !== $deactivated) {
+            $membership->setDeactivated($deactivated);
+            $membership->setUpdatedAt(date('Y-m-d H:i:s'));
+            $member->setMembership($this->membershipMapper->update($membership));
+            $this->auditLog?->record($clubId, 'membership', $membership->getId(), $deactivated ? 'deactivate' : 'activate', ['memberId' => $id]);
+            $this->syncCalendar($clubId, $member);
+        }
+        return $member;
+    }
     private function logMemberChange(int $clubId, Member $member, array $before): void {
         if ($this->auditLog === null) {
             return;

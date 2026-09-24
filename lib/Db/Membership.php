@@ -18,6 +18,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setJoinDate(?string $joinDate)
  * @method ?string getLeaveDate()
  * @method void setLeaveDate(?string $leaveDate)
+ * @method bool getDeactivated()
+ * @method void setDeactivated(bool $deactivated)
  * @method bool getFoundingMember()
  * @method void setFoundingMember(bool $foundingMember)
  * @method ?string getMandateReference()
@@ -40,6 +42,8 @@ class Membership extends Entity implements JsonSerializable {
     protected ?string $joinDate = null;
     protected ?string $leaveDate = null;
     protected bool $foundingMember = false;
+    // Deactivated: no payments (fee run, SEPA), no calendar reminders, no derived rights; nothing is deleted
+    protected bool $deactivated = false;
     protected ?string $mandateReference = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
@@ -52,6 +56,7 @@ class Membership extends Entity implements JsonSerializable {
         $this->addType('memberId', 'integer');
         $this->addType('clubId', 'integer');
         $this->addType('foundingMember', 'bool');
+        $this->addType('deactivated', 'bool');
         $this->addType('feeRateId', 'integer');
     }
 
@@ -73,6 +78,7 @@ class Membership extends Entity implements JsonSerializable {
             'joinDate' => $this->joinDate,
             'leaveDate' => $this->leaveDate,
             'foundingMember' => $this->foundingMember,
+            'deactivated' => $this->deactivated,
             'mandateReference' => $this->mandateReference,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,
