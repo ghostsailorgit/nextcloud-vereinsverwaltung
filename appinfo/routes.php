@@ -32,6 +32,8 @@ return [
         ['name' => 'member#show', 'url' => '/members/{id}', 'verb' => 'GET'],
         ['name' => 'member#update', 'url' => '/members/{id}', 'verb' => 'PUT'],
         ['name' => 'member#destroy', 'url' => '/members/{id}', 'verb' => 'DELETE'],
+        ['name' => 'member#lock', 'url' => '/members/{id}/lock', 'verb' => 'POST'],
+        ['name' => 'member#unlock', 'url' => '/members/{id}/unlock', 'verb' => 'POST'],
         
         ['name' => 'finance#index', 'url' => '/finance', 'verb' => 'GET'],
         ['name' => 'finance#markPaid', 'url' => '/finance/mark-paid', 'verb' => 'POST'],
@@ -54,6 +56,8 @@ return [
         // Statistics endpoints
         ['name' => 'statistics#getMemberStatistics', 'url' => '/statistics/members', 'verb' => 'GET'],
         ['name' => 'statistics#getFeeStatistics', 'url' => '/statistics/fees', 'verb' => 'GET'],
+
+        ['name' => 'auditLog#index', 'url' => '/audit-log', 'verb' => 'GET'],
 
         // RBAC & permissions
         ['name' => 'role#index', 'url' => '/roles', 'verb' => 'GET'],

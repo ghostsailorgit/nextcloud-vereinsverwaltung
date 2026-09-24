@@ -26,7 +26,8 @@ class MemberService {
         private ClubMapper $clubMapper,
         private IUserManager $userManager,
         private FeeRateMapper $feeRates,
-        private ?MemberCalendarService $calendarService = null
+        private ?MemberCalendarService $calendarService = null,
+        private ?AuditLogService $auditLog = null
     ) {
     }
 
@@ -117,6 +118,7 @@ class MemberService {
         $membership->setUpdatedAt(date('Y-m-d H:i:s'));
         $member->setMembership($this->membershipMapper->insert($membership));
 
+        $this->auditLog?->record($clubId, 'member', $member->getId(), 'create', $member->jsonSerialize());
         $this->syncCalendar($clubId, $member);
         return $member;
     }
@@ -152,6 +154,7 @@ class MemberService {
 
     public function update(int $clubId, int $id, array $data): Member {
         $member = $this->find($clubId, $id);
+        $before = $member->jsonSerialize();
 
         $this->applyPersonData($member, $data);
         $member->setUpdatedAt(date('Y-m-d H:i:s'));
@@ -161,6 +164,8 @@ class MemberService {
         $this->applyMembershipData($membership, $data);
         $membership->setUpdatedAt(date('Y-m-d H:i:s'));
         $member->setMembership($this->membershipMapper->update($membership));
+
+        $this->logMemberChange($clubId, $member, $before);
 
         // The person's name/birth date show up in the calendars of every
         // club they belong to
@@ -189,10 +194,45 @@ class MemberService {
         $this->calendarService?->removeMember($club, $member);
 
         $this->feeMapper->deleteByMemberInClub($id, $clubId);
+        $membershipId = $member->getMembership()->getId();
         $this->membershipMapper->delete($member->getMembership());
+        $this->auditLog?->record($clubId, 'membership', $membershipId, 'delete');
 
         if ($this->membershipMapper->findByMember($id) === []) {
             $this->mapper->delete($member);
+            $this->auditLog?->record($clubId, 'member', $id, 'delete');
+        }
+    }
+
+    /**
+     * Locks a member: their linked Nextcloud account (if any) immediately
+     * loses roles derived from club membership (RoleService::derivedRoles()).
+     * Explicit role assignments are untouched. Nothing is deleted; unlock()
+     * reverses it.
+     */
+    public function lock(int $clubId, int $id): Member {
+        $member = $this->find($clubId, $id);
+        $member->setLocked(true);
+        $member = $this->mapper->update($member);
+        $this->auditLog?->record($clubId, 'member', $id, 'lock');
+        return $member;
+    }
+
+    public function unlock(int $clubId, int $id): Member {
+        $member = $this->find($clubId, $id);
+        $member->setLocked(false);
+        $member = $this->mapper->update($member);
+        $this->auditLog?->record($clubId, 'member', $id, 'unlock');
+        return $member;
+    }
+
+    private function logMemberChange(int $clubId, Member $member, array $before): void {
+        if ($this->auditLog === null) {
+            return;
+        }
+        $changes = $this->auditLog->diff($before, $member->jsonSerialize());
+        if ($changes !== []) {
+            $this->auditLog->record($clubId, 'member', $member->getId(), 'update', $changes);
         }
     }
 

@@ -19,7 +19,8 @@ class FeeRateService {
     public function __construct(
         private FeeRateMapper $rates,
         private MembershipMapper $memberships,
-        private ClubMapper $clubs
+        private ClubMapper $clubs,
+        private ?AuditLogService $auditLog = null
     ) {
     }
 
@@ -43,6 +44,7 @@ class FeeRateService {
         if ($rate->getIsDefault()) {
             $this->makeOnlyDefault($rate);
         }
+        $this->auditLog?->record($clubId, 'fee_rate', $rate->getId(), 'create', $rate->jsonSerialize());
         return $rate;
     }
 
@@ -52,6 +54,7 @@ class FeeRateService {
      */
     public function update(int $clubId, int $id, array $data): FeeRate {
         $rate = $this->ownRate($clubId, $id);
+        $before = $rate->jsonSerialize();
         $this->apply($rate, $data, $clubId, $id);
         if ($this->toBool($data['isDefault'] ?? false)) {
             $rate->setIsDefault(true);
@@ -59,6 +62,12 @@ class FeeRateService {
         $rate = $this->rates->update($rate);
         if ($rate->getIsDefault()) {
             $this->makeOnlyDefault($rate);
+        }
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $rate->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record($clubId, 'fee_rate', $id, 'update', $changes);
+            }
         }
         return $rate;
     }
@@ -74,6 +83,7 @@ class FeeRateService {
         }
         $wasDefault = $rate->getIsDefault();
         $this->rates->delete($rate);
+        $this->auditLog?->record($clubId, 'fee_rate', $id, 'delete');
         if ($wasDefault) {
             $remaining = $this->rates->findByClub($clubId);
             if ($remaining !== []) {

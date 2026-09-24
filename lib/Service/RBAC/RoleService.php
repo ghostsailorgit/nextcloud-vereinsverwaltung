@@ -23,6 +23,7 @@ use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRole;
 use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Exception\ValidationException;
+use OCA\Verein\Service\AuditLogService;
 use OCA\Verein\Exception\PermissionDeniedException;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\IGroupManager;
@@ -159,6 +160,7 @@ class RoleService {
         'verein.role.manage',
         'verein.sepa.export',
         'verein.club.manage',
+        'verein.audit.view',
     ];
 
     private const ENFORCED_PERMISSION_DESCRIPTIONS = [
@@ -171,6 +173,7 @@ class RoleService {
         'verein.role.manage' => 'Rollen und Berechtigungen verwalten',
         'verein.sepa.export' => 'SEPA-Export erstellen',
         'verein.club.manage' => 'Vereinsdaten, Bankkonten und Kalender verwalten',
+        'verein.audit.view' => 'Änderungsprotokoll einsehen',
     ];
 
     private IUserSession $userSession;
@@ -190,7 +193,8 @@ class RoleService {
         LoggerInterface $logger,
         MemberMapper $memberMapper,
         MembershipMapper $membershipMapper,
-        ClubMapper $clubMapper
+        ClubMapper $clubMapper,
+        private ?AuditLogService $auditLog = null
     ) {
         $this->memberMapper = $memberMapper;
         $this->membershipMapper = $membershipMapper;
@@ -324,14 +328,15 @@ class RoleService {
      * Nextcloud account linked to the person: each club can map its
      * membership roles (Mitglied/Kassierer/Vorstand) to an app role (see
      * Club::getRoleMappingArray()). Nothing is derived unless a club has
-     * configured such a mapping, and nothing once the person has left or
-     * passed away - the rights disappear together with the membership.
+     * configured such a mapping, and nothing once the person has left,
+     * passed away, or been locked (MemberService::lock()) - the rights
+     * disappear together with the membership.
      *
      * @return Role[]
      */
     private function derivedRoles(string $userId, ?int $clubId): array {
         $person = $this->memberMapper->findByUserId($userId);
-        if ($person === null || $person->getDeceased()) {
+        if ($person === null || $person->getDeceased() || $person->getLocked()) {
             return [];
         }
 
@@ -423,7 +428,9 @@ class RoleService {
         $role->setCreatedAt($now);
         $role->setUpdatedAt($now);
 
-        return $this->roleMapper->insert($role);
+        $role = $this->roleMapper->insert($role);
+        $this->auditLog?->record(null, 'role', $role->getId(), 'create', $role->jsonSerialize());
+        return $role;
     }
 
     /**
@@ -432,6 +439,7 @@ class RoleService {
      */
     public function updateRole(int $id, ?string $name, ?string $description, ?array $permissions): Role {
         $role = $this->roleMapper->find($id);
+        $before = $role->jsonSerialize();
 
         if ($name !== null && trim($name) !== '') {
             $role->setName($name);
@@ -444,12 +452,20 @@ class RoleService {
         }
         $role->setUpdatedAt(date('Y-m-d H:i:s'));
 
-        return $this->roleMapper->update($role);
+        $role = $this->roleMapper->update($role);
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $role->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record(null, 'role', $role->getId(), 'update', $changes);
+            }
+        }
+        return $role;
     }
 
     public function deleteRole(int $id): void {
         $role = $this->roleMapper->find($id);
         $this->roleMapper->delete($role);
+        $this->auditLog?->record(null, 'role', $id, 'delete');
     }
 
     /**
@@ -537,10 +553,13 @@ class RoleService {
         $currentUser = $this->userSession->getUser();
         $userRole->setGrantedBy($currentUser !== null ? $currentUser->getUID() : 'system');
 
-        return $this->userRoleMapper->insert($userRole);
+        $userRole = $this->userRoleMapper->insert($userRole);
+        $this->auditLog?->record($clubId, 'user_role', $userRole->getId(), 'create', $userRole->jsonSerialize());
+        return $userRole;
     }
 
     public function removeUserRoles(string $userId, int $clubId): void {
+        $this->auditLog?->record($clubId, 'user_role', 0, 'delete', ['userId' => $userId]);
         $this->userRoleMapper->deleteByUserAndClub($userId, $clubId);
     }
     

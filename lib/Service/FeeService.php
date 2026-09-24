@@ -14,7 +14,8 @@ use OCP\AppFramework\Db\DoesNotExistException;
 class FeeService {
     public function __construct(
         private FeeMapper $mapper,
-        private MembershipMapper $membershipMapper
+        private MembershipMapper $membershipMapper,
+        private ?AuditLogService $auditLog = null
     ) {
     }
 
@@ -49,7 +50,9 @@ class FeeService {
         $fee->setDescription($description);
         $fee->setCreatedAt(date('Y-m-d H:i:s'));
         $fee->setUpdatedAt(date('Y-m-d H:i:s'));
-        return $this->mapper->insert($fee);
+        $fee = $this->mapper->insert($fee);
+        $this->auditLog?->record($clubId, 'fee', $fee->getId(), 'create', $fee->jsonSerialize());
+        return $fee;
     }
 
     public function update(
@@ -62,6 +65,7 @@ class FeeService {
         ?string $description = null
     ): Fee {
         $fee = $this->find($clubId, $id);
+        $before = $fee->jsonSerialize();
         $this->assertMemberOfClub($clubId, $memberId);
 
         $fee->setMemberId($memberId);
@@ -70,12 +74,21 @@ class FeeService {
         $fee->setDueDate($dueDate);
         $fee->setDescription($description);
         $fee->setUpdatedAt(date('Y-m-d H:i:s'));
-        return $this->mapper->update($fee);
+        $fee = $this->mapper->update($fee);
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $fee->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record($clubId, 'fee', $id, 'update', $changes);
+            }
+        }
+        return $fee;
     }
 
     public function delete(int $clubId, int $id): Fee {
         $fee = $this->find($clubId, $id);
-        return $this->mapper->delete($fee);
+        $deleted = $this->mapper->delete($fee);
+        $this->auditLog?->record($clubId, 'fee', $id, 'delete');
+        return $deleted;
     }
 
     /**
@@ -89,7 +102,11 @@ class FeeService {
         if ($ids === []) {
             return 0;
         }
-        return $this->mapper->markPaidInClub($clubId, $ids, date('Y-m-d H:i:s'));
+        $count = $this->mapper->markPaidInClub($clubId, $ids, date('Y-m-d H:i:s'));
+        if ($count > 0) {
+            $this->auditLog?->record($clubId, 'fee', 0, 'mark_paid', ['ids' => $ids, 'count' => $count]);
+        }
+        return $count;
     }
 
     /**
@@ -98,7 +115,11 @@ class FeeService {
      * @return int number of fees flagged
      */
     public function flagOverdue(int $clubId): int {
-        return $this->mapper->flagOverdueInClub($clubId, date('Y-m-d'), date('Y-m-d H:i:s'));
+        $count = $this->mapper->flagOverdueInClub($clubId, date('Y-m-d'), date('Y-m-d H:i:s'));
+        if ($count > 0) {
+            $this->auditLog?->record($clubId, 'fee', 0, 'flag_overdue', ['count' => $count]);
+        }
+        return $count;
     }
 
     /**

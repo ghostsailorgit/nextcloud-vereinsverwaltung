@@ -248,10 +248,31 @@
                 <span v-else-if="member.isFormer" class="status-badge former">Ehemalig</span>
                 <span v-else class="status-badge active">Aktiv</span>
                 <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
+                <span
+                  v-if="member.locked"
+                  class="status-badge locked"
+                  title="Automatische Rechte sind ausgesetzt, solange das Mitglied gesperrt ist"
+                >Gesperrt</span>
               </td>
               <td v-if="canManage" class="actions">
                 <NcButton @click="startEdit(member)" variant="secondary">
                   Bearbeiten
+                </NcButton>
+                <NcButton
+                  v-if="canManageRoles && member.locked"
+                  @click="unlockMember(member.id)"
+                  variant="secondary"
+                  :disabled="loading"
+                >
+                  Entsperren
+                </NcButton>
+                <NcButton
+                  v-else-if="canManageRoles"
+                  @click="lockMember(member.id)"
+                  variant="secondary"
+                  :disabled="loading"
+                >
+                  Sperren
                 </NcButton>
                 <NcButton
                   @click="deleteMember(member.id)"
@@ -567,6 +588,36 @@ export default {
       }
     }
 
+    const lockMember = async (id) => {
+      if (!confirm('Dieses Mitglied sperren? Automatisch abgeleitete Rechte (aus der Vereinsfunktion) entfallen sofort; explizit zugewiesene Rollen bleiben bestehen. Nichts wird gelöscht.')) return
+
+      loading.value = true
+      try {
+        await api.post(`members/${id}/lock`)
+        showSuccess('Mitglied gesperrt')
+        await fetchMembers()
+      } catch (error) {
+        console.error('Error locking member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Sperren des Mitglieds'))
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const unlockMember = async (id) => {
+      loading.value = true
+      try {
+        await api.post(`members/${id}/unlock`)
+        showSuccess('Mitglied entsperrt')
+        await fetchMembers()
+      } catch (error) {
+        console.error('Error unlocking member:', error)
+        showError(extractErrorMessage(error, 'Fehler beim Entsperren des Mitglieds'))
+      } finally {
+        loading.value = false
+      }
+    }
+
     const roleLabel = (role) => {
       return roleOptions.find(r => r.id === role)?.label || role
     }
@@ -587,6 +638,8 @@ export default {
       startEdit,
       cancelEdit,
       deleteMember,
+      lockMember,
+      unlockMember,
       canManage,
       canManageRoles,
       feeRateOptions,
@@ -890,6 +943,11 @@ export default {
   &.deceased {
     background: var(--color-background-darker);
     color: var(--color-text-secondary);
+  }
+
+  &.locked {
+    background: var(--color-error);
+    color: var(--color-primary-element-text);
   }
 
   &.founding {

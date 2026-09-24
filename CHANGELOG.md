@@ -6,6 +6,20 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.10.0-beta] - 2026-09-29
+
+Erster Teil von Datenschutz (Roadmap-Punkt 4): Mitglieder sperren, Änderungsprotokoll.
+
+### ✨ Neu
+- **Mitglieder sperren/entsperren** (`verein.role.manage`, wie eine Rollenänderung): setzt die automatisch aus der Vereinsfunktion abgeleiteten Rechte sofort aus, ohne etwas zu löschen; explizit zugewiesene Rollen bleiben bestehen.
+- **Änderungsprotokoll** (`verein_audit_log`): erfasst wer wann was geändert hat, mit Feld-Diff, für Mitglieder/Mitgliedschaften, Beiträge, Beitragskategorien, Vereine (inkl. Bankkonten, Rollen-Mapping) und Rollen/Zuweisungen. Lesbar über `GET /audit-log` (`verein.audit.view`, je Verein).
+
+### 📋 Noch offen (Rest von Punkt 4)
+- Mitglieder löschen/anonymisieren (bewusst zurückgestellt: Aufbewahrungspflicht für Buchhaltungsbelege).
+- Datenexport einer Person durch einen Admin (bisher nur die Selbstauskunft der Person selbst, `/me/export`).
+
+---
+
 ## [0.9.0-beta] - 2026-09-25
 
 Stand dieses Forks (mehrere Vereine, Rechte, Beiträge). Die älteren Einträge unten stammen vom Upstream-Projekt.

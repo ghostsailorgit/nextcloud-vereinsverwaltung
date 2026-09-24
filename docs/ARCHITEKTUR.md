@@ -21,12 +21,13 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 |---|---|
 | `verein_clubs` | Name (eindeutig), Team-Ordner, Kalendergruppen, Zuordnung „Vereinsfunktion → App-Rolle“ |
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
-| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto |
+| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `locked` (siehe „Sperren“) |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
 | `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
+| `verein_audit_log` | Änderungsprotokoll: wer hat wann was geändert (siehe „Änderungsprotokoll“) |
 
 ## Rechte
 Drei Quellen, die sich addieren:
@@ -42,7 +43,23 @@ darf**. Vereine anlegen/löschen und Rollendefinitionen ändern dürfen nur Next
 
 Jeder Endpunkt ist mit `#[RequirePermission('verein.…')]` geschützt; ein Test stellt sicher, dass keiner
 vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/delete/export`,
-`verein.sepa.export`, `verein.role.manage`, `verein.club.manage`.
+`verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`.
+
+## Sperren
+Ein Mitglied lässt sich sperren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“ wie eine
+Rollenänderung - eine gesperrte Person könnte sonst durch Entsperren ihre eigenen automatischen Rechte
+wiederherstellen, wenn sie das Sperren selbst dürfte). Gesperrt heißt: die automatische Rechtevergabe aus der
+Vereinsfunktion setzt sofort aus - explizit zugewiesene Rollen bleiben bestehen. Es wird nichts gelöscht;
+Entsperren macht es rückgängig. Vorgesehen z. B. bei ruhendem Konto oder laufender Klärung, nicht als Ersatz
+für Austritt.
+
+## Änderungsprotokoll
+Jede Änderung an Mitgliedern/Mitgliedschaften, Beiträgen, Beitragskategorien, Vereinen (inkl. Bankkonten,
+Rollen-Zuordnung) und Rollen/Zuweisungen wird protokolliert: wer (Nextcloud-Konto, Anzeigename zum Zeitpunkt
+der Änderung), wann, welche Aktion (anlegen/ändern/löschen/sperren/entsperren/…) und bei Änderungen welche
+Felder von welchem auf welchen Wert. Rein anfügend, nichts wird nachträglich bearbeitet. Einsehbar je Verein
+über die API (`GET /audit-log`, Recht „Änderungsprotokoll einsehen“); eine eigene Ansicht in der Oberfläche
+gibt es noch nicht.
 
 ## Selbstauskunft („Meine Daten“)
 Wer mit einer Person verknüpft ist, sieht seine eigenen Daten, Mitgliedschaften und Beiträge und kann sie als

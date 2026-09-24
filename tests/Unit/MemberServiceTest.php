@@ -196,6 +196,25 @@ class MemberServiceTest extends TestCase {
         $this->assertFalse($other->isFormer());
     }
 
+    // --- locking (see RoleService::derivedRoles())
+
+    public function testLockSetsTheLockedFlag(): void {
+        $this->updatable(8);
+
+        $member = $this->service->lock(1, 8);
+
+        $this->assertTrue($member->getLocked());
+    }
+
+    public function testUnlockClearsTheLockedFlag(): void {
+        $member = $this->updatable(8);
+        $member->setLocked(true);
+
+        $result = $this->service->unlock(1, 8);
+
+        $this->assertFalse($result->getLocked());
+    }
+
     // --- linking a person to a Nextcloud account
 
     private function updatable(int $id): Member {

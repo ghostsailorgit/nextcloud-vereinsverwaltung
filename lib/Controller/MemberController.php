@@ -348,6 +348,39 @@ class MemberController extends Controller {
     }
 
     /**
+     * Locking/unlocking suppresses automatic rights the same way changing a
+     * member's role or account link does (RoleService::derivedRoles()), so
+     * it needs the same permission (see canManageRoles()) - not just
+     * 'verein.member.manage'.
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.role.manage')]
+    public function lock($id) {
+        try {
+            $member = $this->memberService->lock($this->clubId(), (int)$id);
+            return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
+        } catch (Exception $e) {
+            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.role.manage')]
+    public function unlock($id) {
+        try {
+            $member = $this->memberService->unlock($this->clubId(), (int)$id);
+            return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
+        } catch (Exception $e) {
+            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
      * The member as JSON plus the display name of the linked Nextcloud
      * account (falls back to the uid if that account no longer exists).
      */

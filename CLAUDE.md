@@ -27,7 +27,8 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 - **Club (`verein_clubs`)** is the top level: name (unique), team-folder path, calendar groups, bank
   accounts (`verein_club_accounts`: IBAN, BIC, creditor ID), and `role_mapping` (see automatic rights).
 - **Person (`verein_members`)**: name, address, birth date, own IBAN/BIC, `user_id` (linked Nextcloud
-  account, unique). One row per human, shared by all clubs.
+  account, unique), `locked` (suspends automatic rights, see rule 4; nothing else is affected). One row per
+  human, shared by all clubs.
 - **Membership (`verein_memberships`)**: person x club - role (`member|treasurer|admin`=Vorstand),
   join/leave date, founding flag, SEPA mandate (reference, signature date, signed file path).
   `Member` (entity) exposes the membership fields of the club it was loaded for via `setMembership()`.
@@ -44,11 +45,14 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
    short, justified exception list. New endpoints that return only "own" data (`/me`) are the exception.
 2. **Nextcloud ignores what `Middleware::beforeController()` returns.** Blocking must `throw`; the
    middleware converts it in `afterException()`. (An earlier version returned a response and enforced nothing.)
-3. **Privilege escalation:** a member's `role` and `user_id` drive automatic rights, so only holders of
-   `verein.role.manage` may change them (`MemberController::canManageRoles()`); role *definitions* are
-   Nextcloud-admin only; creating/deleting clubs is Nextcloud-admin only. Keep it that way.
-4. **Automatic rights** (`RoleService::effectiveRoles()`): explicit assignments + roles mapped from the linked
-   person's *active* memberships (no leave date, not deceased). No mapping configured = nothing derived.
+3. **Privilege escalation:** a member's `role`, `user_id` and `locked` flag drive automatic rights, so only
+   holders of `verein.role.manage` may change them (`MemberController::canManageRoles()`, and the
+   `#[RequirePermission('verein.role.manage')]` on `MemberController::lock()`/`unlock()`); role *definitions*
+   are Nextcloud-admin only; creating/deleting clubs is Nextcloud-admin only. Keep it that way.
+4. **Automatic rights** (`RoleService::derivedRoles()`): explicit assignments + roles mapped from the linked
+   person's *active* memberships (no leave date, not deceased, not locked). Locking
+   (`MemberService::lock()`) deletes nothing - it only suspends this derivation until `unlock()`. No mapping
+   configured = nothing derived.
 5. **SEPA export only includes fees whose member has an IBAN AND a mandate signature date**; the rest are
    reported with the reason, never dropped silently. Mandate reference falls back to `M<clubId>-<memberId>`.
    Sequence type is always RCUR (allowed since 2016).
@@ -69,6 +73,14 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 11. Calendar events are managed through `OCA\DAV\CalDAV\CalDavBackend` (the public `OCP\Calendar` API cannot
     update/delete). The calendar is shared read-only with Nextcloud groups configured per club - never with a
     public link (member birth dates are personal data).
+12. **Audit log** (`AuditLogService`, injected as an optional collaborator like `MemberCalendarService` - a
+    service without one just logs nothing, so existing tests that construct a service directly still compile):
+    call `record()` after a create/delete, or `diff(before, after)` then `record()` with the result after an
+    update, so a manual DI factory in `Application.php` must be updated too when you add the param (see
+    `MemberService`, `FeeService`, `RoleService` there) - the ones without a manual factory (`ClubService`,
+    `FeeRateService`, `FeeRunService`) are auto-wired and need no such change. Read back via
+    `GET /audit-log` (`verein.audit.view`, club-scoped); entries with `clubId = null` (role definitions) are
+    not exposed through it.
 
 ## Working conventions
 - **With every feature/fix/release update all three: `CHANGELOG.md` (new entry at the top, matching the
@@ -90,6 +102,11 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 2. Real-world data (IBANs, mandates, bank account/creditor ID, open import questions) - mostly manual work.
 3. Fees in daily use - done: categories per club, annual fee run with preview, mark exported fees paid, flag overdue.
    Still open: reminder letters / dunning levels (Mahnungen), pro-rata fees for members who join mid-year.
-4. Data protection: delete/lock members, per-person data export, change log.
+4. Data protection - partly done: locking a member (MemberService::lock()/unlock()) suspends automatic rights
+   without deleting anything; a generic audit log (AuditLogService, `verein_audit_log`) covers members/
+   memberships, fees, fee categories, clubs (incl. accounts, role mapping), and roles/assignments, readable
+   via `GET /audit-log` (`verein.audit.view`). Still open: delete/anonymize members (deliberately postponed -
+   bookkeeping retention for fees/SEPA mandates), per-person data export triggered by an admin (today only the
+   linked person's own self-service export, `/me/export`).
 5. Cleanup/publishing: slim README/docs (many stale upstream docs still in the repo), proper 404 vs 500 codes,
    automatic backup of the club tables.

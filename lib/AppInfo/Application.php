@@ -16,6 +16,7 @@ use OCA\Verein\Service\Export\PdfExporter;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\MemberCalendarService;
 use OCA\Verein\Service\FeeService;
+use OCA\Verein\Service\AuditLogService;
 use OCA\Verein\Service\StatisticsService;
 use OCA\Verein\Settings\AdminSection;
 use OCA\Verein\Settings\AdminSettings;
@@ -48,7 +49,8 @@ class Application extends App implements IBootstrap {
                 $container->query(LoggerInterface::class),
                 $container->query(MemberMapper::class),
                 $container->query(MembershipMapper::class),
-                $container->query(ClubMapper::class)
+                $container->query(ClubMapper::class),
+                $container->query(AuditLogService::class)
             );
         });
 
@@ -79,14 +81,16 @@ class Application extends App implements IBootstrap {
                 $container->query(ClubMapper::class),
                 $container->query(IUserManager::class),
                 $container->query(FeeRateMapper::class),
-                $container->query(MemberCalendarService::class)
+                $container->query(MemberCalendarService::class),
+                $container->query(AuditLogService::class)
             );
         });
 
         $context->registerService(FeeService::class, function (IAppContainer $container): FeeService {
             return new FeeService(
                 $container->query(FeeMapper::class),
-                $container->query(MembershipMapper::class)
+                $container->query(MembershipMapper::class),
+                $container->query(AuditLogService::class)
             );
         });
 

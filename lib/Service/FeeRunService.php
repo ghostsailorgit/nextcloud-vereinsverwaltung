@@ -24,7 +24,8 @@ class FeeRunService {
         private MemberMapper $members,
         private FeeMapper $fees,
         private ClubMapper $clubs,
-        private IDBConnection $db
+        private IDBConnection $db,
+        private ?AuditLogService $auditLog = null
     ) {
     }
 
@@ -154,6 +155,12 @@ class FeeRunService {
         }
 
         $plan['created'] = count($plan['included']);
+        $this->auditLog?->record($clubId, 'fee_run', 0, 'create', [
+            'year' => $year,
+            'dueDate' => $dueDate,
+            'created' => $plan['created'],
+            'total' => $plan['total'],
+        ]);
         return $plan;
     }
 

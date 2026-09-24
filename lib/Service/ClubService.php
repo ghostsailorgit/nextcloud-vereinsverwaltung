@@ -30,7 +30,8 @@ class ClubService {
         private ValidationService $validation,
         private MemberCalendarService $calendar,
         private RoleMapper $roleMapper,
-        private FeeRateMapper $feeRates
+        private FeeRateMapper $feeRates,
+        private ?AuditLogService $auditLog = null
     ) {
     }
 
@@ -81,6 +82,7 @@ class ClubService {
         $this->applyData($club, $data);
         $club->setCreatedAt(date('Y-m-d H:i:s'));
         $club = $this->clubMapper->insert($club);
+        $this->auditLog?->record($club->getId(), 'club', $club->getId(), 'create', $club->jsonSerialize());
         $this->calendar->syncClubCalendar($club);
         return $club;
     }
@@ -90,9 +92,16 @@ class ClubService {
      */
     public function update(int $id, array $data): Club {
         $club = $this->clubMapper->find($id);
+        $before = $club->jsonSerialize();
         $this->applyData($club, $data, $id);
         $club->setUpdatedAt(date('Y-m-d H:i:s'));
         $club = $this->clubMapper->update($club);
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $club->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record($id, 'club', $id, 'update', $changes);
+            }
+        }
         $this->calendar->syncClubCalendar($club);
         return $club;
     }
@@ -113,6 +122,7 @@ class ClubService {
         $this->feeRates->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);
         $this->clubMapper->delete($club);
+        $this->auditLog?->record($id, 'club', $id, 'delete');
     }
 
     /**
@@ -142,7 +152,9 @@ class ClubService {
 
         $club->setRoleMapping($clean === [] ? null : json_encode($clean));
         $club->setUpdatedAt(date('Y-m-d H:i:s'));
-        return $this->clubMapper->update($club);
+        $club = $this->clubMapper->update($club);
+        $this->auditLog?->record($clubId, 'club', $clubId, 'update', ['roleMapping' => $clean]);
+        return $club;
     }
 
     /**
@@ -182,6 +194,7 @@ class ClubService {
         if ($account->getIsDefault()) {
             $this->makeOnlyDefault($account);
         }
+        $this->auditLog?->record($clubId, 'club_account', $account->getId(), 'create', $account->jsonSerialize());
         return $account;
     }
 
@@ -193,6 +206,7 @@ class ClubService {
         if ($account->getClubId() !== $clubId) {
             throw new DoesNotExistException('Bankkonto nicht gefunden');
         }
+        $before = $account->jsonSerialize();
         $this->applyAccountData($account, $data);
         if ($this->toBool($data['isDefault'] ?? false)) {
             $account->setIsDefault(true);
@@ -200,6 +214,12 @@ class ClubService {
         $account = $this->accountMapper->update($account);
         if ($account->getIsDefault()) {
             $this->makeOnlyDefault($account);
+        }
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $account->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record($clubId, 'club_account', $accountId, 'update', $changes);
+            }
         }
         return $account;
     }
@@ -214,6 +234,7 @@ class ClubService {
         }
         $wasDefault = $account->getIsDefault();
         $this->accountMapper->delete($account);
+        $this->auditLog?->record($clubId, 'club_account', $accountId, 'delete');
         if ($wasDefault) {
             // Keep exactly one default while any account is left
             $remaining = $this->accountMapper->findByClub($clubId);
