@@ -113,7 +113,6 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | GET | `/roles/assignments` | `verein.role.manage` |
 | POST | `/roles/users` | `verein.role.manage` |
 | DELETE | `/roles/users` | `verein.role.manage` |
-| GET | `/roles/club/{clubType}` | `verein.role.manage` (übergreifend) |
 | GET | `/roles/users/{userId}` | `verein.role.manage` |
 | GET | `/roles/{id}` | `verein.role.manage` (übergreifend) |
 | PUT | `/roles/{id}` | Nextcloud-Administrator |

@@ -72,7 +72,6 @@ return [
         ['name' => 'role#clubAssignments', 'url' => '/roles/assignments', 'verb' => 'GET'],
         ['name' => 'role#assignRole', 'url' => '/roles/users', 'verb' => 'POST'],
         ['name' => 'role#removeRoles', 'url' => '/roles/users', 'verb' => 'DELETE'],
-        ['name' => 'role#indexByClubType', 'url' => '/roles/club/{clubType}', 'verb' => 'GET'],
         ['name' => 'role#getUserRoles', 'url' => '/roles/users/{userId}', 'verb' => 'GET'],
         ['name' => 'role#show', 'url' => '/roles/{id}', 'verb' => 'GET'],
         ['name' => 'role#update', 'url' => '/roles/{id}', 'verb' => 'PUT'],

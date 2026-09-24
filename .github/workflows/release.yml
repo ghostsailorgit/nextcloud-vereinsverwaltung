@@ -49,7 +49,7 @@ jobs:
           mkdir -p dist-release/verein
           cp -r appinfo lib templates img vendor LICENSE README.md CHANGELOG.md SECURITY.md dist-release/verein/
           mkdir -p dist-release/verein/js
-          cp -r js/dist js/admin-roles.js dist-release/verein/js/
+          cp -r js/dist dist-release/verein/js/
           tar -czf "verein-${GITHUB_REF_NAME}.tar.gz" -C dist-release verein
 
       - name: Publish the release

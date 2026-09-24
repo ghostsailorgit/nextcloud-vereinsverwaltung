@@ -93,14 +93,6 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage', clubScoped: false)]
-    public function indexByClubType(string $clubType): JSONResponse {
-        try {
-            $roles = $this->roleService->getRolesForClubType($clubType);
-            return new JSONResponse($roles);
-        } catch (\Throwable $e) {
-            return $this->errorResponse($e);
-        }
-    }
     
     /**
      * @NoAdminRequired

@@ -13,7 +13,12 @@ Aufräumen und Vorbereitung auf die Veröffentlichung.
 - Unerwartete Fehler zeigen dem Nutzer nur noch „Interner Fehler“; Datenbank- und Ausnahmetexte stehen im Nextcloud-Log und nicht mehr im Browser. Ein Test verhindert, dass Controller wieder Ausnahmetexte durchreichen.
 - Ein fehlgeschlagener CSV- oder PDF-Export liefert eine JSON-Fehlermeldung statt einer Datei `error.txt`.
 
+### 🔧 Betrieb
+- **Installationen in einem Unterordner** (z. B. `/nextcloud`) und ohne „schöne URLs“ funktionieren: Die Oberfläche bekommt die Adresse der Nextcloud von der Seite mitgeteilt, statt eine Installation im Hauptverzeichnis der Domain anzunehmen.
+- Die alte Rollenseite in den Nextcloud-Administrationseinstellungen ist entfernt (sie sendete kein CSRF-Token und ist durch den Reiter „Rollen“ in der App ersetzt).
+
 ### 🧹 Aufgeräumt
+- Ein nie verwendeter Platzhalter `RoleService::hasPermission()` (lieferte immer „erlaubt“), Rechtevorlagen für Musik-/Sportvereine mit nicht geprüften Rechten und die zugehörige Route `/roles/club/{clubType}` entfernt.
 - Toter Code entfernt: ein nie angebundener PDF- und SEPA-Exporter (pain.001), ungenutzte Validierungsklassen, ein nicht erreichbarer Admin-Controller, nicht eingebundene Vorlagen und Oberflächen-Dateien, die alte `database.xml` und die ungültige Upstream-Signatur `signature.json`.
 - Veraltete Upstream-Dokumente (Statusberichte, Release-Notizen, Handbücher, Wiki, PDF-Roadmap) entfernt. Neu geschrieben: README, Installationsanleitung, Planung, Beitragsregeln, Sicherheitshinweise. Die API-Übersicht (`docs/API.md`) wird aus dem Code erzeugt und per Test aktuell gehalten.
 - Die nicht lauffähigen Integrationstests aus dem Upstream-Projekt entfernt.

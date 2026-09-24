@@ -18,8 +18,6 @@ use OCA\Verein\Service\MemberCalendarService;
 use OCA\Verein\Service\FeeService;
 use OCA\Verein\Service\AuditLogService;
 use OCA\Verein\Service\StatisticsService;
-use OCA\Verein\Settings\AdminSection;
-use OCA\Verein\Settings\AdminSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -102,19 +100,8 @@ class Application extends App implements IBootstrap {
         });
 
         $context->registerMiddleware(AuthorizationMiddleware::class);
-
-        // Register admin settings classes
-        $context->registerService(AdminSection::class, function (IAppContainer $c): AdminSection {
-            return new AdminSection($c);
-        });
-
-        $context->registerService(AdminSettings::class, function (IAppContainer $c): AdminSettings {
-            return new AdminSettings($c);
-        });
     }
 
     public function boot(IBootContext $context): void {
-        // Nextcloud will auto-discover IIconSection and ISettings implementations
-        // This is already handled by the bootstrap mechanism
     }
 }

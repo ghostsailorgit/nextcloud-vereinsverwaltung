@@ -27,7 +27,6 @@ class PermissionController extends ApiController {
     public function index(): DataResponse {
         return new DataResponse([
             'permissions' => $this->roleService->getAvailablePermissions(),
-            'templates' => $this->roleService->getDefaultRoleTemplates(),
         ]);
     }
 }

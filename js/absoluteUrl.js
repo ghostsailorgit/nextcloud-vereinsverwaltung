@@ -1,11 +1,11 @@
-import { generateUrl } from '@nextcloud/router'
-
-// generateUrl()'s automatic webroot detection (window._oc_webroot) does not
-// resolve correctly on this app's page for reasons not fully root-caused
-// (see project notes - a Content-Security-Policy nonce mismatch prevents
-// Nextcloud's own bootstrap script from running, leaving window._oc_webroot
-// unset). Force baseURL explicitly instead. This install is confirmed to be
-// at the domain root.
-export function absoluteUrl(path, params) {
-  return generateUrl(path, params, { baseURL: '' })
+// Builds a URL below this Nextcloud's root, e.g. absoluteUrl('/apps/verein/clubs').
+//
+// The page template (templates/main.php) puts the installation's URL prefix on the #app element
+// (data-url-root): "" for an install at the domain root with pretty URLs, "/nextcloud/index.php"
+// for a subfolder install without them, and so on. Nextcloud's own generateUrl() cannot be used
+// here: on this app's page its bootstrap script does not run (Content-Security-Policy nonce
+// mismatch), so window.OC and the web root are not available.
+export function absoluteUrl(path) {
+  const root = document.getElementById('app')?.dataset.urlRoot ?? ''
+  return root + (path.startsWith('/') ? path : '/' + path)
 }

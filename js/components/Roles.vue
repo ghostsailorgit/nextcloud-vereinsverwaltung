@@ -164,7 +164,6 @@ export default {
       roles: [],
       assignments: [],
       permissionsList: [],
-      permissionTemplates: [],
       showForm: false,
       editingRole: null,
       form: {
@@ -223,9 +222,8 @@ export default {
       try {
         const res = await axios.get(generateUrl('/apps/verein/permissions'))
         const data = res.data || {}
-        // API returns { permissions: [...], templates: [...] }
+        // API returns { permissions: [...] }
         this.permissionsList = data.permissions || []
-        this.permissionTemplates = data.templates || []
       } catch (e) {
         console.error('Error loading permissions', e)
         showError(extractErrorMessage(e, 'Fehler beim Laden der Berechtigungen'))

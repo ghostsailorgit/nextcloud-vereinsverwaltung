@@ -40,8 +40,4 @@ A comprehensive club/association management solution for Nextcloud with member m
         <command>OCA\Verein\Command\RestoreBackup</command>
     </commands>
 
-    <settings>
-        <admin>OCA\Verein\Settings\AdminSettings</admin>
-        <admin-section>OCA\Verein\Settings\AdminSection</admin-section>
-    </settings>
 </info>

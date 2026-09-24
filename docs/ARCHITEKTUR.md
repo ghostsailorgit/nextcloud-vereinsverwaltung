@@ -110,21 +110,31 @@ Mitglieder. Er wird nur intern mit den je Verein festgelegten Nextcloud-Gruppen 
 ## Technik
 - Backend: PHP, Nextcloud AppFramework (Controller → Service → Mapper/Entity), Migrationen in `lib/Migration`.
 - Frontend: Vue 3 + `@nextcloud/vue`, gebaut mit Vite nach `js/dist/`. Der ausgewählte Verein liegt in
-  `js/store/club.js`; `js/api.js` hängt die `clubId` an jede Anfrage.
+  `js/store/club.js`; `js/api.js` hängt die `clubId` an jede Anfrage. Die Adresse der Nextcloud (Unterordner, `index.php`)
+  gibt die Seite dem Frontend über `data-url-root` mit (`js/absoluteUrl.js`).
 - Tests: PHPUnit (`tests/Unit`), Nextcloud-Klassen kommen aus den `nextcloud/ocp`-Stubs.
+- PDF-Export: TCPDF aus `vendor/` (`composer install --no-dev`); fehlt es, antwortet der Export mit 503 und einem Hinweis.
+- API-Übersicht: `docs/API.md` wird aus den Routen erzeugt (`php scripts/ApiDocs.php`), ein Test hält sie aktuell.
+
+## Fehlerbehandlung
+Dienste werfen `ValidationException` (400), `NotFoundException` (404), `PermissionDeniedException` (403) oder
+`DependencyMissingException` (503); deren Texte sind für Nutzer gedacht. Controller geben jede Ausnahme an
+`RespondsWithErrors::errorResponse()` weiter. Alles Unerwartete wird als 500 mit allgemeinem Text beantwortet, die
+Einzelheiten stehen nur im Nextcloud-Log (Datenbankfehler können SQL enthalten). Ein Test stellt sicher, dass kein
+Controller einen Ausnahmetext selbst in eine Antwort schreibt.
 
 ## Entwicklung
 ```
 composer update
-vendor/bin/phpunit --testsuite "Unit Tests"
-npm install && npm run build
+vendor/bin/phpunit
+npm ci && npm run build
 ```
 Bei jeder Änderung, die Rechte betrifft, bitte mit einem echten Nicht-Admin-Konto testen. Beim Ausspielen
 auf eine Nextcloud immer aus einem frischen Verzeichnis kopieren und danach die Dateien per Prüfsumme mit dem Repo
 vergleichen. Für jede Veröffentlichung `<version>` in `appinfo/info.xml` erhöhen.
 
 ## Datenschutz im Repo
-Keine echten Mitgliederdaten, Domains, Servernamen oder Firmenbezüge in Code, Tests, Doku oder Commit-Texten.
+Das Repository ist öffentlich. Keine echten Mitgliederdaten, Domains, Servernamen, E-Mail-Adressen oder Firmenbezüge in Code, Tests, Doku oder Commit-Texten (Beispiele: `Mustermann`, `cloud.example.org`). Commits laufen unter der GitHub-noreply-Adresse.
 
 ## Sicherheit
 - Rechte je Endpunkt (`#[RequirePermission]`), Mandantentrennung über `clubId` (jede ID-Abfrage prüft die Vereinszugehörigkeit).
