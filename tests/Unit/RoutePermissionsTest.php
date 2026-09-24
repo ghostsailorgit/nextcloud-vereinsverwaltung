@@ -83,6 +83,28 @@ class RoutePermissionsTest extends TestCase {
         }
     }
 
+    /**
+     * @dataProvider routes
+     */
+    public function testStateChangingRoutesKeepTheCsrfCheck(string $controller, string $method): void {
+        $config = require __DIR__ . '/../../appinfo/routes.php';
+        foreach ($config['routes'] as $route) {
+            if ($route['name'] !== $controller . '#' . $method) {
+                continue;
+            }
+            if (strtoupper($route['verb']) === 'GET') {
+                $this->addToAssertionCount(1);
+                return;
+            }
+        }
+        $doc = (string)$this->reflect($controller, $method)->getDocComment();
+        $this->assertSame(
+            0,
+            preg_match('/^\s*\*\s*@NoCSRFRequired\b/m', $doc),
+            "$controller#$method changes data, so it must not be marked @NoCSRFRequired (a sibling site could forge requests)"
+        );
+    }
+
     public function testClubScopedRoutesCanGetTheirClubId(): void {
         // Club-scoped permissions read `clubId` from the request; routes that
         // carry it in the URL must name the placeholder exactly that.

@@ -70,6 +70,10 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
     update/delete). The calendar is shared read-only with Nextcloud groups configured per club - never with a
     public link (member birth dates are personal data).
 
+12. **CSRF:** never put `@NoCSRFRequired` on a POST/PUT/DELETE action (it once was everywhere; a sibling site on the same
+    registrable domain could then forge writes). Only GET reads and file downloads may have it - `RoutePermissionsTest` enforces it.
+    The frontend goes through `js/api.js` (`@nextcloud/axios` adds the token); do not use raw `fetch` for writes.
+
 ## Working conventions
 - **With every feature/fix/release update all three: `CHANGELOG.md` (new entry at the top, matching the
   `info.xml` version), `ROADMAP.md` (table "Stand dieses Forks" at the top) and the roadmap below.** Also

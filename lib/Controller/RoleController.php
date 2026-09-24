@@ -120,7 +120,6 @@ class RoleController extends ApiController {
      * member of one club must not be able to change what another club's
      * roles allow.
      *
-     * @NoCSRFRequired
      */
     public function store(): DataResponse {
         try {
@@ -149,7 +148,6 @@ class RoleController extends ApiController {
      * member of one club must not be able to change what another club's
      * roles allow.
      *
-     * @NoCSRFRequired
      */
     public function update(int $id): DataResponse {
         try {
@@ -176,7 +174,6 @@ class RoleController extends ApiController {
      * member of one club must not be able to change what another club's
      * roles allow.
      *
-     * @NoCSRFRequired
      */
     public function destroy(int $id): DataResponse {
         try {
@@ -205,7 +202,6 @@ class RoleController extends ApiController {
     
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
     public function assignRole(): DataResponse {
@@ -218,6 +214,11 @@ class RoleController extends ApiController {
                 return new DataResponse(['error' => 'userId und roleId erforderlich'], 400);
             }
             
+            // rights must not be pre-assigned to an account name that does not exist (yet)
+            if (!$this->userManager->userExists((string)$userId)) {
+                return new DataResponse(['error' => 'Das Nextcloud-Konto existiert nicht'], 400);
+            }
+
             $userRole = $this->roleService->assignRole($userId, $roleId, $clubId);
             return new DataResponse($userRole->jsonSerialize(), 201);
         } catch (\Exception $e) {
@@ -227,7 +228,6 @@ class RoleController extends ApiController {
     
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
     public function removeRoles(): DataResponse {

@@ -4,7 +4,7 @@
 
 ---
 
-## Stand dieses Forks (aktuell, Version 0.9.1-beta)
+## Stand dieses Forks (aktuell, Version 0.9.2-beta)
 
 Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind teils überholt. Maßgeblich ist diese Liste.
 

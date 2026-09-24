@@ -22,7 +22,6 @@ class FeeRunController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function preview(): JSONResponse {
@@ -36,7 +35,6 @@ class FeeRunController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function run(): JSONResponse {

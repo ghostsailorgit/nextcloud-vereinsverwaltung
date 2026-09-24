@@ -142,7 +142,6 @@ class MemberController extends Controller {
      * Adds an existing person (from another club) to this club.
      *
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function attach() {
@@ -205,7 +204,6 @@ class MemberController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function create() {
@@ -280,7 +278,6 @@ class MemberController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function update($id) {
@@ -329,7 +326,6 @@ class MemberController extends Controller {
      * no other club has them).
      *
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.member.manage')]
     public function destroy($id) {

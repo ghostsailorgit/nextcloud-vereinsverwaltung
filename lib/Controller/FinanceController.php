@@ -51,7 +51,6 @@ class FinanceController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function create() {
@@ -96,7 +95,6 @@ class FinanceController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function update($id) {
@@ -141,7 +139,6 @@ class FinanceController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function markPaid() {
@@ -153,7 +150,6 @@ class FinanceController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function flagOverdue() {
@@ -163,7 +159,6 @@ class FinanceController extends Controller {
 
     /**
      * @NoAdminRequired
-     * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.delete')]
     public function destroy($id) {

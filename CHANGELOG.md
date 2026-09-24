@@ -6,6 +6,15 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.9.2-beta] - 2026-09-25
+
+### 🔒 Sicherheit
+- Schreibende Endpunkte (Mitglieder, Beiträge, Beitragslauf, Rollenzuweisung) verlangen wieder das CSRF-Token. Vorher war es überall abgeschaltet; ein Test verhindert das künftig.
+- CSV-Export schützt vor Formelinjektion: Text, der mit `=`, `+`, `-` oder `@` beginnt, wird mit einem Apostroph entschärft.
+- Rollen lassen sich nur noch an existierende Nextcloud-Konten vergeben.
+
+---
+
 ## [0.9.1-beta] - 2026-09-25
 
 ### 🐛 Behoben
