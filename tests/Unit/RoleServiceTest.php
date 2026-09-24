@@ -1,6 +1,12 @@
 <?php
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\Db\Club;
+use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\Member;
+use OCA\Verein\Db\MemberMapper;
+use OCA\Verein\Db\Membership;
+use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Db\Role;
 use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRole;
@@ -22,7 +28,17 @@ class RoleServiceTest extends TestCase {
     private RoleMapper&MockObject $roleMapper;
     private UserRoleMapper&MockObject $userRoleMapper;
     private IGroupManager&MockObject $groupManager;
+    private MemberMapper&MockObject $memberMapper;
+    private MembershipMapper&MockObject $membershipMapper;
+    private ClubMapper&MockObject $clubMapper;
     private RoleService $service;
+
+    /** @var array<string, Member> linked person by Nextcloud uid */
+    private array $people = [];
+    /** @var array<int, Membership[]> */
+    private array $membershipsByMember = [];
+    /** @var array<int, Club> */
+    private array $clubs = [];
 
     /** @var array<int, Role> */
     private array $roles = [];
@@ -33,6 +49,12 @@ class RoleServiceTest extends TestCase {
         $this->roleMapper = $this->createMock(RoleMapper::class);
         $this->userRoleMapper = $this->createMock(UserRoleMapper::class);
         $this->groupManager = $this->createMock(IGroupManager::class);
+        $this->memberMapper = $this->createMock(MemberMapper::class);
+        $this->membershipMapper = $this->createMock(MembershipMapper::class);
+        $this->clubMapper = $this->createMock(ClubMapper::class);
+        $this->memberMapper->method('findByUserId')->willReturnCallback(fn (string $uid) => $this->people[$uid] ?? null);
+        $this->membershipMapper->method('findByMember')->willReturnCallback(fn (int $id) => $this->membershipsByMember[$id] ?? []);
+        $this->clubMapper->method('find')->willReturnCallback(fn (int $id) => $this->clubs[$id] ?? throw new DoesNotExistException('no club'));
 
         $this->roleMapper->method('find')->willReturnCallback(function (int $id) {
             return $this->roles[$id] ?? throw new DoesNotExistException('no role');
@@ -52,7 +74,10 @@ class RoleServiceTest extends TestCase {
             $this->userRoleMapper,
             $this->groupManager,
             $this->createMock(IUserSession::class),
-            $this->createMock(LoggerInterface::class)
+            $this->createMock(LoggerInterface::class),
+            $this->memberMapper,
+            $this->membershipMapper,
+            $this->clubMapper
         );
     }
 
@@ -161,5 +186,122 @@ class RoleServiceTest extends TestCase {
         $byUser = array_column($result, 'roles', 'userId');
         $this->assertSame(['role1', 'role2'], $byUser['anna']);
         $this->assertSame(['role1'], $byUser['bob']);
+    }
+
+    // --- automatic rights derived from the membership
+
+    private function person(int $id, ?string $userId, bool $deceased = false): Member {
+        $m = new Member();
+        $m->setId($id);
+        $m->setName('P' . $id);
+        $m->setUserId($userId);
+        $m->setDeceased($deceased);
+        return $m;
+    }
+
+    private function membershipIn(int $memberId, int $clubId, string $role, ?string $leaveDate = null): Membership {
+        $ms = new Membership();
+        $ms->setMemberId($memberId);
+        $ms->setClubId($clubId);
+        $ms->setRole($role);
+        $ms->setLeaveDate($leaveDate);
+        return $ms;
+    }
+
+    /** @param array<string,int> $mapping */
+    private function club(int $id, array $mapping): void {
+        $club = new Club();
+        $club->setId($id);
+        $club->setName('Club ' . $id);
+        $club->setRoleMapping($mapping === [] ? null : json_encode($mapping));
+        $this->clubs[$id] = $club;
+    }
+
+    private function linkedPerson(string $uid, Member $person, Membership ...$memberships): void {
+        $this->people[$uid] = $person;
+        $this->membershipsByMember[$person->getId()] = $memberships;
+    }
+
+    public function testBoardMemberGetsTheMappedRoleAutomaticallyInTheirClubOnly(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, ['admin' => 1]);
+        $this->club(11, ['admin' => 1]);
+        $this->linkedPerson('max', $this->person(5, 'max'), $this->membershipIn(5, 10, 'admin'));
+
+        $this->assertTrue($this->service->userHasPermission('max', 'verein.member.manage', 10));
+        $this->assertFalse($this->service->userHasPermission('max', 'verein.member.manage', 11), 'not a member of club 11');
+        $this->assertSame([10], $this->service->getClubIdsWithPermission('max', 'verein.member.manage'));
+        $this->assertSame([10], $this->service->getAccessibleClubIds('max'));
+        $this->assertSame(['verein.member.manage'], $this->service->getPermissionsForClub('max', 10));
+    }
+
+    public function testNothingIsDerivedWithoutAMappingForThatMembershipRole(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, ['admin' => 1]); // only the board is mapped
+        $this->linkedPerson('anna', $this->person(6, 'anna'), $this->membershipIn(6, 10, 'member'));
+
+        $this->assertFalse($this->service->userHasPermission('anna', 'verein.member.manage', 10));
+        $this->assertSame([], $this->service->getAccessibleClubIds('anna'));
+    }
+
+    public function testNothingIsDerivedWhenTheClubHasNoMappingAtAll(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, []);
+        $this->linkedPerson('max', $this->person(5, 'max'), $this->membershipIn(5, 10, 'admin'));
+
+        $this->assertFalse($this->service->userHasPermission('max', 'verein.member.manage', 10));
+    }
+
+    public function testRightsEndWithTheMembership(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, ['admin' => 1]);
+        $this->linkedPerson('left', $this->person(5, 'left'), $this->membershipIn(5, 10, 'admin', '2025-06-30'));
+        $this->linkedPerson('dead', $this->person(6, 'dead', true), $this->membershipIn(6, 10, 'admin'));
+
+        $this->assertFalse($this->service->userHasPermission('left', 'verein.member.manage', 10), 'left the club');
+        $this->assertFalse($this->service->userHasPermission('dead', 'verein.member.manage', 10), 'deceased');
+    }
+
+    public function testMappingToAMissingRoleGrantsNothing(): void {
+        $this->club(10, ['admin' => 99]);
+        $this->linkedPerson('max', $this->person(5, 'max'), $this->membershipIn(5, 10, 'admin'));
+
+        $this->assertFalse($this->service->userHasPermission('max', 'verein.member.manage', 10));
+    }
+
+    public function testExplicitAndAutomaticRolesAddUp(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->role(2, ['verein.finance.read']);
+        $this->club(10, ['admin' => 1]);
+        $this->linkedPerson('max', $this->person(5, 'max'), $this->membershipIn(5, 10, 'admin'));
+        $this->assign('max', 2, 10);
+
+        $perms = $this->service->getPermissionsForClub('max', 10);
+        sort($perms);
+        $this->assertSame(['verein.finance.read', 'verein.member.manage'], $perms);
+    }
+
+    public function testAccountWithoutLinkedPersonGetsNothingAutomatic(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, ['admin' => 1]);
+
+        $this->assertFalse($this->service->userHasPermission('stranger', 'verein.member.manage', 10));
+    }
+
+    public function testClubAssignmentsListAutomaticRolesSeparately(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->role(2, ['verein.finance.read']);
+        $this->club(10, ['admin' => 1]);
+        $this->assign('max', 2, 10);
+        $this->userRoleMapper->method('findByClubId')->with(10)->willReturn($this->assignments);
+
+        $max = $this->person(5, 'max');
+        $max->setMembership($this->membershipIn(5, 10, 'admin'));
+        $this->memberMapper->method('findByClub')->with(10)->willReturn([$max]);
+
+        $result = array_column($this->service->getClubAssignments(10), null, 'userId');
+
+        $this->assertSame(['role2'], $result['max']['roles']);
+        $this->assertSame(['role1'], $result['max']['automaticRoles']);
     }
 }

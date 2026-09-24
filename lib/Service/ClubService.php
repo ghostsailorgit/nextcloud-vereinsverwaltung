@@ -8,6 +8,7 @@ use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Service\RBAC\RoleService;
@@ -26,7 +27,8 @@ class ClubService {
         private UserRoleMapper $userRoleMapper,
         private RoleService $roleService,
         private ValidationService $validation,
-        private MemberCalendarService $calendar
+        private MemberCalendarService $calendar,
+        private RoleMapper $roleMapper
     ) {
     }
 
@@ -100,6 +102,36 @@ class ClubService {
         $this->accountMapper->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);
         $this->clubMapper->delete($club);
+    }
+
+    /**
+     * Sets which app role each membership role gets automatically (members
+     * with a linked Nextcloud account; see RoleService::derivedRoles()).
+     * A missing/empty entry means "no automatic role" for that membership role.
+     *
+     * @param array<string, mixed> $mapping membership role => role id or ''
+     * @throws ValidationException
+     */
+    public function setRoleMapping(int $clubId, array $mapping): Club {
+        $club = $this->clubMapper->find($clubId);
+
+        $clean = [];
+        foreach (['member', 'treasurer', 'admin'] as $membershipRole) {
+            $roleId = $mapping[$membershipRole] ?? '';
+            if ($roleId === '' || $roleId === null || (int)$roleId === 0) {
+                continue;
+            }
+            try {
+                $this->roleMapper->find((int)$roleId);
+            } catch (DoesNotExistException $e) {
+                throw new ValidationException('Die gewählte Rolle existiert nicht');
+            }
+            $clean[$membershipRole] = (int)$roleId;
+        }
+
+        $club->setRoleMapping($clean === [] ? null : json_encode($clean));
+        $club->setUpdatedAt(date('Y-m-d H:i:s'));
+        return $this->clubMapper->update($club);
     }
 
     /**

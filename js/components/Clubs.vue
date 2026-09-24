@@ -73,6 +73,31 @@
       </form>
     </div>
 
+    <!-- Automatic rights -->
+    <div v-if="club && canManageRoles" class="card">
+      <h3>Automatische Rechte</h3>
+      <p class="hint">
+        Mitglieder mit verknüpftem Nextcloud-Konto (Mitgliederformular) bekommen je nach Vereinsrolle automatisch eine
+        App-Rolle für diesen Verein. Die Rechte enden von selbst, sobald jemand austritt oder verstirbt. Leer = keine
+        automatischen Rechte. Zusätzlich vergebene Rollen unter „Rollen“ bleiben bestehen.
+      </p>
+      <form class="grid" @submit.prevent="saveMapping">
+        <NcSelect
+          v-for="m in mappingRows"
+          :key="m.key"
+          v-model="mapping[m.key]"
+          :options="roleOptions"
+          :reduce="r => r.id"
+          label="name"
+          :input-label="m.label"
+          placeholder="keine automatische Rolle"
+        />
+        <div class="actions">
+          <NcButton type="submit" variant="primary" :disabled="busy">Speichern</NcButton>
+        </div>
+      </form>
+    </div>
+
     <!-- Nextcloud administrators: add / remove clubs -->
     <div v-if="isAdmin" class="card">
       <h3>Vereine verwalten (Administrator)</h3>
@@ -91,10 +116,11 @@
 </template>
 
 <script>
-import { reactive, ref, computed, watch } from 'vue'
+import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { api } from '../api'
 import { extractErrorMessage } from '../errorMessage'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
@@ -103,7 +129,7 @@ const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId
 
 export default {
   name: 'Clubs',
-  components: { NcButton, NcTextField },
+  components: { NcButton, NcTextField, NcSelect },
   setup() {
     const busy = ref(false)
     const newClubName = ref('')
@@ -113,6 +139,31 @@ export default {
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
     const canManage = computed(() => can('verein.club.manage'))
+    const canManageRoles = computed(() => can('verein.role.manage'))
+
+    // automatic rights: membership role -> app role
+    const roleOptions = ref([])
+    const mapping = reactive({ member: null, treasurer: null, admin: null })
+    const mappingRows = [
+      { key: 'admin', label: 'Vorstand erhält die Rolle' },
+      { key: 'treasurer', label: 'Kassierer erhält die Rolle' },
+      { key: 'member', label: 'Mitglied erhält die Rolle' }
+    ]
+    const fillMapping = () => {
+      const m = club.value?.roleMapping || {}
+      mapping.member = m.member ?? null
+      mapping.treasurer = m.treasurer ?? null
+      mapping.admin = m.admin ?? null
+    }
+    onMounted(async () => {
+      if (!canManageRoles.value) return
+      try {
+        const res = await api.get('roles')
+        roleOptions.value = Array.isArray(res.data) ? res.data : []
+      } catch (e) {
+        roleOptions.value = []
+      }
+    })
 
     const fillForm = () => {
       const c = club.value
@@ -125,7 +176,7 @@ export default {
         calendarGroups: (c?.calendarGroups || []).join(', ')
       })
     }
-    watch(club, fillForm, { immediate: true })
+    watch(club, () => { fillForm(); fillMapping() }, { immediate: true })
 
     const run = async (action, okMessage) => {
       busy.value = true
@@ -145,6 +196,15 @@ export default {
       await api.updateClub(club.value.id, { ...form })
       await loadClubs()
     }, 'Vereinsdaten gespeichert')
+
+    const saveMapping = () => run(async () => {
+      await api.put(`clubs/${club.value.id}/role-mapping`, {
+        member: mapping.member ?? '',
+        treasurer: mapping.treasurer ?? '',
+        admin: mapping.admin ?? ''
+      })
+      await loadClubs()
+    }, 'Automatische Rechte gespeichert')
 
     const createClub = async () => {
       let createdId = null
@@ -194,7 +254,7 @@ export default {
     }
 
     return {
-      busy, club, isAdmin, canManage, form, accountForm, newClubName,
+      busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm
     }
   }

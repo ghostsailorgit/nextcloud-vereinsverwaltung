@@ -120,9 +120,15 @@
         <tbody>
           <tr v-for="a in assignments" :key="a.userId">
             <td>{{ a.displayName }} <small>({{ a.userId }})</small></td>
-            <td>{{ a.roles.join(', ') }}</td>
             <td>
-              <NcButton variant="error" @click="removeAssignments(a)">Alle Rollen entziehen</NcButton>
+              {{ a.roles.join(', ') }}
+              <span v-if="a.automaticRoles && a.automaticRoles.length" class="auto" title="ergibt sich aus der Mitgliedschaft (Reiter Verein)">
+                <template v-if="a.roles.length"> · </template>{{ a.automaticRoles.join(', ') }} (automatisch)
+              </span>
+            </td>
+            <td>
+              <NcButton v-if="a.roles.length" variant="error" @click="removeAssignments(a)">Zugewiesene Rollen entziehen</NcButton>
+              <small v-else>wird mit der Mitgliedschaft entzogen</small>
             </td>
           </tr>
           <tr v-if="assignments.length === 0">
@@ -327,6 +333,7 @@ export default {
 
 <style scoped>
 .roles-page { padding: 20px }
+.auto { color: var(--color-text-maxcontrast); font-style: italic }
 .hint { color: var(--color-text-maxcontrast); margin-bottom: 12px }
 .controls { margin-bottom: 12px }
 .form-card, .table-card { background: var(--color-main-background); border: 1px solid var(--color-border); padding: 16px; border-radius: 6px; margin-bottom: 16px }

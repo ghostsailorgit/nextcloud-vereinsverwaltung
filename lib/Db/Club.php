@@ -17,6 +17,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDocumentsPath(?string $documentsPath)
  * @method ?string getCalendarGroups()
  * @method void setCalendarGroups(?string $calendarGroups)
+ * @method ?string getRoleMapping()
+ * @method void setRoleMapping(?string $roleMapping)
  * @method ?string getCalendarUri()
  * @method void setCalendarUri(?string $calendarUri)
  * @method ?string getCreatedAt()
@@ -32,6 +34,7 @@ class Club extends Entity implements JsonSerializable {
     protected ?string $documentsPath = null;
     protected ?string $calendarGroups = null;
     protected ?string $calendarUri = null;
+    protected ?string $roleMapping = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -39,6 +42,26 @@ class Club extends Entity implements JsonSerializable {
     public function getCalendarGroupsArray(): array {
         $decoded = json_decode((string)$this->calendarGroups, true);
         return is_array($decoded) ? array_values(array_filter($decoded, 'is_string')) : [];
+    }
+
+    /**
+     * Which app role (verein_roles id) a membership role gets automatically,
+     * e.g. ['admin' => 3, 'treasurer' => 4]. Empty = nothing derived.
+     *
+     * @return array<string, int>
+     */
+    public function getRoleMappingArray(): array {
+        $decoded = json_decode((string)$this->roleMapping, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $result = [];
+        foreach ($decoded as $membershipRole => $roleId) {
+            if (is_string($membershipRole) && is_numeric($roleId) && (int)$roleId > 0) {
+                $result[$membershipRole] = (int)$roleId;
+            }
+        }
+        return $result;
     }
 
     public function jsonSerialize(): array {
@@ -50,6 +73,7 @@ class Club extends Entity implements JsonSerializable {
             'city' => $this->city,
             'documentsPath' => $this->documentsPath,
             'calendarGroups' => $this->getCalendarGroupsArray(),
+            'roleMapping' => (object)$this->getRoleMappingArray(),
         ];
     }
 }

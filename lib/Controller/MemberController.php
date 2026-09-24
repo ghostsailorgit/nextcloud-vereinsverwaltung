@@ -37,6 +37,17 @@ class MemberController extends Controller {
         $this->validationService = $validationService;
     }
 
+    /**
+     * A member's role and linked Nextcloud account decide which rights they
+     * get automatically (see RoleService::derivedRoles()), so changing them
+     * needs the role-management permission - otherwise someone who may only
+     * edit member data could make themselves (or anyone) a board member.
+     */
+    private function canManageRoles(): bool {
+        $uid = $this->userSession->getUser()?->getUID() ?? '';
+        return $this->roleService->userHasPermission($uid, 'verein.role.manage', $this->clubId());
+    }
+
     private function clubId(): int {
         return (int)$this->request->getParam('clubId', 0);
     }
@@ -148,6 +159,8 @@ class MemberController extends Controller {
             }
 
             $data = $this->readMemberParams();
+            $data['role'] = 'member';
+            $data['userId'] = null;
             $validation = $this->validationService->validateMember(array_merge($data, ['name' => 'Platzhalter', 'email' => 'platzhalter@example.com']));
             if (!$validation['valid']) {
                 return new JSONResponse([
@@ -198,6 +211,10 @@ class MemberController extends Controller {
     public function create() {
         try {
             $data = $this->readMemberParams();
+            if (!$this->canManageRoles()) {
+                $data['role'] = 'member';
+                $data['userId'] = null;
+            }
 
             // Validierung
             $validation = $this->validationService->validateMember($data);
@@ -268,6 +285,11 @@ class MemberController extends Controller {
     public function update($id) {
         try {
             $data = $this->readMemberParams();
+            if (!$this->canManageRoles()) {
+                // keep the current role and account link untouched
+                $data['role'] = $this->memberService->find($this->clubId(), (int)$id)->getRole();
+                $data['userId'] = null;
+            }
 
             // Validierung
             $validation = $this->validationService->validateMember($data);

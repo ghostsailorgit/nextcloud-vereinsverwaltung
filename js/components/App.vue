@@ -34,7 +34,7 @@
       <div class="verein-container">
         <p v-if="!loaded">Lade Vereine…</p>
         <p v-else-if="loadError" class="verein-error">{{ loadError }}</p>
-        <p v-else-if="!clubs.length && !isAdmin">
+        <p v-else-if="!clubs.length && !isAdmin && !hasMe">
           Du bist noch keinem Verein zugeordnet. Bitte wende dich an einen Administrator,
           damit er dir in der Vereinsverwaltung eine Rolle zuweist.
         </p>
@@ -59,7 +59,7 @@ import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
-import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
+import { clubState, currentClub, loadClubs, loadMe, setCurrentClub, can } from '../store/club'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
 // Lazy-load Statistics (includes Chart.js ~500KB) for better initial load
@@ -67,6 +67,7 @@ const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
 import Roles from './Roles.vue'
 import SepaExport from './SepaExport.vue'
 import Clubs from './Clubs.vue'
+import Me from './Me.vue'
 
 export default {
   name: 'App',
@@ -82,7 +83,8 @@ export default {
     Statistics,
     Roles,
     SepaExport,
-    Clubs
+    Clubs,
+    Me
   },
   setup() {
     const activeTab = ref('dashboard')
@@ -99,6 +101,7 @@ export default {
       { id: 'roles', label: 'Rollen', emoji: '🛡️', show: can('verein.role.manage') },
       { id: 'sepa', label: 'SEPA-Export', emoji: '🏦', show: can('verein.sepa.export') },
       { id: 'clubs', label: 'Verein', emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
+      { id: 'me', label: 'Meine Daten', emoji: '👤', show: !!clubState.me?.linked },
       {
         id: 'documents',
         label: 'Dokumente',
@@ -117,7 +120,8 @@ export default {
       finance: 'Finance',
       roles: 'Roles',
       sepa: 'SepaExport',
-      clubs: 'Clubs'
+      clubs: 'Clubs',
+      me: 'Me'
     }
 
     // If the current tab isn't available (e.g. after switching to a club where
@@ -135,7 +139,7 @@ export default {
 
     onMounted(async () => {
       try {
-        await loadClubs()
+        await Promise.all([loadClubs(), loadMe()])
         ensureVisibleTab()
       } catch (e) {
         loadError.value = extractErrorMessage(e, 'Die Vereine konnten nicht geladen werden')
@@ -163,7 +167,8 @@ export default {
       clubs: computed(() => clubState.clubs),
       currentClubId: computed(() => clubState.currentId),
       loaded: computed(() => clubState.loaded),
-      isAdmin: computed(() => clubState.isAdmin)
+      isAdmin: computed(() => clubState.isAdmin),
+      hasMe: computed(() => !!clubState.me?.linked)
     }
   }
 }

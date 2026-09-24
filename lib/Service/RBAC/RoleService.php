@@ -15,6 +15,9 @@
 
 namespace OCA\Verein\Service\RBAC;
 
+use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\MemberMapper;
+use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Db\Role;
 use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRole;
@@ -175,14 +178,23 @@ class RoleService {
     private UserRoleMapper $userRoleMapper;
     private IGroupManager $groupManager;
     private LoggerInterface $logger;
+    private MemberMapper $memberMapper;
+    private MembershipMapper $membershipMapper;
+    private ClubMapper $clubMapper;
 
     public function __construct(
         RoleMapper $roleMapper,
         UserRoleMapper $userRoleMapper,
         IGroupManager $groupManager,
         IUserSession $userSession,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        MemberMapper $memberMapper,
+        MembershipMapper $membershipMapper,
+        ClubMapper $clubMapper
     ) {
+        $this->memberMapper = $memberMapper;
+        $this->membershipMapper = $membershipMapper;
+        $this->clubMapper = $clubMapper;
         $this->roleMapper = $roleMapper;
         $this->userRoleMapper = $userRoleMapper;
         $this->groupManager = $groupManager;
@@ -193,25 +205,17 @@ class RoleService {
     /**
      * Checks whether a user holds a role granting the given permission.
      * Nextcloud admins always pass, since they administer the whole instance
-     * anyway; everyone else needs an explicit Role assignment (see assignRole()).
-     * Role assignments are per club: with a $clubId only assignments for that
-     * club count, with null the permission may be held in any club.
+     * anyway; everyone else needs a role - either assigned explicitly (see
+     * assignRole()) or derived automatically from their membership (see
+     * derivedRoles()). Roles are per club: with a $clubId only that club's
+     * roles count, with null the permission may be held in any club.
      */
     public function userHasPermission(string $userId, string $permission, ?int $clubId = null): bool {
         if ($this->groupManager->isAdmin($userId)) {
             return true;
         }
 
-        $userRoles = $clubId === null
-            ? $this->userRoleMapper->findByUserId($userId)
-            : $this->userRoleMapper->findByUserAndClub($userId, $clubId);
-
-        foreach ($userRoles as $userRole) {
-            try {
-                $role = $this->roleMapper->find($userRole->getRoleId());
-            } catch (DoesNotExistException $e) {
-                continue;
-            }
+        foreach ($this->effectiveRoles($userId, $clubId) as $role) {
             if (in_array($permission, $role->getPermissionsArray(), true)) {
                 return true;
             }
@@ -232,22 +236,16 @@ class RoleService {
         }
 
         $clubIds = [];
-        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
-            $clubId = (int)$userRole->getClubId();
-            if (isset($clubIds[$clubId])) {
-                continue;
-            }
-            try {
-                $role = $this->roleMapper->find($userRole->getRoleId());
-            } catch (DoesNotExistException $e) {
-                continue;
-            }
-            if (in_array($permission, $role->getPermissionsArray(), true)) {
-                $clubIds[$clubId] = $clubId;
+        foreach ($this->candidateClubIds($userId) as $clubId) {
+            foreach ($this->effectiveRoles($userId, $clubId) as $role) {
+                if (in_array($permission, $role->getPermissionsArray(), true)) {
+                    $clubIds[] = $clubId;
+                    break;
+                }
             }
         }
 
-        return array_values($clubIds);
+        return $clubIds;
     }
 
     /**
@@ -261,10 +259,12 @@ class RoleService {
             return null;
         }
         $ids = [];
-        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
-            $ids[(int)$userRole->getClubId()] = (int)$userRole->getClubId();
+        foreach ($this->candidateClubIds($userId) as $clubId) {
+            if ($this->effectiveRoles($userId, $clubId) !== []) {
+                $ids[] = $clubId;
+            }
         }
-        return array_values($ids);
+        return $ids;
     }
 
     /**
@@ -279,12 +279,7 @@ class RoleService {
         }
 
         $permissions = [];
-        foreach ($this->userRoleMapper->findByUserAndClub($userId, $clubId) as $userRole) {
-            try {
-                $role = $this->roleMapper->find($userRole->getRoleId());
-            } catch (DoesNotExistException $e) {
-                continue;
-            }
+        foreach ($this->effectiveRoles($userId, $clubId) as $role) {
             foreach ($role->getPermissionsArray() as $permission) {
                 $permissions[$permission] = $permission;
             }
@@ -295,6 +290,104 @@ class RoleService {
     public function isNextcloudAdmin(string $userId): bool {
         return $this->groupManager->isAdmin($userId);
     }
+
+    /**
+     * The roles a user effectively holds: explicit assignments plus the
+     * roles derived from their membership. Null club = across all clubs.
+     *
+     * @return Role[]
+     */
+    private function effectiveRoles(string $userId, ?int $clubId): array {
+        $roles = [];
+
+        $assignments = $clubId === null
+            ? $this->userRoleMapper->findByUserId($userId)
+            : $this->userRoleMapper->findByUserAndClub($userId, $clubId);
+        foreach ($assignments as $userRole) {
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            $roles[$role->getId()] = $role;
+        }
+
+        foreach ($this->derivedRoles($userId, $clubId) as $role) {
+            $roles[$role->getId()] = $role;
+        }
+
+        return array_values($roles);
+    }
+
+    /**
+     * Roles granted automatically by being an active member of a club with a
+     * Nextcloud account linked to the person: each club can map its
+     * membership roles (Mitglied/Kassierer/Vorstand) to an app role (see
+     * Club::getRoleMappingArray()). Nothing is derived unless a club has
+     * configured such a mapping, and nothing once the person has left or
+     * passed away - the rights disappear together with the membership.
+     *
+     * @return Role[]
+     */
+    private function derivedRoles(string $userId, ?int $clubId): array {
+        $person = $this->memberMapper->findByUserId($userId);
+        if ($person === null || $person->getDeceased()) {
+            return [];
+        }
+
+        $roles = [];
+        foreach ($this->membershipMapper->findByMember($person->getId()) as $membership) {
+            if ($clubId !== null && $membership->getClubId() !== $clubId) {
+                continue;
+            }
+            if (!empty($membership->getLeaveDate())) {
+                continue;
+            }
+            $role = $this->mappedRole($membership->getClubId(), $membership->getRole());
+            if ($role !== null) {
+                $roles[$role->getId()] = $role;
+            }
+        }
+        return array_values($roles);
+    }
+
+    private function mappedRole(int $clubId, string $membershipRole): ?Role {
+        try {
+            $club = $this->clubMapper->find($clubId);
+        } catch (DoesNotExistException $e) {
+            return null;
+        }
+        $roleId = $club->getRoleMappingArray()[$membershipRole] ?? null;
+        if ($roleId === null) {
+            return null;
+        }
+        try {
+            return $this->roleMapper->find((int)$roleId);
+        } catch (DoesNotExistException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Clubs in which the user could hold a role at all (assigned or via
+     * their linked person's memberships) - each is then checked in detail.
+     *
+     * @return int[]
+     */
+    private function candidateClubIds(string $userId): array {
+        $ids = [];
+        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
+            $ids[(int)$userRole->getClubId()] = (int)$userRole->getClubId();
+        }
+        $person = $this->memberMapper->findByUserId($userId);
+        if ($person !== null) {
+            foreach ($this->membershipMapper->findByMember($person->getId()) as $membership) {
+                $ids[$membership->getClubId()] = $membership->getClubId();
+            }
+        }
+        return array_values($ids);
+    }
+
     /**
      * @return string[]
      */
@@ -385,10 +478,11 @@ class RoleService {
     }
 
     /**
-     * Everyone holding a role in the club, one entry per user with the
-     * names of their roles.
+     * Everyone holding a role in the club, one entry per user: the names of
+     * the explicitly assigned roles ('roles', removable) and of the roles
+     * derived automatically from their membership ('automaticRoles').
      *
-     * @return array<int, array{userId: string, roles: string[]}>
+     * @return array<int, array{userId: string, roles: string[], automaticRoles: string[]}>
      */
     public function getClubAssignments(int $clubId): array {
         $byUser = [];
@@ -398,16 +492,30 @@ class RoleService {
             } catch (DoesNotExistException $e) {
                 continue;
             }
-            $byUser[$userRole->getUserId()][] = $role->getName();
+            $byUser[$userRole->getUserId()]['roles'][] = $role->getName();
+        }
+
+        foreach ($this->memberMapper->findByClub($clubId) as $member) {
+            $uid = $member->getUserId();
+            if ($uid === null || $uid === '' || $member->isFormer()) {
+                continue;
+            }
+            $role = $this->mappedRole($clubId, $member->getRole());
+            if ($role !== null) {
+                $byUser[$uid]['automaticRoles'][] = $role->getName();
+            }
         }
 
         $result = [];
-        foreach ($byUser as $userId => $roles) {
-            $result[] = ['userId' => (string)$userId, 'roles' => $roles];
+        foreach ($byUser as $userId => $entry) {
+            $result[] = [
+                'userId' => (string)$userId,
+                'roles' => $entry['roles'] ?? [],
+                'automaticRoles' => $entry['automaticRoles'] ?? [],
+            ];
         }
         return $result;
     }
-
     /**
      * @throws ValidationException
      */

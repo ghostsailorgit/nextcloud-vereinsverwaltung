@@ -16,6 +16,8 @@ class RoutePermissionsTest extends TestCase {
     private const OPEN = [
         'page#index' => 'only renders the app shell, needs a login but no data',
         'club#index' => 'returns only the clubs the current user has a role in',
+        'me#index' => 'returns only the record of the person linked to the current account (self-service)',
+        'me#export' => 'downloads only the record of the person linked to the current account',
     ];
 
     /**

@@ -10,9 +10,14 @@ return [
         ['name' => 'club#create', 'url' => '/clubs', 'verb' => 'POST'],
         ['name' => 'club#update', 'url' => '/clubs/{clubId}', 'verb' => 'PUT'],
         ['name' => 'club#destroy', 'url' => '/clubs/{clubId}', 'verb' => 'DELETE'],
+        ['name' => 'club#updateRoleMapping', 'url' => '/clubs/{clubId}/role-mapping', 'verb' => 'PUT'],
         ['name' => 'club#createAccount', 'url' => '/clubs/{clubId}/accounts', 'verb' => 'POST'],
         ['name' => 'club#updateAccount', 'url' => '/clubs/{clubId}/accounts/{accountId}', 'verb' => 'PUT'],
         ['name' => 'club#destroyAccount', 'url' => '/clubs/{clubId}/accounts/{accountId}', 'verb' => 'DELETE'],
+
+        // Self-service: the person linked to the logged-in Nextcloud account
+        ['name' => 'me#index', 'url' => '/me', 'verb' => 'GET'],
+        ['name' => 'me#export', 'url' => '/me/export', 'verb' => 'GET'],
 
         // Members - all of these need a clubId parameter
         ['name' => 'member#index', 'url' => '/members', 'verb' => 'GET'],

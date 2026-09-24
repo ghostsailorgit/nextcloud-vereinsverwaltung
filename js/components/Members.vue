@@ -97,12 +97,14 @@
             v-model="selectedUser"
             :options="userOptions"
             input-label="Verknüpftes Nextcloud-Konto"
+            :disabled="!canManageRoles"
             placeholder="Name oder Benutzername eingeben"
             @search="onUserSearch"
             @update:model-value="onUserPicked"
           />
           <p class="hint">
-            Optional. Verknüpft dieses Mitglied mit seinem Nextcloud-Login (z. B. Vorstandsmitglieder).
+            Optional. Verknüpft dieses Mitglied mit seinem Nextcloud-Login (z. B. Vorstandsmitglieder). Damit kann es unter „Meine Daten“ seine Daten einsehen; Vereinsrolle und Konto bestimmen zusammen die automatischen Rechte.
+            <strong v-if="!canManageRoles">Rolle und Konto ändern darf nur, wer Rollen verwalten darf.</strong>
             <span v-if="!formData.userId && userOptions.length">Vorschläge nach Namen stehen im Dropdown.</span>
           </p>
         </div>
@@ -123,6 +125,7 @@
           label="label"
           input-label="Rolle"
           :clearable="false"
+          :disabled="!canManageRoles"
         />
         <label class="checkbox-field">
           <input v-model="formData.foundingMember" type="checkbox" />
@@ -324,6 +327,7 @@ export default {
 
     const formData = reactive(emptyFormData())
     const canManage = computed(() => can('verein.member.manage'))
+    const canManageRoles = computed(() => can('verein.role.manage'))
 
     // Link to a Nextcloud account
     const selectedUser = ref(null)
@@ -567,6 +571,7 @@ export default {
       cancelEdit,
       deleteMember,
       canManage,
+      canManageRoles,
       selectedUser,
       userOptions,
       onUserSearch,

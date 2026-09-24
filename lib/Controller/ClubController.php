@@ -64,6 +64,25 @@ class ClubController extends Controller {
     }
 
     /**
+     * Automatic rights: which app role a membership role (Mitglied /
+     * Kassierer / Vorstand) gets. Needs the role-management permission,
+     * since this decides who gets which rights.
+     *
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.role.manage')]
+    public function updateRoleMapping(int $clubId): JSONResponse {
+        return $this->guard(function () use ($clubId) {
+            $club = $this->clubService->setRoleMapping($clubId, [
+                'member' => $this->request->getParam('member'),
+                'treasurer' => $this->request->getParam('treasurer'),
+                'admin' => $this->request->getParam('admin'),
+            ]);
+            return new JSONResponse(['status' => 'ok', 'data' => $club]);
+        });
+    }
+
+    /**
      * Nextcloud administrators only.
      */
     public function destroy(int $clubId): JSONResponse {

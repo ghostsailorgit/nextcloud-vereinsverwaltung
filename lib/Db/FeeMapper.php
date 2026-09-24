@@ -52,6 +52,17 @@ class FeeMapper extends QBMapper {
             ->executeStatement();
     }
 
+    /**
+     * @return Fee[] all fees of one person, across clubs (self-service only)
+     */
+    public function findByMember(int $memberId): array {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+        return $this->findEntities($qb);
+    }
+
     public function findByStatus(string $status): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')

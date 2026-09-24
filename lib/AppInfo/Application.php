@@ -44,7 +44,10 @@ class Application extends App implements IBootstrap {
                 $container->query(UserRoleMapper::class),
                 $container->query(IGroupManager::class),
                 $container->query(IUserSession::class),
-                $container->query(LoggerInterface::class)
+                $container->query(LoggerInterface::class),
+                $container->query(MemberMapper::class),
+                $container->query(MembershipMapper::class),
+                $container->query(ClubMapper::class)
             );
         });
 

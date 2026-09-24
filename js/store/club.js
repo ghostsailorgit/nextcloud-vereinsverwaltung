@@ -13,7 +13,9 @@ export const clubState = reactive({
   clubs: [],
   currentId: null,
   isAdmin: false,
-  loaded: false
+  loaded: false,
+  // self-service record of the person linked to the logged-in account ({ linked: false } if none)
+  me: null
 })
 
 export const currentClub = computed(() => clubState.clubs.find(c => c.id === clubState.currentId) || null)
@@ -29,6 +31,15 @@ export function setCurrentClub(id) {
     window.localStorage.setItem(STORAGE_KEY, String(id))
   } catch (e) {
     // storage unavailable - selection just isn't remembered
+  }
+}
+
+export async function loadMe() {
+  try {
+    const response = await axios.get(absoluteUrl('/apps/verein/me'))
+    clubState.me = response.data
+  } catch (e) {
+    clubState.me = { linked: false }
   }
 }
 
