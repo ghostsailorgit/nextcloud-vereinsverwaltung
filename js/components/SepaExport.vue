@@ -66,6 +66,15 @@
         <p><strong>Gesamtbetrag:</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
       </div>
       
+      <div v-if="previewData.skipped && previewData.skipped.length" class="skipped-warning">
+        <strong>Nicht im Export enthalten (keine IBAN hinterlegt):</strong>
+        <ul>
+          <li v-for="(s, idx) in previewData.skipped" :key="idx">
+            {{ s.memberName }} – {{ s.amount.toFixed(2) }} €, fällig {{ s.dueDate }}
+          </li>
+        </ul>
+      </div>
+
       <h4>Transaktionen:</h4>
       <table>
         <thead>
@@ -141,6 +150,10 @@ export default {
         a.click()
         window.URL.revokeObjectURL(url)
         showSuccess('SEPA-XML heruntergeladen')
+        const skipped = parseInt(response.headers['x-sepa-skipped'] || '0', 10)
+        if (skipped > 0) {
+          showError(`Achtung: ${skipped} offene Zahlung(en) fehlen im Export, weil keine IBAN hinterlegt ist. Details in der Vorschau.`)
+        }
       } catch (error) {
         console.error('Error generating SEPA:', error)
         let message = 'Fehler beim Generieren der SEPA-Datei'
@@ -185,6 +198,15 @@ export default {
 .preview-summary {
   background: var(--color-main-background);
   padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.skipped-warning {
+  background: var(--color-warning-hover, #fff3cd);
+  color: var(--color-main-text);
+  border-left: 4px solid var(--color-warning, #e9a800);
+  padding: 10px 15px;
   border-radius: 4px;
   margin-bottom: 20px;
 }

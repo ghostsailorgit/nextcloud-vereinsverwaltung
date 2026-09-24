@@ -27,56 +27,79 @@ class SepaService {
      * @param string $creditorIban IBAN of the creditor
      * @param string $creditorBic BIC of the creditor
      * @param string $creditorId SEPA Creditor ID
-     * @return string SEPA-XML content
+     * @return array{xml: string, skippedCount: int} XML plus number of fees left out for lack of IBAN
      */
     public function generateSepaXml(
         string $creditorName,
         string $creditorIban,
         string $creditorBic,
         string $creditorId
-    ): string {
-        // Get all fees that still need to be collected (open and overdue -
-        // overdue is a manually-set status, not an automatic transition, so
-        // it still represents money owed that hasn't been debited yet)
-        $openFees = $this->feeMapper->findByStatuses(['open', 'overdue']);
+    ): array {
+        $collected = $this->collectFees();
 
-        if (empty($openFees)) {
+        if (empty($collected['transactions'])) {
+            if (!empty($collected['skipped'])) {
+                $names = implode(', ', array_map(
+                    fn($s) => $s['memberName'],
+                    $collected['skipped']
+                ));
+                throw new \Exception('Keine Zahlung exportierbar: Bei folgenden Mitgliedern mit offener Zahlung ist keine IBAN hinterlegt: ' . $names);
+            }
             throw new \Exception('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
         }
 
-        // Calculate total amount
+        return [
+            'xml' => $this->buildSepaXml(
+                $creditorName,
+                $creditorIban,
+                $creditorBic,
+                $creditorId,
+                $collected['totalAmount'],
+                $collected['transactions']
+            ),
+            'skippedCount' => count($collected['skipped'])
+        ];
+    }
+
+    /**
+     * Collect all fees that still need to be debited (open and overdue -
+     * overdue is a manually-set status, not an automatic transition, so it
+     * still represents money owed that hasn't been debited yet).
+     *
+     * Members without an IBAN cannot be debited; they are returned in
+     * 'skipped' so callers can tell the user instead of silently dropping them.
+     */
+    private function collectFees(): array {
         $totalAmount = 0;
         $transactions = [];
-        
-        foreach ($openFees as $fee) {
+        $skipped = [];
+
+        foreach ($this->feeMapper->findByStatuses(['open', 'overdue']) as $fee) {
             $member = $this->memberMapper->find($fee->getMemberId());
-            
+
             if (empty($member->getIban())) {
-                continue; // Skip members without IBAN
+                $skipped[] = [
+                    'memberName' => $member->getFullName(),
+                    'amount' => $fee->getAmount(),
+                    'dueDate' => $fee->getDueDate()
+                ];
+                continue;
             }
-            
+
             $totalAmount += $fee->getAmount();
             $transactions[] = [
                 'name' => $member->getFullName(),
+                'memberName' => $member->getFullName(),
                 'iban' => $member->getIban(),
                 'bic' => $member->getBic(),
                 'amount' => $fee->getAmount(),
+                'dueDate' => $fee->getDueDate(),
                 'reference' => 'Mitgliedsbeitrag ' . date('Y'),
                 'feeId' => $fee->getId()
             ];
         }
 
-        // Generate SEPA-XML
-        $xml = $this->buildSepaXml(
-            $creditorName,
-            $creditorIban,
-            $creditorBic,
-            $creditorId,
-            $totalAmount,
-            $transactions
-        );
-
-        return $xml;
+        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalAmount' => $totalAmount];
     }
 
     /**
@@ -88,33 +111,15 @@ class SepaService {
         string $creditorBic,
         string $creditorId
     ): array {
-        $openFees = $this->feeMapper->findByStatuses(['open', 'overdue']);
-        
-        $totalAmount = 0;
-        $transactions = [];
-        
-        foreach ($openFees as $fee) {
-            $member = $this->memberMapper->find($fee->getMemberId());
-            
-            if (empty($member->getIban())) {
-                continue;
-            }
-            
-            $totalAmount += $fee->getAmount();
-            $transactions[] = [
-                'memberName' => $member->getFullName(),
-                'iban' => $member->getIban(),
-                'amount' => $fee->getAmount(),
-                'dueDate' => $fee->getDueDate()
-            ];
-        }
+        $collected = $this->collectFees();
 
         return [
             'creditorName' => $creditorName,
             'creditorIban' => $creditorIban,
-            'totalAmount' => $totalAmount,
-            'transactionCount' => count($transactions),
-            'transactions' => $transactions
+            'totalAmount' => $collected['totalAmount'],
+            'transactionCount' => count($collected['transactions']),
+            'transactions' => $collected['transactions'],
+            'skipped' => $collected['skipped']
         ];
     }
 

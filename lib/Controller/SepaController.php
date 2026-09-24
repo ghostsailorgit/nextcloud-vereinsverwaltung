@@ -44,7 +44,7 @@ class SepaController extends ApiController {
         string $creditorId
     ): Response {
         try {
-            $xml = $this->service->generateSepaXml(
+            $result = $this->service->generateSepaXml(
                 $creditorName,
                 $creditorIban,
                 $creditorBic,
@@ -61,11 +61,15 @@ class SepaController extends ApiController {
         // (that's what silently 404'd here); DataDownloadResponse is the
         // class for handing back generated content as a download, same as
         // ExportController's CSV/PDF endpoints already do.
-        return new DataDownloadResponse(
-            $xml,
+        $response = new DataDownloadResponse(
+            $result['xml'],
             'sepa_export_' . date('Y-m-d') . '.xml',
             'application/xml'
         );
+        // Fees left out because the member has no IBAN; the frontend warns
+        // about it (details are listed in the preview).
+        $response->addHeader('X-Sepa-Skipped', (string)$result['skippedCount']);
+        return $response;
     }
 
     /**

@@ -50,12 +50,13 @@ class SepaServiceTest extends TestCase {
             ->willReturn($member);
         
         // Act
-        $xml = $this->sepaService->generateSepaXml(
+        $result = $this->sepaService->generateSepaXml(
             'Test Verein',
             'DE89370400440532013000',
             'COBADEFFXXX',
             'DE98ZZZ09999999999'
         );
+        $xml = $result['xml'];
         
         // Assert
         $this->assertIsString($xml);
@@ -124,12 +125,13 @@ class SepaServiceTest extends TestCase {
             });
         
         // Act
-        $xml = $this->sepaService->generateSepaXml(
+        $result = $this->sepaService->generateSepaXml(
             'Test Verein',
             'DE89370400440532013000',
             'COBADEFFXXX',
             'DE98ZZZ09999999999'
         );
+        $xml = $result['xml'];
         
         // Assert - Should only contain member 2
         $this->assertStringContainsString('Member With IBAN', $xml);
@@ -196,12 +198,13 @@ class SepaServiceTest extends TestCase {
         $this->memberMapper->method('find')->willReturn($member);
         
         // Act
-        $xml = $this->sepaService->generateSepaXml(
+        $result = $this->sepaService->generateSepaXml(
             'Test Verein',
             'DE89370400440532013000',
             'COBADEFFXXX',
             'DE98ZZZ09999999999'
         );
+        $xml = $result['xml'];
         
         // Assert - Message ID should start with VEREIN-
         $this->assertMatchesRegularExpression('/<MsgId>VEREIN-\d{14}<\/MsgId>/', $xml);
@@ -237,12 +240,13 @@ class SepaServiceTest extends TestCase {
         });
         
         // Act
-        $xml = $this->sepaService->generateSepaXml(
+        $result = $this->sepaService->generateSepaXml(
             'Test Verein',
             'DE89370400440532013000',
             'COBADEFFXXX',
             'DE98ZZZ09999999999'
         );
+        $xml = $result['xml'];
         
         // Assert - Total should be 125.50
         $this->assertStringContainsString('<CtrlSum>125.50</CtrlSum>', $xml);
