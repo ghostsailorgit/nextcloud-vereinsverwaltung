@@ -14,7 +14,7 @@ class ValidationService {
      *
      * @param array $data Erwartete Schlüssel: name, email, iban, firstName,
      *   salutation, postalCode, birthDate, joinDate, leaveDate
-     *   (alle außer name/email optional)
+     *   (alle außer name optional)
      * @return array Mit 'valid' (bool) und 'errors' (array)
      */
     public function validateMember(array $data): array {
@@ -38,10 +38,8 @@ class ValidationService {
             $errors[] = 'Name darf maximal 255 Zeichen lang sein';
         }
 
-        // Email validieren
-        if (empty(trim($email))) {
-            $errors[] = 'E-Mail ist erforderlich';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        // E-Mail ist optional (nicht jedes Mitglied hat eine), aber wenn angegeben, muss sie gültig sein
+        if (trim($email) !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'E-Mail ist ungültig';
         }
 

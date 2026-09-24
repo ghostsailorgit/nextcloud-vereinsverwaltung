@@ -14,8 +14,9 @@
         "tecnickcom/tcpdf": "^6.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "nextcloud/coding-standard": "^1.0"
+        "phpunit/phpunit": "^10.5",
+        "nextcloud/coding-standard": "^1.0",
+        "nextcloud/ocp": "dev-master"
     },
     "autoload": {
         "psr-4": {
@@ -24,11 +25,15 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "OCA\\Verein\\Tests\\": "tests/"
+            "OCA\\Verein\\Tests\\": "tests/",
+            "OCP\\": "vendor/nextcloud/ocp/OCP/",
+            "NCU\\": "vendor/nextcloud/ocp/NCU/"
         }
     },
     "scripts": {
         "test": "phpunit --configuration phpunit.xml",
         "test-fast": "phpunit --configuration phpunit.xml --testsuite Fast"
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

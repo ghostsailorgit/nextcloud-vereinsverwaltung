@@ -1,255 +1,193 @@
 <?php
 namespace OCA\Verein\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
-use OCA\Verein\Service\SepaService;
+use OCA\Verein\Db\Club;
+use OCA\Verein\Db\ClubAccount;
+use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
+use OCA\Verein\Db\Membership;
+use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Service\ClubService;
+use OCA\Verein\Service\SepaService;
+use OCP\AppFramework\Db\DoesNotExistException;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
-/**
- * Create PHPUnit test for SepaService XML validation
- */
 class SepaServiceTest extends TestCase {
-    private $feeMapper;
-    private $memberMapper;
-    private $sepaService;
+    private const CLUB = 4;
+
+    private FeeMapper&MockObject $fees;
+    private MemberMapper&MockObject $members;
+    private MembershipMapper&MockObject $memberships;
+    private ClubService&MockObject $clubService;
+    private SepaService $service;
+
+    /** @var array<int, Member> */
+    private array $personsById = [];
+    /** @var array<int, Membership> */
+    private array $membershipsByMember = [];
+    /** @var Fee[] */
+    private array $openFees = [];
+    private ClubAccount $account;
 
     protected function setUp(): void {
-        parent::setUp();
-        
-        $this->feeMapper = $this->createMock(FeeMapper::class);
-        $this->memberMapper = $this->createMock(MemberMapper::class);
-        $this->sepaService = new SepaService($this->feeMapper, $this->memberMapper);
+        $this->fees = $this->createMock(FeeMapper::class);
+        $this->members = $this->createMock(MemberMapper::class);
+        $this->memberships = $this->createMock(MembershipMapper::class);
+        $clubs = $this->createMock(ClubMapper::class);
+        $this->clubService = $this->createMock(ClubService::class);
+
+        $club = new Club();
+        $club->setId(self::CLUB);
+        $club->setName('Musterverein & Söhne');
+        $clubs->method('find')->willReturn($club);
+
+        $this->account = new ClubAccount();
+        $this->account->setClubId(self::CLUB);
+        $this->account->setIban('DE89370400440532013000');
+        $this->account->setBic('COBADEFFXXX');
+        $this->account->setCreditorId('DE98ZZZ09999999999');
+        $this->clubService->method('resolveAccount')->willReturn($this->account);
+
+        $this->fees->method('findByStatusesInClub')->willReturnCallback(fn () => $this->openFees);
+        $this->members->method('find')->willReturnCallback(fn (int $id) => $this->personsById[$id]);
+        $this->memberships->method('findByMemberAndClub')->willReturnCallback(
+            function (int $memberId, int $clubId) {
+                return $this->membershipsByMember[$memberId] ?? throw new DoesNotExistException('none');
+            }
+        );
+
+        $this->service = new SepaService($this->fees, $this->members, $this->memberships, $clubs, $this->clubService);
     }
 
-    public function testGenerateSepaXmlWithOpenFees() {
-        // Arrange
-        $member = new Member();
-        $member->setId(1);
-        $member->setName('Max Mustermann');
-        $member->setIban('DE89370400440532013000');
-        $member->setBic('COBADEFFXXX');
-        
+    private function fee(int $id, int $memberId, float $amount, ?string $description = null): void {
         $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setStatus('open');
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findByStatus')
-            ->with('open')
-            ->willReturn([$fee]);
-        
-        $this->memberMapper->expects($this->once())
-            ->method('find')
-            ->with(1)
-            ->willReturn($member);
-        
-        // Act
-        $result = $this->sepaService->generateSepaXml(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
-        $xml = $result['xml'];
-        
-        // Assert
-        $this->assertIsString($xml);
-        $this->assertStringContainsString('<?xml version="1.0" encoding="UTF-8"?>', $xml);
-        $this->assertStringContainsString('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.02"', $xml);
-        $this->assertStringContainsString('<Cdtr><Nm>Test Verein</Nm></Cdtr>', $xml);
-        $this->assertStringContainsString('<IBAN>DE89370400440532013000</IBAN>', $xml);
-        $this->assertStringContainsString('<Dbtr><Nm>Max Mustermann</Nm></Dbtr>', $xml);
-        $this->assertStringContainsString('<InstdAmt Ccy="EUR">50.00</InstdAmt>', $xml);
+        $fee->setId($id);
+        $fee->setMemberId($memberId);
+        $fee->setAmount($amount);
+        $fee->setDueDate('2026-12-01 00:00:00');
+        $fee->setDescription($description);
+        $this->openFees[] = $fee;
     }
 
-    public function testGenerateSepaXmlThrowsExceptionWhenNoOpenFees() {
-        // Arrange
-        $this->feeMapper->expects($this->once())
-            ->method('findByStatus')
-            ->with('open')
-            ->willReturn([]);
-        
-        // Assert
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('No open fees found for SEPA export');
-        
-        // Act
-        $this->sepaService->generateSepaXml(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
+    private function person(int $id, string $first, string $name, ?string $iban, ?string $bic = null): void {
+        $m = new Member();
+        $m->setId($id);
+        $m->setFirstName($first);
+        $m->setName($name);
+        $m->setIban($iban);
+        $m->setBic($bic);
+        $this->personsById[$id] = $m;
     }
 
-    public function testGenerateSepaXmlSkipsMembersWithoutIban() {
-        // Arrange
-        $member1 = new Member();
-        $member1->setId(1);
-        $member1->setName('Member Without IBAN');
-        $member1->setIban(''); // No IBAN
-        
-        $member2 = new Member();
-        $member2->setId(2);
-        $member2->setName('Member With IBAN');
-        $member2->setIban('DE89370400440532013000');
-        $member2->setBic('COBADEFFXXX');
-        
-        $fee1 = new Fee();
-        $fee1->setId(1);
-        $fee1->setMemberId(1);
-        $fee1->setAmount(50.00);
-        $fee1->setStatus('open');
-        
-        $fee2 = new Fee();
-        $fee2->setId(2);
-        $fee2->setMemberId(2);
-        $fee2->setAmount(75.00);
-        $fee2->setStatus('open');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findByStatus')
-            ->with('open')
-            ->willReturn([$fee1, $fee2]);
-        
-        $this->memberMapper->expects($this->exactly(2))
-            ->method('find')
-            ->willReturnCallback(function($id) use ($member1, $member2) {
-                return $id === 1 ? $member1 : $member2;
-            });
-        
-        // Act
-        $result = $this->sepaService->generateSepaXml(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
-        $xml = $result['xml'];
-        
-        // Assert - Should only contain member 2
-        $this->assertStringContainsString('Member With IBAN', $xml);
-        $this->assertStringNotContainsString('Member Without IBAN', $xml);
-        $this->assertStringContainsString('<NbOfTxs>1</NbOfTxs>', $xml);
-        $this->assertStringContainsString('<InstdAmt Ccy="EUR">75.00</InstdAmt>', $xml);
+    private function mandate(int $memberId, ?string $date, ?string $reference = null): void {
+        $ms = new Membership();
+        $ms->setMemberId($memberId);
+        $ms->setClubId(self::CLUB);
+        $ms->setMandateDate($date);
+        $ms->setMandateReference($reference);
+        $this->membershipsByMember[$memberId] = $ms;
     }
 
-    public function testPreviewSepaExport() {
-        // Arrange
-        $member = new Member();
-        $member->setId(1);
-        $member->setName('Max Mustermann');
-        $member->setIban('DE89370400440532013000');
-        
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findByStatus')
-            ->with('open')
-            ->willReturn([$fee]);
-        
-        $this->memberMapper->expects($this->once())
-            ->method('find')
-            ->with(1)
-            ->willReturn($member);
-        
-        // Act
-        $preview = $this->sepaService->previewSepaExport(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
-        
-        // Assert
-        $this->assertIsArray($preview);
-        $this->assertEquals('Test Verein', $preview['creditorName']);
-        $this->assertEquals('DE89370400440532013000', $preview['creditorIban']);
-        $this->assertEquals(50.00, $preview['totalAmount']);
-        $this->assertEquals(1, $preview['transactionCount']);
-        $this->assertCount(1, $preview['transactions']);
-        $this->assertEquals('Max Mustermann', $preview['transactions'][0]['memberName']);
+    public function testOnlyMembersWithIbanAndMandateAreCollectedTheRestIsReportedWithReason(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05', 'ANNA-1');
+        $this->fee(10, 1, 12.5);
+        $this->person(2, 'Bernd', 'OhneIban', null);
+        $this->mandate(2, '2021-01-05');
+        $this->fee(11, 2, 7.0);
+        $this->person(3, 'Carla', 'OhneMandat', 'DE02120300000000202051');
+        $this->mandate(3, null);
+        $this->fee(12, 3, 9.0);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(1, $preview['transactionCount']);
+        $this->assertSame(12.5, $preview['totalAmount']);
+        $this->assertSame('Anna Ok', $preview['transactions'][0]['memberName']);
+        $this->assertCount(2, $preview['skipped']);
+        $reasons = array_column($preview['skipped'], 'reason', 'memberName');
+        $this->assertStringContainsString('IBAN', $reasons['Bernd OhneIban']);
+        $this->assertStringContainsString('Mandat', $reasons['Carla OhneMandat']);
     }
 
-    public function testSepaXmlContainsValidMessageId() {
-        // Arrange
-        $member = new Member();
-        $member->setId(1);
-        $member->setName('Test Member');
-        $member->setIban('DE89370400440532013000');
-        $member->setBic('COBADEFFXXX');
-        
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        
-        $this->feeMapper->method('findByStatus')->willReturn([$fee]);
-        $this->memberMapper->method('find')->willReturn($member);
-        
-        // Act
-        $result = $this->sepaService->generateSepaXml(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
-        $xml = $result['xml'];
-        
-        // Assert - Message ID should start with VEREIN-
-        $this->assertMatchesRegularExpression('/<MsgId>VEREIN-\d{14}<\/MsgId>/', $xml);
+    public function testMemberWithoutAnyMembershipInTheClubIsSkipped(): void {
+        $this->person(1, 'Anna', 'Fremd', 'DE02120300000000202051');
+        $this->fee(10, 1, 5.0); // no membership registered for anna in this club
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(0, $preview['transactionCount']);
+        $this->assertCount(1, $preview['skipped']);
     }
 
-    public function testSepaXmlContainsCorrectTotalAmount() {
-        // Arrange
-        $member1 = new Member();
-        $member1->setId(1);
-        $member1->setName('Member 1');
-        $member1->setIban('DE89370400440532013000');
-        $member1->setBic('COBADEFFXXX');
-        
-        $member2 = new Member();
-        $member2->setId(2);
-        $member2->setName('Member 2');
-        $member2->setIban('DE89370400440532013001');
-        $member2->setBic('COBADEFFXXX');
-        
-        $fee1 = new Fee();
-        $fee1->setId(1);
-        $fee1->setMemberId(1);
-        $fee1->setAmount(50.00);
-        
-        $fee2 = new Fee();
-        $fee2->setId(2);
-        $fee2->setMemberId(2);
-        $fee2->setAmount(75.50);
-        
-        $this->feeMapper->method('findByStatus')->willReturn([$fee1, $fee2]);
-        $this->memberMapper->method('find')->willReturnCallback(function($id) use ($member1, $member2) {
-            return $id === 1 ? $member1 : $member2;
-        });
-        
-        // Act
-        $result = $this->sepaService->generateSepaXml(
-            'Test Verein',
-            'DE89370400440532013000',
-            'COBADEFFXXX',
-            'DE98ZZZ09999999999'
-        );
-        $xml = $result['xml'];
-        
-        // Assert - Total should be 125.50
-        $this->assertStringContainsString('<CtrlSum>125.50</CtrlSum>', $xml);
-        $this->assertStringContainsString('<NbOfTxs>2</NbOfTxs>', $xml);
+    public function testGeneratedXmlCarriesMandateCreditorAndTotals(): void {
+        $this->person(1, 'Anna', 'Ok & Co', 'DE02 1203 0000 0000 2020 51');
+        $this->mandate(1, '2021-01-05', 'ANNA-1');
+        $this->fee(10, 1, 12.5, 'Beitrag 2026');
+        $this->person(2, 'Bernd', 'Keiner', null);
+        $this->mandate(2, '2021-01-05');
+        $this->fee(11, 2, 7.0);
+
+        $result = $this->service->generateSepaXml(self::CLUB);
+
+        $this->assertSame(1, $result['skippedCount']);
+        $xml = simplexml_load_string($result['xml']);
+        $this->assertNotFalse($xml, 'XML must be well-formed (names with & are escaped)');
+        $ns = $xml->getNamespaces(true);
+        $doc = $xml->children($ns['']);
+        $pmt = $doc->CstmrDrctDbtInitn->PmtInf;
+
+        $this->assertSame('12.50', (string)$doc->CstmrDrctDbtInitn->GrpHdr->CtrlSum);
+        $this->assertSame('Musterverein & Söhne', (string)$pmt->Cdtr->Nm);
+        $this->assertSame('DE89370400440532013000', (string)$pmt->CdtrAcct->Id->IBAN);
+        $this->assertSame('DE98ZZZ09999999999', (string)$pmt->CdtrSchmeId->Id->PrvtId->Othr->Id);
+
+        $tx = $pmt->DrctDbtTxInf;
+        $this->assertCount(1, $tx);
+        $this->assertSame('ANNA-1', (string)$tx->DrctDbtTx->MndtRltdInf->MndtId);
+        $this->assertSame('2021-01-05', (string)$tx->DrctDbtTx->MndtRltdInf->DtOfSgntr);
+        $this->assertSame('Anna Ok & Co', (string)$tx->Dbtr->Nm);
+        $this->assertSame('DE02120300000000202051', (string)$tx->DbtrAcct->Id->IBAN, 'spaces are stripped from the IBAN');
+        $this->assertSame('Beitrag 2026', (string)$tx->RmtInf->Ustrd);
+        // no BIC on the member -> IBAN-only marker instead of an empty BIC element
+        $this->assertSame('NOTPROVIDED', (string)$tx->DbtrAgt->FinInstnId->Othr->Id);
+    }
+
+    public function testMandateReferenceFallsBackToAGeneratedOne(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05', null);
+        $this->fee(10, 1, 5.0);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame('M' . self::CLUB . '-1', $preview['transactions'][0]['mandateReference']);
+    }
+
+    public function testExportFailsWithNamesWhenNothingIsExportable(): void {
+        $this->person(2, 'Bernd', 'Keiner', null);
+        $this->mandate(2, '2021-01-05');
+        $this->fee(11, 2, 7.0);
+
+        $this->expectExceptionMessage('Bernd Keiner');
+        $this->service->generateSepaXml(self::CLUB);
+    }
+
+    public function testExportFailsWhenThereAreNoOpenFeesAtAll(): void {
+        $this->expectExceptionMessage('Keine offenen');
+        $this->service->generateSepaXml(self::CLUB);
+    }
+
+    public function testExportRequiresACreditorId(): void {
+        $this->account->setCreditorId('');
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 5.0);
+
+        $this->expectExceptionMessage('Gläubiger-ID');
+        $this->service->generateSepaXml(self::CLUB);
     }
 }

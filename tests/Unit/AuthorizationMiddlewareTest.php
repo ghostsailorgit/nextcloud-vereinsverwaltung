@@ -2,185 +2,159 @@
 namespace OCA\Verein\Tests\Unit;
 
 use OCA\Verein\Attributes\RequirePermission;
+use OCA\Verein\Exception\PermissionDeniedException;
+use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Middleware\AuthorizationMiddleware;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\Http\JSONResponse;
-use OCP\ILogger;
+use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
+/**
+ * Nextcloud ignores whatever beforeController() returns - the only way to
+ * stop a request is to throw. These tests pin that behaviour: a denied
+ * request must throw (and afterException() must turn it into a JSON error),
+ * never just return a response.
+ */
 class AuthorizationMiddlewareTest extends TestCase {
+    private RoleService&MockObject $roleService;
+    private IUserSession&MockObject $userSession;
+    private IRequest&MockObject $request;
     private AuthorizationMiddleware $middleware;
-    private RoleService $roleService;
-    private IUserSession $userSession;
-    private ILogger $logger;
 
     protected function setUp(): void {
-        parent::setUp();
-
         $this->roleService = $this->createMock(RoleService::class);
         $this->userSession = $this->createMock(IUserSession::class);
-        $this->logger = $this->createMock(ILogger::class);
+        $this->request = $this->createMock(IRequest::class);
 
         $this->middleware = new AuthorizationMiddleware(
             $this->roleService,
             $this->userSession,
-            $this->logger
+            $this->createMock(LoggerInterface::class),
+            $this->request
         );
     }
 
-    /**
-     * Test: Middleware allows access when user has required permission
-     */
-    public function testMiddlewareAllowsAccessWithPermission(): void {
+    private function loginAs(string $uid): void {
         $user = $this->createMock(IUser::class);
-        $user->method('getUID')->willReturn('allowed_user');
-
+        $user->method('getUID')->willReturn($uid);
         $this->userSession->method('getUser')->willReturn($user);
-        $this->roleService->method('userHasPermission')
-            ->with('allowed_user', 'verein.member.view')
+    }
+
+    private function clubIdParam(?int $clubId): void {
+        $this->request->method('getParam')->willReturnCallback(
+            fn (string $key, $default = null) => $key === 'clubId' && $clubId !== null ? (string)$clubId : $default
+        );
+    }
+
+    private function controller(): object {
+        return new class {
+            #[RequirePermission('verein.member.view')]
+            public function scoped() {}
+
+            #[RequirePermission('verein.role.manage', clubScoped: false)]
+            public function unscoped() {}
+
+            public function open() {}
+        };
+    }
+
+    public function testMethodWithoutAttributeIsNotChecked(): void {
+        $this->roleService->expects($this->never())->method('userHasPermission');
+        $this->middleware->beforeController($this->controller(), 'open');
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAllowsUserHoldingPermissionInThatClub(): void {
+        $this->loginAs('anna');
+        $this->clubIdParam(7);
+        $this->roleService->expects($this->once())
+            ->method('userHasPermission')
+            ->with('anna', 'verein.member.view', 7)
             ->willReturn(true);
 
-        $controller = new class {
-            #[RequirePermission('verein.member.view')]
-            public function listMembers() {}
-        };
-
-        $result = $this->middleware->beforeController($controller, 'listMembers');
-        $this->assertNull($result);
+        $this->middleware->beforeController($this->controller(), 'scoped');
+        $this->addToAssertionCount(1);
     }
 
-    /**
-     * Test: Middleware denies access when user lacks permission
-     */
-    public function testMiddlewareDeniesAccessWithoutPermission(): void {
-        $user = $this->createMock(IUser::class);
-        $user->method('getUID')->willReturn('restricted_user');
-
-        $this->userSession->method('getUser')->willReturn($user);
-        $this->roleService->method('userHasPermission')
-            ->with('restricted_user', 'verein.role.manage')
-            ->willReturn(false);
-
-        $controller = new class {
-            #[RequirePermission('verein.role.manage')]
-            public function manageRoles() {}
-        };
-
-        $result = $this->middleware->beforeController($controller, 'manageRoles');
-        
-        $this->assertInstanceOf(JSONResponse::class, $result);
-        $this->assertEquals(403, $result->getStatus());
-    }
-
-    /**
-     * Test: Middleware allows access when no permissions required
-     */
-    public function testMiddlewareAllowsPublicMethods(): void {
-        $controller = new class {
-            public function publicMethod() {}
-        };
-
-        $result = $this->middleware->beforeController($controller, 'publicMethod');
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test: Middleware denies unauthenticated users
-     */
-    public function testMiddlewareDeniesUnauthenticatedUsers(): void {
-        $this->userSession->method('getUser')->willReturn(null);
-
-        $controller = new class {
-            #[RequirePermission('verein.member.view')]
-            public function listMembers() {}
-        };
-
-        $result = $this->middleware->beforeController($controller, 'listMembers');
-
-        $this->assertInstanceOf(JSONResponse::class, $result);
-        $this->assertEquals(403, $result->getStatus());
-    }
-
-    /**
-     * Test: Middleware handles multiple permission requirements
-     */
-    public function testMiddlewareHandlesMultiplePermissionRequirements(): void {
-        $user = $this->createMock(IUser::class);
-        $user->method('getUID')->willReturn('multi_perm_user');
-
-        $this->userSession->method('getUser')->willReturn($user);
-        
-        // First call has permission, second doesn't
-        $this->roleService->method('userHasPermission')
-            ->willReturnMap([
-                ['multi_perm_user', 'verein.member.view', true],
-                ['multi_perm_user', 'verein.member.manage', false],
-            ]);
-
-        // Create controller with multiple permission requirements
-        $controller = new class {
-            #[RequirePermission('verein.member.view')]
-            #[RequirePermission('verein.member.manage')]
-            public function criticalOperation() {}
-        };
-
-        $result = $this->middleware->beforeController($controller, 'criticalOperation');
-
-        // Should be denied because second permission is missing
-        $this->assertInstanceOf(JSONResponse::class, $result);
-        $this->assertEquals(403, $result->getStatus());
-    }
-
-    /**
-     * Test: Middleware logs permission violations
-     */
-    public function testMiddlewareLogsPermissionViolations(): void {
-        $user = $this->createMock(IUser::class);
-        $user->method('getUID')->willReturn('violation_user');
-
-        $this->userSession->method('getUser')->willReturn($user);
-        $this->roleService->method('userHasPermission')
-            ->with('violation_user', 'verein.role.manage')
-            ->willReturn(false);
-
-        // Expect logger to be called
-        $this->logger->expects($this->once())
-            ->method('warning')
-            ->with($this->stringContains('RBAC: Permission denied'));
-
-        $controller = new class {
-            #[RequirePermission('verein.role.manage')]
-            public function manageRoles() {}
-        };
-
-        $this->middleware->beforeController($controller, 'manageRoles');
-    }
-
-    /**
-     * Test: Middleware returns proper 403 JSON response
-     */
-    public function testMiddlewareReturnsForbiddenResponse(): void {
-        $user = $this->createMock(IUser::class);
-        $user->method('getUID')->willReturn('denied_user');
-
-        $this->userSession->method('getUser')->willReturn($user);
+    public function testDeniesUserWithoutPermissionByThrowing(): void {
+        $this->loginAs('anna');
+        $this->clubIdParam(7);
         $this->roleService->method('userHasPermission')->willReturn(false);
 
-        $controller = new class {
-            #[RequirePermission('verein.member.manage')]
-            public function createMember() {}
-        };
+        $this->expectException(PermissionDeniedException::class);
+        $this->middleware->beforeController($this->controller(), 'scoped');
+    }
 
-        $result = $this->middleware->beforeController($controller, 'createMember');
+    public function testPermissionInAnotherClubDoesNotCount(): void {
+        $this->loginAs('anna');
+        $this->clubIdParam(2);
+        // anna may only view club 1
+        $this->roleService->method('userHasPermission')->willReturnCallback(
+            fn (string $uid, string $perm, ?int $club) => $club === 1
+        );
 
-        $this->assertInstanceOf(JSONResponse::class, $result);
-        $this->assertEquals(403, $result->getStatus());
+        $this->expectException(PermissionDeniedException::class);
+        $this->middleware->beforeController($this->controller(), 'scoped');
+    }
 
-        // Verify response structure
-        $data = $result->getData();
-        $this->assertEquals('error', $data['status']);
-        $this->assertStringContainsString('Missing permission', $data['message']);
+    public function testMissingClubIdIsRejected(): void {
+        $this->loginAs('anna');
+        $this->clubIdParam(null);
+        $this->roleService->expects($this->never())->method('userHasPermission');
+
+        $this->expectException(ValidationException::class);
+        $this->middleware->beforeController($this->controller(), 'scoped');
+    }
+
+    public function testUnauthenticatedIsRejected(): void {
+        $this->userSession->method('getUser')->willReturn(null);
+        $this->clubIdParam(1);
+
+        $this->expectException(PermissionDeniedException::class);
+        $this->middleware->beforeController($this->controller(), 'scoped');
+    }
+
+    public function testClubIndependentPermissionIsCheckedWithoutClub(): void {
+        $this->loginAs('anna');
+        $this->clubIdParam(null);
+        $this->roleService->expects($this->once())
+            ->method('userHasPermission')
+            ->with('anna', 'verein.role.manage', null)
+            ->willReturn(true);
+
+        $this->middleware->beforeController($this->controller(), 'unscoped');
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAfterExceptionTurnsPermissionErrorInto403Json(): void {
+        $response = $this->middleware->afterException(
+            $this->controller(),
+            'scoped',
+            new PermissionDeniedException('Missing permission: x')
+        );
+
+        $this->assertInstanceOf(JSONResponse::class, $response);
+        $this->assertSame(403, $response->getStatus());
+        $this->assertSame('Missing permission: x', $response->getData()['message']);
+    }
+
+    public function testAfterExceptionTurnsValidationErrorInto400Json(): void {
+        $response = $this->middleware->afterException(
+            $this->controller(),
+            'scoped',
+            new ValidationException('Verein (clubId) fehlt')
+        );
+
+        $this->assertSame(400, $response->getStatus());
+    }
+
+    public function testAfterExceptionRethrowsForeignExceptions(): void {
+        $this->expectException(\RuntimeException::class);
+        $this->middleware->afterException($this->controller(), 'scoped', new \RuntimeException('boom'));
     }
 }

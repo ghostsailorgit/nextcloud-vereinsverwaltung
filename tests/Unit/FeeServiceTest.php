@@ -1,264 +1,105 @@
 <?php
 namespace OCA\Verein\Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
-use OCA\Verein\Service\FeeService;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\Membership;
+use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Service\FeeService;
+use OCP\AppFramework\Db\DoesNotExistException;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
 
 /**
- * Create PHPUnit test for FeeService CRUD operations
+ * A fee belongs to one club: another club's fees must be unreachable, and a
+ * fee can only be booked against a member of that same club.
  */
 class FeeServiceTest extends TestCase {
-    private $feeMapper;
-    private $feeService;
+    private FeeMapper&MockObject $fees;
+    private MembershipMapper&MockObject $memberships;
+    private FeeService $service;
 
     protected function setUp(): void {
-        parent::setUp();
-        
-        // Create mock for FeeMapper
-        $this->feeMapper = $this->createMock(FeeMapper::class);
-        $this->feeService = new FeeService($this->feeMapper);
+        $this->fees = $this->createMock(FeeMapper::class);
+        $this->memberships = $this->createMock(MembershipMapper::class);
+        $this->service = new FeeService($this->fees, $this->memberships);
     }
 
-    public function testFindAll() {
-        // Arrange
-        $fee1 = new Fee();
-        $fee1->setId(1);
-        $fee1->setMemberId(1);
-        $fee1->setAmount(50.00);
-        $fee1->setStatus('open');
-        
-        $fee2 = new Fee();
-        $fee2->setId(2);
-        $fee2->setMemberId(2);
-        $fee2->setAmount(75.00);
-        $fee2->setStatus('paid');
-        
-        $expectedFees = [$fee1, $fee2];
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findAll')
-            ->willReturn($expectedFees);
-        
-        // Act
-        $result = $this->feeService->findAll();
-        
-        // Assert
-        $this->assertCount(2, $result);
-        $this->assertEquals(50.00, $result[0]->getAmount());
-        $this->assertEquals(75.00, $result[1]->getAmount());
-    }
-
-    public function testFind() {
-        // Arrange
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setStatus('open');
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('find')
-            ->with(1)
-            ->willReturn($fee);
-        
-        // Act
-        $result = $this->feeService->find(1);
-        
-        // Assert
-        $this->assertEquals(1, $result->getId());
-        $this->assertEquals(50.00, $result->getAmount());
-        $this->assertEquals('open', $result->getStatus());
-    }
-
-    public function testCreate() {
-        // Arrange
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setStatus('open');
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('insert')
-            ->willReturn($fee);
-        
-        // Act
-        $result = $this->feeService->create(
-            1,
-            50.00,
-            'open',
-            '2024-12-31',
-            'Jahresbeitrag 2024'
-        );
-        
-        // Assert
-        $this->assertEquals(1, $result->getMemberId());
-        $this->assertEquals(50.00, $result->getAmount());
-        $this->assertEquals('open', $result->getStatus());
-    }
-
-    public function testUpdate() {
-        // Arrange
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setStatus('open');
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('find')
-            ->with(1)
-            ->willReturn($fee);
-        
-        $this->feeMapper->expects($this->once())
-            ->method('update')
-            ->willReturn($fee);
-        
-        // Act
-        $result = $this->feeService->update(
-            1,
-            1,
-            75.00,
-            'paid',
-            '2024-12-31',
-            'Nachberechnung'
-        );
-        
-        // Assert
-        $this->assertEquals(75.00, $result->getAmount());
-        $this->assertEquals('paid', $result->getStatus());
-    }
-
-    public function testDelete() {
-        // Arrange
-        $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        
-        $this->feeMapper->expects($this->once())
-            ->method('find')
-            ->with(1)
-            ->willReturn($fee);
-        
-        $this->feeMapper->expects($this->once())
-            ->method('delete')
-            ->with($fee)
-            ->willReturn($fee);
-        
-        // Act
-        $result = $this->feeService->delete(1);
-        
-        // Assert
-        $this->assertEquals(1, $result->getId());
-    }
-
-    public function testExportToCsv() {
-        // Arrange
-        $fee1 = new Fee();
-        $fee1->setId(1);
-        $fee1->setMemberId(1);
-        $fee1->setAmount(50.00);
-        $fee1->setStatus('open');
-        $fee1->setDueDate('2024-12-31');
-        
-        $fee2 = new Fee();
-        $fee2->setId(2);
-        $fee2->setMemberId(2);
-        $fee2->setAmount(75.00);
-        $fee2->setStatus('paid');
-        $fee2->setDueDate('2024-11-30');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findAll')
-            ->willReturn([$fee1, $fee2]);
-        
-        // Act
-        $result = $this->feeService->exportToCsv();
-        
-        // Assert
-        $this->assertStringContainsString('ID,Member ID,Amount,Status,Due Date', $result);
-        $this->assertStringContainsString('1,1,50.00,open,2024-12-31', $result);
-        $this->assertStringContainsString('2,2,75.00,paid,2024-11-30', $result);
-    }
-
-    public function testFindThrowsExceptionWhenNotFound() {
-        // Arrange
-        $this->feeMapper->expects($this->once())
-            ->method('find')
-            ->with(999)
-            ->willThrowException(new \Exception('Not found'));
-        
-        // Assert
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Fee not found');
-        
-        // Act
-        $this->feeService->find(999);
-    }
-
-    /**
-     * Test for overdue fees functionality
-     */
-    public function testFindOverdueFees() {
-        // Arrange - Create fees with different due dates
-        $overdueFee = new Fee();
-        $overdueFee->setId(1);
-        $overdueFee->setMemberId(1);
-        $overdueFee->setAmount(50.00);
-        $overdueFee->setStatus('open');
-        $overdueFee->setDueDate(date('Y-m-d', strtotime('-10 days')));
-        
-        $currentFee = new Fee();
-        $currentFee->setId(2);
-        $currentFee->setMemberId(2);
-        $currentFee->setAmount(75.00);
-        $currentFee->setStatus('open');
-        $currentFee->setDueDate(date('Y-m-d', strtotime('+10 days')));
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findAll')
-            ->willReturn([$overdueFee, $currentFee]);
-        
-        // Act
-        $allFees = $this->feeService->findAll();
-        
-        // Assert - Check that we can identify overdue fees
-        $today = new Date();
-        $overdueCount = 0;
-        foreach ($allFees as $fee) {
-            if ($fee->getStatus() === 'open' && strtotime($fee->getDueDate()) < strtotime('today')) {
-                $overdueCount++;
+    private function memberOf(int $memberId, int $clubId): void {
+        $this->memberships->method('findByMemberAndClub')->willReturnCallback(
+            function (int $m, int $c) use ($memberId, $clubId) {
+                if ($m === $memberId && $c === $clubId) {
+                    return new Membership();
+                }
+                throw new DoesNotExistException('not a member');
             }
-        }
-        
-        $this->assertEquals(1, $overdueCount);
+        );
     }
 
-    public function testExportToCsvIncludesAllFields() {
-        // Arrange
+    public function testFindAllOnlyAsksForTheGivenClub(): void {
+        $this->fees->expects($this->once())->method('findByClub')->with(4)->willReturn([]);
+
+        $this->assertSame([], $this->service->findAll(4));
+    }
+
+    public function testCreateStoresClubMemberAndAmount(): void {
+        $this->memberOf(9, 4);
+        $stored = null;
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$stored) {
+            $stored = $f;
+            return $f;
+        });
+
+        $this->service->create(4, 9, 12.5, 'open', '2026-12-01', 'Jahresbeitrag');
+
+        $this->assertSame(4, $stored->getClubId());
+        $this->assertSame(9, $stored->getMemberId());
+        $this->assertSame(12.5, $stored->getAmount());
+        $this->assertSame('open', $stored->getStatus());
+    }
+
+    public function testCreateForSomeoneFromAnotherClubIsRejected(): void {
+        $this->memberOf(9, 4);
+        $this->fees->expects($this->never())->method('insert');
+
+        $this->expectExceptionMessage('gehört nicht zu diesem Verein');
+        $this->service->create(5, 9, 10.0, 'open', '2026-12-01');
+    }
+
+    public function testFeeOfAnotherClubIsNotFound(): void {
+        $this->fees->method('findInClub')->with(3, 5)->willThrowException(new DoesNotExistException('x'));
+
+        $this->expectExceptionMessage('Fee not found');
+        $this->service->find(5, 3);
+    }
+
+    public function testUpdateAndDeleteOfAnotherClubsFeeAreImpossible(): void {
+        $this->fees->method('findInClub')->willThrowException(new DoesNotExistException('x'));
+        $this->fees->expects($this->never())->method('update');
+        $this->fees->expects($this->never())->method('delete');
+
+        try {
+            $this->service->update(5, 3, 9, 1.0, 'open', '2026-12-01');
+            $this->fail('update must fail');
+        } catch (\Exception $e) {
+            $this->assertSame('Fee not found', $e->getMessage());
+        }
+        try {
+            $this->service->delete(5, 3);
+            $this->fail('delete must fail');
+        } catch (\Exception $e) {
+            $this->assertSame('Fee not found', $e->getMessage());
+        }
+    }
+
+    public function testUpdateCannotMoveTheFeeToAMemberOfAnotherClub(): void {
         $fee = new Fee();
-        $fee->setId(1);
-        $fee->setMemberId(1);
-        $fee->setAmount(50.00);
-        $fee->setStatus('open');
-        $fee->setDueDate('2024-12-31');
-        
-        $this->feeMapper->expects($this->once())
-            ->method('findAll')
-            ->willReturn([$fee]);
-        
-        // Act
-        $csv = $this->feeService->exportToCsv();
-        
-        // Assert - Check CSV format and content
-        $lines = explode("\n", trim($csv));
-        $this->assertCount(2, $lines); // Header + 1 data row
-        $this->assertEquals('ID,Member ID,Amount,Status,Due Date', $lines[0]);
-        $this->assertStringContainsString('1,1,50.00,open,2024-12-31', $lines[1]);
+        $fee->setClubId(4);
+        $this->fees->method('findInClub')->willReturn($fee);
+        $this->memberOf(9, 4);
+        $this->fees->expects($this->never())->method('update');
+
+        $this->expectExceptionMessage('gehört nicht zu diesem Verein');
+        $this->service->update(4, 1, 77, 5.0, 'open', '2026-12-01');
     }
 }

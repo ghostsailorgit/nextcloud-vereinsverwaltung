@@ -89,8 +89,7 @@
           @update:model-value="formData.email = $event"
           type="email"
           label="E-Mail"
-          placeholder="max@example.com"
-          required
+          placeholder="max@example.com (optional)"
         />
 
         <h3 class="form-subheader">Mitgliedschaft</h3>
