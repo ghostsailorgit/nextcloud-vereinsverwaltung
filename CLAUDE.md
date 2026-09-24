@@ -96,6 +96,19 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     supports, ship background jobs via `appinfo/info.xml`. New tables go into `BackupService::TABLES` (a test checks it).
     Backups: `BackupService` (gzip JSON in the app data folder), `DailyBackupJob`, retention 30 days but the newest 7 always kept.
 
+15. **Anonymize, don't delete:** `MemberService::anonymize()` replaces a person's PII with placeholders but keeps the row -
+    fees and SEPA history stay attributable, and a hard delete would break bookkeeping retention. Only allowed once the
+    person has left (or is deceased in) every club - an active member's data is still needed. It also calls
+    `AuditLogService::scrubEntity()` for the person and every membership, redacting *already-stored* log entries, not just
+    future ones. `MemberController::anonymize()`/`export()` must call `MemberService::find($clubId, $id)` first (404 if the
+    person is not a member of the calling club) before doing anything else - `MemberService::anonymize()` and
+    `SelfServiceService::forMemberId()` look the person up globally and do not check that themselves, so skipping it lets
+    anyone with the right permission in *any* club reach a person who only belongs to a different one.
+16. **`AuditLogService::SAFE_FIELDS` is an allow-list, not a deny-list:** everything not on it gets redacted for a covered
+    entity type, so a new field on `Member` needs nothing done to stay safe by default - only add to the list if it should
+    show up in plain text (a deny-list missed derived/joined fields like `fullName`, `mandateReference`/`mandateFile`, `age`
+    once before; don't repeat that with a new sensitive-fields list elsewhere).
+
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
   `ROADMAP.md`** (move items between done/next), and `docs/ARCHITEKTUR.md` when the data model or rules change, in the same
@@ -117,6 +130,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - Vue files may have CRLF line endings on Windows checkouts (`autocrlf`); normalise before multi-line patches.
 
 ## Planning
-The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (delete/anonymize members,
-admin data export, masking sensitive values in the audit log) is worked on by a colleague - coordinate before starting.
+The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (anonymize/delete members,
+admin data export, masking sensitive values in the audit log) is done (see rule 15) - built by the colleague it was
+assigned to (`feature/anonymisieren`), coordinate before changing that area further.
 Real-world data entry (bank account, creditor ID, real IBANs and mandates) happens in the running instance, not in the repo.

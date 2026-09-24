@@ -21,7 +21,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 |---|---|
 | `verein_clubs` | Name (eindeutig), Team-Ordner, Kalendergruppen, Zuordnung „Vereinsfunktion → App-Rolle“ |
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
-| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto |
+| `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `anonymized_at` (siehe „Anonymisieren“) |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
 | `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge |
@@ -65,15 +65,37 @@ Felder von welchem auf welchen Wert. Rein anfügend, nichts wird nachträglich b
 Zahlungen und Zugriffsrechten) werden 10 Jahre aufbewahrt, alle übrigen (Vereine, Bankkonten, Beitragskategorien,
 Beitragsläufe, Rollendefinitionen) 30 Tage. Ein täglicher Hintergrundjob (`AuditLogCleanupJob`) löscht Abgelaufenes;
 die Zuordnung steht in `AuditLogService::LONG_RETENTION_TYPES`. Das Protokoll ist Teil der Sicherung.
-Hinweis: Es speichert auch die alten und neuen Werte personenbezogener Felder (z. B. IBAN, Anschrift) - bei einer späteren
-Lösch-/Anonymisierungsfunktion müssen die Protokolleinträge der Person mitbehandelt werden. Einsehbar je Verein
-über die API (`GET /audit-log`, Recht „Änderungsprotokoll einsehen“); eine eigene Ansicht in der Oberfläche
-gibt es noch nicht.
+**Personenbezogene Felder werden im Protokoll nie im Klartext gespeichert**, nur die Tatsache, dass sich das Feld
+geändert hat (`{"redacted": true}` bzw. `true` bei „angelegt“). Umgesetzt als Erlaubnisliste, nicht als Sperrliste
+(`AuditLogService::SAFE_FIELDS`): für Mitglieder werden nur `id`, `role`, `joinDate`, `leaveDate`, `foundingMember`,
+`deactivated`, `deceased`, `clubId` im Klartext protokolliert, alles andere wird redigiert - auch abgeleitete Felder
+wie `fullName`, `mandateReference`, `mandateFile` (der Pfad enthält oft den Namen) oder `age`, die eine Sperrliste
+leicht übersieht. Einsehbar je Verein über die API (`GET /audit-log`, Recht „Änderungsprotokoll einsehen“); eine
+eigene Ansicht in der Oberfläche gibt es noch nicht.
 
-## Selbstauskunft („Meine Daten“)
+## Anonymisieren
+Statt eine Person zu löschen (`POST /members/{id}/anonymize`, Recht „Rollen verwalten“, wie bei Deaktivieren; die
+Person muss laut `MemberController::anonymize()` Mitglied im aufrufenden Verein sein, sonst 404 - sonst könnte jeder
+Rolleninhaber irgendeines Vereins jede Person anonymisieren): Name, Anschrift, E-Mail, IBAN/BIC, Geburtsdatum und die
+Konto-Verknüpfung werden durch Platzhalter ersetzt, `anonymized_at` wird gesetzt. Der Datensatz bleibt bestehen, damit
+Beiträge und SEPA-Historie weiter der (jetzt anonymen) Person zuzuordnen sind - eine harte Löschung würde die
+Aufbewahrungspflicht der Buchhaltung verletzen. Geht erst, wenn die Person in jedem Verein ausgetreten (oder
+verstorben) ist - eine noch aktive Mitgliedschaft braucht die Daten. Ältere Protokolleinträge zu der Person und all
+ihren Mitgliedschaften werden beim Anonymisieren nachträglich redigiert (`AuditLogService::scrubEntity()`), nicht nur
+künftige. Es gibt kein Zurück: `anonymized_at` bleibt gesetzt.
+**Nicht betroffen:** `mandateReference`/`mandateFile` an der Mitgliedschaft (kann den Namen enthalten) und die
+unterschriebene Mandatsdatei in Nextcloud Files selbst - Mandate haben eine eigene Aufbewahrungsfrist. Ebenso nicht
+betroffen: Freitext in Beitragsbeschreibungen. Für die künftige Oberfläche ist vor dem Auslösen eine ausdrückliche
+Rückfrage vorgesehen (siehe `ROADMAP.md`) - über die API gibt es sie bewusst nicht, das wäre nur Reibung ohne Nutzen.
+
+## Selbstauskunft („Meine Daten“) und Admin-Export
 Wer mit einer Person verknüpft ist, sieht seine eigenen Daten, Mitgliedschaften und Beiträge und kann sie als
-JSON herunterladen. Das geht ohne Rolle. Es ist bewusst nur lesend (siehe SEPA-Betrugsrisiko bei
-selbst geänderten IBANs).
+JSON herunterladen (`GET /me/export`). Das geht ohne Rolle. Es ist bewusst nur lesend (siehe SEPA-Betrugsrisiko bei
+selbst geänderten IBANs). Für eine Auskunft nach Art. 15 DSGVO an eine Person, die sich nicht (mehr) selbst anmelden
+kann, exportiert `GET /members/{id}/export` dieselben Daten - aber nur Mitgliedschaft und Beiträge **des aufrufenden
+Vereins**, nicht die anderer Vereine der Person. Das Recht ist dasselbe wie für die normale Mitgliederansicht
+(`verein.member.view`), da es nichts zeigt, was dort nicht ohnehin sichtbar ist; `MemberController::export()` prüft
+zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins ist (404 sonst).
 
 ## Beiträge
 - **Kategorien** (Reiter „Verein“): z. B. Erwachsene 24 €, Jugend 12 €, Ehrenmitglied 0 €. Eine Kategorie ist der Standard;

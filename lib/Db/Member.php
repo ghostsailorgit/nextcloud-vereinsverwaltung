@@ -33,6 +33,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDeceased(bool $deceased)
  * @method ?string getUserId()
  * @method void setUserId(?string $userId)
+ * @method ?string getAnonymizedAt()
+ * @method void setAnonymizedAt(?string $anonymizedAt)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
  * @method ?string getUpdatedAt()
@@ -52,6 +54,7 @@ class Member extends Entity implements JsonSerializable {
     protected ?string $birthDate = null;
     protected bool $deceased = false;
     protected ?string $userId = null;
+    protected ?string $anonymizedAt = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -167,6 +170,7 @@ class Member extends Entity implements JsonSerializable {
             // Linked Nextcloud account (uid) or null; the display name is added by MemberController
             'userId' => $this->userId,
             'deceased' => $this->deceased,
+            'anonymizedAt' => $this->anonymizedAt,
             // Club-specific part (defaults when no club context is attached)
             'clubId' => $this->membership?->getClubId(),
             'role' => $this->getRole(),

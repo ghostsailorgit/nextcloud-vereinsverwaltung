@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.13.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.14.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -12,12 +12,14 @@ Stand: Version 0.13.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge, „bezahlt“-Markierung nach dem Export |
 | Kalender | Geburtstage und Jubiläen je Verein, nur intern geteilt |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll (API) mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
+| Datenschutz | Person anonymisieren statt löschen, Admin-Export einer Person, Änderungsprotokoll ohne Klartext bei personenbezogenen Feldern |
 | Qualität | Automatische Tests und CI, API-Übersicht aus dem Code erzeugt |
 
 ## Als Nächstes
 
-- **Datenschutz vervollständigen:** Person anonymisieren statt nur löschen (inklusive der Einträge im Änderungsprotokoll), Datenexport zu einer Person durch den Administrator, sensible Werte im Änderungsprotokoll nur als „geändert“ ohne Inhalt speichern.
-- **Oberfläche für das Änderungsprotokoll** (bisher nur per API abrufbar).
+- **Oberfläche für das Änderungsprotokoll und das Anonymisieren** (bisher nur per API abrufbar/auslösbar). Anonymisieren
+  ist unumkehrbar - die Oberfläche muss vor dem Auslösen ausdrücklich rückfragen („Person <Name> unwiderruflich
+  anonymisieren?“), nicht nur ein normaler Löschen-Dialog.
 - **Mitgliederimport** aus CSV, mit Vorschau und Prüfung von IBAN und Doppelten.
 - **Mahnwesen:** Mahnstufen und Mahnschreiben für überfällige Beiträge.
 - **Anteilige Beiträge** bei Eintritt im laufenden Jahr.

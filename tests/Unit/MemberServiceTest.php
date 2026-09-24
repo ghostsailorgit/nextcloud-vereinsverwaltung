@@ -331,4 +331,84 @@ class MemberServiceTest extends TestCase {
         $member = $this->service->update(1, 8, ['name' => 'Muster', 'feeRateId' => '']);
         $this->assertNull($member->getMembership()->getFeeRateId(), 'empty = cleared');
     }
+
+    // --- anonymize()
+
+    public function testAnonymizeRejectsAnActiveMembership(): void {
+        $member = $this->person(8);
+        $this->members->method('find')->with(8)->willReturn($member);
+        $this->memberships->method('findByMember')->with(8)->willReturn([$this->membership(8, 1)]);
+
+        $this->expectExceptionMessage('aktives Mitglied');
+        $this->service->anonymize(8);
+    }
+
+    public function testAnonymizeAllowsAFormerMemberEverywhere(): void {
+        $member = $this->person(8, 'Mustermann');
+        $member->setFirstName('Max');
+        $member->setEmail('max@example.org');
+        $member->setIban('DE89370400440532013000');
+        $member->setUserId('maxmuster');
+        $this->members->method('find')->with(8)->willReturn($member);
+        $left = $this->membership(8, 1);
+        $left->setLeaveDate('2024-01-01');
+        $this->memberships->method('findByMember')->with(8)->willReturn([$left]);
+        $this->members->method('update')->willReturnArgument(0);
+
+        $result = $this->service->anonymize(8);
+
+        $this->assertSame('Anonymisiert', $result->getName());
+        $this->assertNull($result->getFirstName());
+        $this->assertSame('', $result->getEmail());
+        $this->assertNull($result->getIban());
+        $this->assertNull($result->getUserId());
+        $this->assertNotNull($result->getAnonymizedAt());
+    }
+
+    public function testAnonymizeAllowsADeceasedMemberEvenWithoutALeaveDate(): void {
+        $member = $this->person(8);
+        $member->setDeceased(true);
+        $this->members->method('find')->with(8)->willReturn($member);
+        $this->memberships->method('findByMember')->with(8)->willReturn([$this->membership(8, 1)]);
+        $this->members->method('update')->willReturnArgument(0);
+
+        $result = $this->service->anonymize(8);
+
+        $this->assertSame('Anonymisiert', $result->getName());
+    }
+
+    public function testAnonymizeRejectsAnAlreadyAnonymizedPerson(): void {
+        $member = $this->person(8);
+        $member->setAnonymizedAt('2024-01-01 00:00:00');
+        $this->members->method('find')->with(8)->willReturn($member);
+
+        $this->expectExceptionMessage('bereits anonymisiert');
+        $this->service->anonymize(8);
+    }
+
+    public function testAnonymizeScrubsTheAuditLogOfThePersonAndEveryMembership(): void {
+        $member = $this->person(8);
+        $this->members->method('find')->with(8)->willReturn($member);
+        $left1 = $this->membership(8, 1);
+        $left1->setLeaveDate('2024-01-01');
+        $left2 = $this->membership(8, 2);
+        $left2->setLeaveDate('2024-01-01');
+        $this->memberships->method('findByMember')->with(8)->willReturn([$left1, $left2]);
+        $this->members->method('update')->willReturnArgument(0);
+
+        // membership(8, 1) -> id 801, membership(8, 2) -> id 802 (memberId * 100 + clubId)
+        $seen = [];
+        $auditLog = $this->createMock(\OCA\Verein\Service\AuditLogService::class);
+        $auditLog->expects($this->once())->method('record')->with(null, 'member', 8, 'anonymize');
+        $auditLog->expects($this->exactly(3))->method('scrubEntity')->willReturnCallback(
+            function (string $type, int $id) use (&$seen) {
+                $seen[] = [$type, $id];
+            }
+        );
+        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, null, $auditLog);
+
+        $service->anonymize(8);
+
+        $this->assertSame([['member', 8], ['membership', 801], ['membership', 802]], $seen);
+    }
 }

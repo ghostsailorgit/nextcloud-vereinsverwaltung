@@ -233,6 +233,65 @@ class MemberService {
         }
         return $member;
     }
+
+    /**
+     * Replaces a person's personal data with placeholders (GDPR erasure), keeping the row itself so
+     * fees and SEPA history stay attributable to it - a hard delete would break bookkeeping retention.
+     * Only allowed once the person has left (or is deceased in) every club they belong to - an active
+     * member's data is still needed to run the club. Does not touch the membership's mandateReference
+     * or mandateFile (may contain the name, e.g. in the file path); mandates have their own retention
+     * duty and the signed file itself stays in Nextcloud Files regardless.
+     *
+     * The audit log keeps knowing *that* something changed but not what: past entries about this person
+     * (and their memberships) are scrubbed too (see AuditLogService::scrubEntity()), and this action
+     * itself is recorded without the erased values.
+     *
+     * The caller (MemberController::anonymize()) must confirm the person belongs to the requesting
+     * club before calling this - it looks the person up globally and does not check that itself.
+     *
+     * @throws ValidationException if already anonymized or still an active member somewhere
+     */
+    public function anonymize(int $id): Member {
+        $member = $this->mapper->find($id);
+        if ($member->getAnonymizedAt() !== null) {
+            throw new ValidationException('Die Person ist bereits anonymisiert');
+        }
+        $memberships = $this->membershipMapper->findByMember($id);
+        if (!$member->getDeceased()) {
+            foreach ($memberships as $membership) {
+                if (empty($membership->getLeaveDate())) {
+                    throw new ValidationException(
+                        'Die Person ist noch aktives Mitglied in mindestens einem Verein und kann nicht anonymisiert werden'
+                    );
+                }
+            }
+        }
+
+        $member->setSalutation(null);
+        $member->setName('Anonymisiert');
+        $member->setFirstName(null);
+        $member->setAddress(null);
+        $member->setStreet(null);
+        $member->setPostalCode(null);
+        $member->setCity(null);
+        $member->setEmail('');
+        $member->setIban(null);
+        $member->setBic(null);
+        $member->setBirthDate(null);
+        $member->setUserId(null);
+        $member->setAnonymizedAt(date('Y-m-d H:i:s'));
+        $member->setUpdatedAt(date('Y-m-d H:i:s'));
+        $member = $this->mapper->update($member);
+
+        $this->auditLog?->record(null, 'member', $id, 'anonymize');
+        $this->auditLog?->scrubEntity('member', $id);
+        foreach ($memberships as $membership) {
+            $this->auditLog?->scrubEntity('membership', $membership->getId());
+        }
+
+        return $member;
+    }
+
     private function logMemberChange(int $clubId, Member $member, array $before): void {
         if ($this->auditLog === null) {
             return;

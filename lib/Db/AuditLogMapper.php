@@ -50,4 +50,18 @@ class AuditLogMapper extends QBMapper {
 
         return $this->findEntities($qb);
     }
+
+    /**
+     * Every entry of one entity, across all clubs and with no limit - used by
+     * AuditLogService::scrubEntity() to redact history, not for display.
+     *
+     * @return AuditLogEntry[]
+     */
+    public function findAllForEntity(string $entityType, int $entityId): array {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')->from($this->getTableName())
+            ->where($qb->expr()->eq('entity_type', $qb->createNamedParameter($entityType)))
+            ->andWhere($qb->expr()->eq('entity_id', $qb->createNamedParameter($entityId, IQueryBuilder::PARAM_INT)));
+        return $this->findEntities($qb);
+    }
 }
