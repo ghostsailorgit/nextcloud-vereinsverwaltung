@@ -274,6 +274,7 @@ class MemberController extends Controller {
             'mandateDate' => $this->request->getParam('mandateDate'),
             'mandateFile' => $this->request->getParam('mandateFile'),
             'userId' => $this->request->getParam('userId'),
+            'feeRateId' => $this->request->getParam('feeRateId'),
         ];
     }
 

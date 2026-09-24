@@ -4,6 +4,7 @@ namespace OCA\Verein\Controller;
 use Exception;
 use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Service\ClubService;
+use OCA\Verein\Service\FeeRateService;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -21,6 +22,7 @@ class ClubController extends Controller {
         $AppName,
         IRequest $request,
         private ClubService $clubService,
+        private FeeRateService $feeRates,
         private RoleService $roleService,
         private IUserSession $userSession
     ) {
@@ -123,6 +125,47 @@ class ClubController extends Controller {
             $this->clubService->deleteAccount($clubId, $accountId);
             return new JSONResponse(['status' => 'ok']);
         });
+    }
+
+    /**
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.club.manage')]
+    public function createFeeRate(int $clubId): JSONResponse {
+        return $this->guard(function () use ($clubId) {
+            $rate = $this->feeRates->create($clubId, $this->feeRateParams());
+            return new JSONResponse(['status' => 'ok', 'data' => $rate], 201);
+        });
+    }
+
+    /**
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.club.manage')]
+    public function updateFeeRate(int $clubId, int $rateId): JSONResponse {
+        return $this->guard(function () use ($clubId, $rateId) {
+            $rate = $this->feeRates->update($clubId, $rateId, $this->feeRateParams());
+            return new JSONResponse(['status' => 'ok', 'data' => $rate]);
+        });
+    }
+
+    /**
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.club.manage')]
+    public function destroyFeeRate(int $clubId, int $rateId): JSONResponse {
+        return $this->guard(function () use ($clubId, $rateId) {
+            $this->feeRates->delete($clubId, $rateId);
+            return new JSONResponse(['status' => 'ok']);
+        });
+    }
+
+    private function feeRateParams(): array {
+        return [
+            'name' => $this->request->getParam('name'),
+            'amount' => $this->request->getParam('amount'),
+            'isDefault' => $this->request->getParam('isDefault', false),
+        ];
     }
 
     private function guard(callable $action): JSONResponse {

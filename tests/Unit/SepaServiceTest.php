@@ -135,6 +135,7 @@ class SepaServiceTest extends TestCase {
         $result = $this->service->generateSepaXml(self::CLUB);
 
         $this->assertSame(1, $result['skippedCount']);
+        $this->assertSame([10], $result['feeIds'], 'only the fees that are in the file');
         $xml = simplexml_load_string($result['xml']);
         $this->assertNotFalse($xml, 'XML must be well-formed (names with & are escaped)');
         $ns = $xml->getNamespaces(true);

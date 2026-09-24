@@ -127,6 +127,14 @@
           :clearable="false"
           :disabled="!canManageRoles"
         />
+        <NcSelect
+          v-model="formData.feeRateId"
+          :options="feeRateOptions"
+          :reduce="r => r.id"
+          label="label"
+          input-label="Beitragskategorie"
+          placeholder="Standard des Vereins"
+        />
         <label class="checkbox-field">
           <input v-model="formData.foundingMember" type="checkbox" />
           <span>Gründungsmitglied</span>
@@ -295,7 +303,8 @@ const emptyFormData = () => ({
   mandateReference: '',
   mandateDate: '',
   mandateFile: '',
-  userId: ''
+  userId: '',
+  feeRateId: null
 })
 
 export default {
@@ -328,6 +337,14 @@ export default {
     const formData = reactive(emptyFormData())
     const canManage = computed(() => can('verein.member.manage'))
     const canManageRoles = computed(() => can('verein.role.manage'))
+
+    // fee categories of the current club, for the membership section
+    const feeRateOptions = computed(() =>
+      (currentClub.value?.feeRates || []).map(r => ({
+        id: r.id,
+        label: r.name + ' (' + Number(r.amount).toFixed(2).replace('.', ',') + ' €)' + (r.isDefault ? ' – Standard' : '')
+      }))
+    )
 
     // Link to a Nextcloud account
     const selectedUser = ref(null)
@@ -572,6 +589,7 @@ export default {
       deleteMember,
       canManage,
       canManageRoles,
+      feeRateOptions,
       selectedUser,
       userOptions,
       onUserSearch,

@@ -171,6 +171,7 @@ class Member extends Entity implements JsonSerializable {
             'mandateReference' => $this->membership?->getMandateReference(),
             'mandateDate' => $this->membership?->getMandateDate(),
             'mandateFile' => $this->membership?->getMandateFile(),
+            'feeRateId' => $this->membership?->getFeeRateId(),
             'age' => $this->getAge(),
             'membershipYears' => $this->getMembershipYears(),
             'isFormer' => $this->isFormer(),

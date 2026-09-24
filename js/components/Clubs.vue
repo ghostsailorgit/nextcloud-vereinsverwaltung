@@ -73,6 +73,43 @@
       </form>
     </div>
 
+    <!-- Fee categories -->
+    <div v-if="club && canManage" class="card">
+      <h3>Beitragskategorien</h3>
+      <p class="hint">
+        Jede Kategorie hat einen Jahresbeitrag. Die Standardkategorie gilt für Mitglieder ohne eigene Kategorie
+        (Mitgliederformular). 0 € = beitragsfrei (z. B. Ehrenmitglieder). Sie werden im Beitragslauf (Reiter „Finanzen“) verwendet.
+      </p>
+      <table v-if="club.feeRates && club.feeRates.length" class="accounts">
+        <thead><tr><th>Kategorie</th><th>Jahresbeitrag</th><th>Aktionen</th></tr></thead>
+        <tbody>
+          <tr v-for="r in club.feeRates" :key="r.id">
+            <td>{{ r.name }} <span v-if="r.isDefault" class="badge">Standard</span></td>
+            <td>{{ Number(r.amount).toFixed(2).replace('.', ',') }} €</td>
+            <td class="row-actions">
+              <NcButton variant="secondary" @click="editRate(r)">Bearbeiten</NcButton>
+              <NcButton variant="error" @click="removeRate(r)">Löschen</NcButton>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="hint">Noch keine Kategorie angelegt.</p>
+
+      <h4>{{ rateForm.id ? 'Kategorie bearbeiten' : 'Kategorie hinzufügen' }}</h4>
+      <form class="grid" @submit.prevent="saveRate">
+        <NcTextField :model-value="rateForm.name" @update:model-value="rateForm.name = $event" label="Name" placeholder="z. B. Erwachsene" required />
+        <NcTextField :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" label="Jahresbeitrag in €" placeholder="24,00" required />
+        <label class="checkbox-field">
+          <input v-model="rateForm.isDefault" type="checkbox" />
+          <span>Standardkategorie</span>
+        </label>
+        <div class="actions">
+          <NcButton type="submit" variant="primary" :disabled="busy">{{ rateForm.id ? 'Speichern' : 'Hinzufügen' }}</NcButton>
+          <NcButton v-if="rateForm.id" type="button" variant="tertiary" @click="resetRateForm">Abbrechen</NcButton>
+        </div>
+      </form>
+    </div>
+
     <!-- Automatic rights -->
     <div v-if="club && canManageRoles" class="card">
       <h3>Automatische Rechte</h3>
@@ -229,6 +266,30 @@ export default {
       if (!ok) await loadClubs()
     }
 
+    // fee categories
+    const rateForm = reactive({ id: null, name: '', amount: '', isDefault: false })
+    const resetRateForm = () => Object.assign(rateForm, { id: null, name: '', amount: '', isDefault: false })
+    const editRate = (r) => Object.assign(rateForm, { id: r.id, name: r.name, amount: String(r.amount).replace('.', ','), isDefault: r.isDefault })
+    const saveRate = async () => {
+      const ok = await run(async () => {
+        const payload = { name: rateForm.name, amount: rateForm.amount, isDefault: rateForm.isDefault }
+        if (rateForm.id) {
+          await api.put(`clubs/${club.value.id}/fee-rates/${rateForm.id}`, payload)
+        } else {
+          await api.post(`clubs/${club.value.id}/fee-rates`, payload)
+        }
+        await loadClubs()
+      }, 'Beitragskategorie gespeichert')
+      if (ok) resetRateForm()
+    }
+    const removeRate = async (r) => {
+      if (!confirm(`Kategorie „${r.name}“ wirklich löschen?`)) return
+      await run(async () => {
+        await api.delete(`clubs/${club.value.id}/fee-rates/${r.id}`)
+        await loadClubs()
+      }, 'Beitragskategorie gelöscht')
+    }
+
     const resetAccountForm = () => Object.assign(accountForm, emptyAccount())
     const editAccount = (a) => Object.assign(accountForm, emptyAccount(), a)
 
@@ -254,6 +315,7 @@ export default {
     }
 
     return {
+      rateForm, saveRate, editRate, removeRate, resetRateForm,
       busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm
     }

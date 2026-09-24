@@ -19,6 +19,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDueDate(string $dueDate)
  * @method ?string getPaidDate()
  * @method void setPaidDate(?string $paidDate)
+ * @method ?string getPeriod()
+ * @method void setPeriod(?string $period)
  * @method ?string getDescription()
  * @method void setDescription(?string $description)
  * @method ?string getCreatedAt()
@@ -34,6 +36,7 @@ class Fee extends Entity implements JsonSerializable {
     protected string $dueDate = '';
     protected ?string $paidDate = null;
     protected ?string $description = null;
+    protected ?string $period = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -47,6 +50,7 @@ class Fee extends Entity implements JsonSerializable {
             'dueDate' => $this->dueDate,
             'paidDate' => $this->paidDate,
             'description' => $this->description,
+            'period' => $this->period,
         ];
     }
 }

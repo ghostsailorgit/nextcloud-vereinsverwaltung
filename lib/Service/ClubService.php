@@ -7,6 +7,7 @@ use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRoleMapper;
@@ -28,7 +29,8 @@ class ClubService {
         private RoleService $roleService,
         private ValidationService $validation,
         private MemberCalendarService $calendar,
-        private RoleMapper $roleMapper
+        private RoleMapper $roleMapper,
+        private FeeRateMapper $feeRates
     ) {
     }
 
@@ -50,6 +52,14 @@ class ClubService {
             $entry['permissions'] = $permissions;
             $canSeeAccounts = in_array('verein.sepa.export', $permissions, true)
                 || in_array('verein.club.manage', $permissions, true);
+            // fee categories are needed to assign one to a member and to run the annual fee run
+            $canSeeRates = array_intersect(
+                ['verein.member.view', 'verein.finance.read', 'verein.club.manage'],
+                $permissions
+            ) !== [];
+            $entry['feeRates'] = $canSeeRates
+                ? array_map(fn ($r) => $r->jsonSerialize(), $this->feeRates->findByClub($club->getId()))
+                : [];
             $entry['accounts'] = $canSeeAccounts
                 ? array_map(fn (ClubAccount $a) => $a->jsonSerialize(), $this->accountMapper->findByClub($club->getId()))
                 : [];
@@ -100,6 +110,7 @@ class ClubService {
         }
         $this->calendar->deleteClubCalendar($club);
         $this->accountMapper->deleteByClub($id);
+        $this->feeRates->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);
         $this->clubMapper->delete($club);
     }

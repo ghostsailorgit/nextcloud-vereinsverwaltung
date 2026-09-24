@@ -79,6 +79,29 @@ class FeeService {
     }
 
     /**
+     * Marks fees as paid (e.g. after they were collected by direct debit).
+     * Only fees of this club that are still open or overdue are touched.
+     *
+     * @param int[] $ids
+     * @return int number of fees marked paid
+     */
+    public function markPaid(int $clubId, array $ids): int {
+        if ($ids === []) {
+            return 0;
+        }
+        return $this->mapper->markPaidInClub($clubId, $ids, date('Y-m-d H:i:s'));
+    }
+
+    /**
+     * Flags open fees whose due date has passed as overdue.
+     *
+     * @return int number of fees flagged
+     */
+    public function flagOverdue(int $clubId): int {
+        return $this->mapper->flagOverdueInClub($clubId, date('Y-m-d'), date('Y-m-d H:i:s'));
+    }
+
+    /**
      * @throws Exception if the person is not a member of the club
      */
     private function assertMemberOfClub(int $clubId, int $memberId): void {

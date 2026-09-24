@@ -1,5 +1,7 @@
 ﻿<template>
   <div class="finance-container">
+    <FeeRun v-if="canWriteFinance" @done="fetchFees" />
+
     <!-- Form für neue Gebühr -->
     <div class="form-section">
       <h2>Neue Gebühr hinzufügen</h2>
@@ -161,13 +163,16 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import ExportButtons from './ExportButtons.vue'
+import FeeRun from './FeeRun.vue'
+import { can } from '../store/club'
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
-  components: { NcButton, NcTextField, NcSelect, ExportButtons },
+  components: { NcButton, NcTextField, NcSelect, ExportButtons, FeeRun },
   setup() {
+    const canWriteFinance = computed(() => can('verein.finance.write'))
     const fees = ref([])
     const members = ref([])
     const loading = ref(false)
@@ -319,6 +324,8 @@ export default {
     // Export is handled by <ExportButtons /> now
 
     return {
+      canWriteFinance,
+      fetchFees,
       fees,
       members,
       sortedMembers,

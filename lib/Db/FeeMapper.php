@@ -44,6 +44,45 @@ class FeeMapper extends QBMapper {
         return $this->findEntity($qb);
     }
 
+    /**
+     * Marks the given fees of the club as paid in one statement. Only fees
+     * that are still open or overdue are touched.
+     *
+     * @param int[] $ids
+     * @return int number of fees changed
+     */
+    public function markPaidInClub(int $clubId, array $ids, string $now): int {
+        $changed = 0;
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $ids))), 500) as $chunk) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->update($this->getTableName())
+                ->set('status', $qb->createNamedParameter('paid'))
+                ->set('paid_date', $qb->createNamedParameter($now))
+                ->set('updated_at', $qb->createNamedParameter($now))
+                ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+                ->andWhere($qb->expr()->in('id', $qb->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
+                ->andWhere($qb->expr()->in('status', $qb->createNamedParameter(['open', 'overdue'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+            $changed += $qb->executeStatement();
+        }
+        return $changed;
+    }
+
+    /**
+     * Open fees of the club that were due before $today become overdue.
+     *
+     * @return int number of fees changed
+     */
+    public function flagOverdueInClub(int $clubId, string $today, string $now): int {
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->getTableName())
+            ->set('status', $qb->createNamedParameter('overdue'))
+            ->set('updated_at', $qb->createNamedParameter($now))
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('status', $qb->createNamedParameter('open')))
+            ->andWhere($qb->expr()->lt('due_date', $qb->createNamedParameter($today . ' 00:00:00')));
+        return $qb->executeStatement();
+    }
+
     public function deleteByMemberInClub(int $memberId, int $clubId): void {
         $qb = $this->db->getQueryBuilder();
         $qb->delete($this->getTableName())

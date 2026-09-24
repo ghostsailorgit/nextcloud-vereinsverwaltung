@@ -23,7 +23,8 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
 | `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
-| `verein_fees` | Beiträge je Person und Verein |
+| `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
+| `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
 
@@ -47,6 +48,16 @@ vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/
 Wer mit einer Person verknüpft ist, sieht seine eigenen Daten, Mitgliedschaften und Beiträge und kann sie als
 JSON herunterladen. Das geht ohne Rolle. Es ist bewusst nur lesend (siehe SEPA-Betrugsrisiko bei
 selbst geänderten IBANs).
+
+## Beiträge
+- **Kategorien** (Reiter „Verein“): z. B. Erwachsene 24 €, Jugend 12 €, Ehrenmitglied 0 €. Eine Kategorie ist der Standard;
+  jede Mitgliedschaft kann im Mitgliederformular eine eigene Kategorie bekommen.
+- **Beitragslauf** (Reiter „Finanzen“): Jahr und Fälligkeit wählen, Vorschau ansehen, erzeugen. Aktive Mitglieder bekommen ihren
+  Jahresbeitrag; übersprungen werden Ausgetretene und Verstorbene, spätere Eintritte, Beitragsfreie, Mitglieder ohne Kategorie
+  (und ohne Standard) sowie alle, die für das Jahr schon einen Beitrag haben. Ein Lauf lässt sich deshalb wiederholen.
+  Anteilige Beiträge bei unterjährigem Eintritt gibt es noch nicht.
+- **Nach dem SEPA-Export** bietet die Seite an, genau die exportierten Beiträge als bezahlt zu markieren (erst nach dem Einreichen bei der Bank).
+- **Überfällige markieren** setzt offene Beiträge mit abgelaufener Fälligkeit auf „überfällig“. Mahnschreiben gibt es noch nicht.
 
 ## SEPA-Lastschrift
 - Pro Verein und Bankkonto wird eine pain.008.001.02-Datei erzeugt.

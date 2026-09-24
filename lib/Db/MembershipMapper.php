@@ -36,6 +36,13 @@ class MembershipMapper extends QBMapper {
         return $this->findEntities($qb);
     }
 
+    public function countByFeeRate(int $feeRateId): int {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select($qb->func()->count('*', 'cnt'))->from($this->getTableName())
+            ->where($qb->expr()->eq('fee_rate_id', $qb->createNamedParameter($feeRateId, IQueryBuilder::PARAM_INT)));
+        return (int)$qb->executeQuery()->fetchOne();
+    }
+
     public function countByClub(int $clubId): int {
         $qb = $this->db->getQueryBuilder();
         $qb->select($qb->func()->count('*', 'cnt'))->from($this->getTableName())

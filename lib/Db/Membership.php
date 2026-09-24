@@ -24,6 +24,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setMandateReference(?string $mandateReference)
  * @method ?string getMandateDate()
  * @method void setMandateDate(?string $mandateDate)
+ * @method ?int getFeeRateId()
+ * @method void setFeeRateId(?int $feeRateId)
  * @method ?string getMandateFile()
  * @method void setMandateFile(?string $mandateFile)
  * @method ?string getCreatedAt()
@@ -41,6 +43,7 @@ class Membership extends Entity implements JsonSerializable {
     protected ?string $mandateReference = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
+    protected ?int $feeRateId = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -49,6 +52,7 @@ class Membership extends Entity implements JsonSerializable {
         $this->addType('memberId', 'integer');
         $this->addType('clubId', 'integer');
         $this->addType('foundingMember', 'bool');
+        $this->addType('feeRateId', 'integer');
     }
 
     /**
@@ -72,6 +76,7 @@ class Membership extends Entity implements JsonSerializable {
             'mandateReference' => $this->mandateReference,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,
+            'feeRateId' => $this->feeRateId,
         ];
     }
 }

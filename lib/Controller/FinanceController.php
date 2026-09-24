@@ -143,6 +143,28 @@ class FinanceController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
+    #[RequirePermission('verein.finance.write')]
+    public function markPaid() {
+        $raw = $this->request->getParam('feeIds', '');
+        $ids = is_array($raw) ? $raw : array_filter(explode(',', (string)$raw), 'strlen');
+        $count = $this->feeService->markPaid($this->clubId(), $ids);
+        return new JSONResponse(['status' => 'ok', 'marked' => $count]);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.finance.write')]
+    public function flagOverdue() {
+        $count = $this->feeService->flagOverdue($this->clubId());
+        return new JSONResponse(['status' => 'ok', 'flagged' => $count]);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
     #[RequirePermission('verein.finance.delete')]
     public function destroy($id) {
         try {

@@ -7,6 +7,7 @@ use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Middleware\AuthorizationMiddleware;
 use OCA\Verein\Service\RBAC\RoleService;
@@ -77,6 +78,7 @@ class Application extends App implements IBootstrap {
                 $container->query(FeeMapper::class),
                 $container->query(ClubMapper::class),
                 $container->query(IUserManager::class),
+                $container->query(FeeRateMapper::class),
                 $container->query(MemberCalendarService::class)
             );
         });

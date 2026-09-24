@@ -31,7 +31,7 @@ class SepaService {
      * Generate SEPA-XML for all open fees of a club
      *
      * @param int|null $accountId Club bank account to collect on (default account if null)
-     * @return array{xml: string, skippedCount: int} XML plus number of fees left out
+     * @return array{xml: string, skippedCount: int, feeIds: int[]} XML, number of fees left out and ids of the fees in the file
      *   (no IBAN / no signed mandate) - see previewSepaExport() for who and why
      */
     public function generateSepaXml(int $clubId, ?int $accountId = null): array {
@@ -61,7 +61,8 @@ class SepaService {
                 $collected['totalAmount'],
                 $collected['transactions']
             ),
-            'skippedCount' => count($collected['skipped'])
+            'skippedCount' => count($collected['skipped']),
+            'feeIds' => array_column($collected['transactions'], 'feeId')
         ];
     }
 

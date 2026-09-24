@@ -41,6 +41,18 @@
       </form>
     </div>
 
+    <!-- After a download: mark exactly the exported fees as paid -->
+    <div v-if="exportedFeeIds.length" class="skipped-warning mark-paid">
+      <p>
+        Die Datei enthält <strong>{{ exportedFeeIds.length }}</strong> Beiträge. Sobald du sie bei der Bank eingereicht hast,
+        kannst du genau diese Beiträge als bezahlt markieren.
+      </p>
+      <NcButton variant="primary" :disabled="marking" @click="markExportedPaid">
+        {{ exportedFeeIds.length }} Beiträge als bezahlt markieren
+      </NcButton>
+      <NcButton variant="tertiary" @click="exportedFeeIds = []">Später</NcButton>
+    </div>
+
     <!-- Preview Section -->
     <div v-if="previewData" class="preview-container">
       <h3>Vorschau SEPA-Export</h3>
@@ -91,6 +103,7 @@ import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
+import { api } from '../api'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { clubState, currentClub } from '../store/club'
@@ -101,7 +114,9 @@ export default {
   data() {
     return {
       accountId: null,
-      previewData: null
+      previewData: null,
+      exportedFeeIds: [],
+      marking: false
     }
   },
   computed: {
@@ -139,6 +154,20 @@ export default {
         showError(extractErrorMessage(error, 'Fehler beim Laden der Vorschau'))
       }
     },
+    async markExportedPaid() {
+      if (!confirm(this.exportedFeeIds.length + ' Beiträge als bezahlt markieren? Das sollte erst nach dem Einreichen bei der Bank geschehen.')) return
+      this.marking = true
+      try {
+        const res = await api.post('finance/mark-paid', { feeIds: this.exportedFeeIds.join(',') })
+        showSuccess(res.data.marked + ' Beiträge als bezahlt markiert')
+        this.exportedFeeIds = []
+        this.previewData = null
+      } catch (error) {
+        showError(extractErrorMessage(error, 'Markieren fehlgeschlagen'))
+      } finally {
+        this.marking = false
+      }
+    },
     async generateSepa() {
       try {
         const response = await axios.post(
@@ -156,6 +185,7 @@ export default {
         a.click()
         window.URL.revokeObjectURL(url)
         showSuccess('SEPA-XML heruntergeladen')
+        this.exportedFeeIds = (response.headers['x-sepa-fee-ids'] || '').split(',').filter(Boolean).map(Number)
         const skipped = parseInt(response.headers['x-sepa-skipped'] || '0', 10)
         if (skipped > 0) {
           showError(`Achtung: ${skipped} offene Zahlung(en) fehlen im Export (keine IBAN oder kein Mandat). Details in der Vorschau.`)
@@ -218,6 +248,9 @@ export default {
   border-radius: 4px;
   margin-bottom: 20px;
 }
+
+.mark-paid { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.mark-paid p { margin: 0; flex: 1 1 320px; }
 
 .skipped-warning {
   background: var(--color-warning-hover, #fff3cd);

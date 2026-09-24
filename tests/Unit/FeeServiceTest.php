@@ -102,4 +102,30 @@ class FeeServiceTest extends TestCase {
         $this->expectExceptionMessage('gehört nicht zu diesem Verein');
         $this->service->update(4, 1, 77, 5.0, 'open', '2026-12-01');
     }
+
+    // --- after a SEPA export / due date passed
+
+    public function testMarkPaidAsksTheMapperForThatClubAndTheGivenFees(): void {
+        $this->fees->expects($this->once())
+            ->method('markPaidInClub')
+            ->with(4, [1, 2, 3], $this->matchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/'))
+            ->willReturn(2);
+
+        $this->assertSame(2, $this->service->markPaid(4, [1, 2, 3]));
+    }
+
+    public function testMarkPaidWithNoIdsDoesNothing(): void {
+        $this->fees->expects($this->never())->method('markPaidInClub');
+
+        $this->assertSame(0, $this->service->markPaid(4, []));
+    }
+
+    public function testFlagOverdueUsesTodayAndTheClub(): void {
+        $this->fees->expects($this->once())
+            ->method('flagOverdueInClub')
+            ->with(4, date('Y-m-d'), $this->anything())
+            ->willReturn(7);
+
+        $this->assertSame(7, $this->service->flagOverdue(4));
+    }
 }

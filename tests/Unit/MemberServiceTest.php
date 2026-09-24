@@ -4,6 +4,8 @@ namespace OCA\Verein\Tests\Unit;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\FeeRate;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
@@ -20,6 +22,7 @@ class MemberServiceTest extends TestCase {
     private FeeMapper&MockObject $fees;
     private ClubMapper&MockObject $clubs;
     private IUserManager&MockObject $userManager;
+    private FeeRateMapper&MockObject $feeRates;
     private MemberService $service;
 
     protected function setUp(): void {
@@ -34,7 +37,8 @@ class MemberServiceTest extends TestCase {
         });
 
         $this->userManager = $this->createMock(IUserManager::class);
-        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, null);
+        $this->feeRates = $this->createMock(FeeRateMapper::class);
+        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, null);
     }
 
     private function person(int $id, string $name = 'Mustermann'): Member {
@@ -256,5 +260,54 @@ class MemberServiceTest extends TestCase {
 
         $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => '']);
         $this->assertNull($member->getUserId(), 'empty string unlinks');
+    }
+
+    // --- fee category on the membership
+
+    private function updatableForRates(): void {
+        $member = $this->person(8);
+        $member->setMembership($this->membership(8, 1));
+        $this->members->method('findInClub')->willReturn($member);
+        $this->members->method('update')->willReturnArgument(0);
+        $this->memberships->method('findByMemberAndClub')->willReturn($this->membership(8, 1));
+        $this->memberships->method('update')->willReturnArgument(0);
+        $this->memberships->method('findByMember')->willReturn([]);
+    }
+
+    private function rateOf(int $id, int $clubId): FeeRate {
+        $r = new FeeRate();
+        $r->setId($id);
+        $r->setClubId($clubId);
+        return $r;
+    }
+
+    public function testFeeCategoryOfTheSameClubIsAccepted(): void {
+        $this->updatableForRates();
+        $this->feeRates->method('find')->with(5)->willReturn($this->rateOf(5, 1));
+
+        $member = $this->service->update(1, 8, ['name' => 'Muster', 'feeRateId' => '5']);
+
+        $this->assertSame(5, $member->getMembership()->getFeeRateId());
+    }
+
+    public function testFeeCategoryOfAnotherClubIsRejected(): void {
+        $this->updatableForRates();
+        $this->feeRates->method('find')->willReturn($this->rateOf(5, 2));
+
+        $this->expectExceptionMessage('anderen Verein');
+        $this->service->update(1, 8, ['name' => 'Muster', 'feeRateId' => '5']);
+    }
+
+    public function testEmptyFeeCategoryClearsAndMissingLeavesItAlone(): void {
+        $this->updatableForRates();
+        $this->feeRates->method('find')->willReturn($this->rateOf(5, 1));
+        $member = $this->service->update(1, 8, ['name' => 'Muster', 'feeRateId' => '5']);
+        $this->assertSame(5, $member->getMembership()->getFeeRateId());
+
+        $member = $this->service->update(1, 8, ['name' => 'Muster']);
+        $this->assertSame(5, $member->getMembership()->getFeeRateId(), 'no value = untouched');
+
+        $member = $this->service->update(1, 8, ['name' => 'Muster', 'feeRateId' => '']);
+        $this->assertNull($member->getMembership()->getFeeRateId(), 'empty = cleared');
     }
 }

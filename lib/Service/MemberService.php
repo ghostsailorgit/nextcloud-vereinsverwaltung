@@ -3,6 +3,7 @@ namespace OCA\Verein\Service;
 
 use Exception;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
@@ -24,6 +25,7 @@ class MemberService {
         private FeeMapper $feeMapper,
         private ClubMapper $clubMapper,
         private IUserManager $userManager,
+        private FeeRateMapper $feeRates,
         private ?MemberCalendarService $calendarService = null
     ) {
     }
@@ -255,6 +257,33 @@ class MemberService {
         $membership->setMandateReference($this->nullIfEmpty($data['mandateReference'] ?? null));
         $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
         $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));
+        $this->applyFeeRate($membership, $data);
+    }
+
+    /**
+     * The fee category of the membership: an id sets it (must belong to the
+     * same club), an empty string clears it, no value leaves it as it is.
+     *
+     * @throws Exception
+     */
+    private function applyFeeRate(Membership $membership, array $data): void {
+        if (!array_key_exists('feeRateId', $data) || $data['feeRateId'] === null) {
+            return;
+        }
+        $raw = trim((string)$data['feeRateId']);
+        if ($raw === '' || $raw === '0') {
+            $membership->setFeeRateId(null);
+            return;
+        }
+        try {
+            $rate = $this->feeRates->find((int)$raw);
+        } catch (DoesNotExistException $e) {
+            throw new Exception('Die Beitragskategorie existiert nicht');
+        }
+        if ($rate->getClubId() !== $membership->getClubId()) {
+            throw new Exception('Die Beitragskategorie gehört zu einem anderen Verein');
+        }
+        $membership->setFeeRateId($rate->getId());
     }
 
     private function nullIfEmpty(mixed $value): ?string {

@@ -58,6 +58,8 @@ class SepaController extends ApiController {
         // Fees left out (no IBAN or no signed mandate); the frontend warns
         // about it (details are listed in the preview).
         $response->addHeader('X-Sepa-Skipped', (string)$result['skippedCount']);
+        // Which fees are in the file, so the UI can offer to mark exactly those as paid
+        $response->addHeader('X-Sepa-Fee-Ids', implode(',', $result['feeIds']));
         return $response;
     }
 
