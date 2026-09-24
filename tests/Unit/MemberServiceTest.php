@@ -10,6 +10,7 @@ use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Service\MemberService;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IUserManager;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -18,6 +19,7 @@ class MemberServiceTest extends TestCase {
     private MembershipMapper&MockObject $memberships;
     private FeeMapper&MockObject $fees;
     private ClubMapper&MockObject $clubs;
+    private IUserManager&MockObject $userManager;
     private MemberService $service;
 
     protected function setUp(): void {
@@ -31,7 +33,8 @@ class MemberServiceTest extends TestCase {
             return $club;
         });
 
-        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, null);
+        $this->userManager = $this->createMock(IUserManager::class);
+        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, null);
     }
 
     private function person(int $id, string $name = 'Mustermann'): Member {
@@ -187,5 +190,71 @@ class MemberServiceTest extends TestCase {
         $active = $this->membership(8, 2);
         $other->setMembership($active);
         $this->assertFalse($other->isFormer());
+    }
+
+    // --- linking a person to a Nextcloud account
+
+    private function updatable(int $id): Member {
+        $member = $this->person($id);
+        $member->setMembership($this->membership($id, 1));
+        $this->members->method('findInClub')->willReturn($member);
+        $this->members->method('update')->willReturnArgument(0);
+        $this->memberships->method('findByMemberAndClub')->willReturn($this->membership($id, 1));
+        $this->memberships->method('update')->willReturnArgument(0);
+        $this->memberships->method('findByMember')->willReturn([]);
+        return $member;
+    }
+
+    public function testLinkingAnExistingFreeAccount(): void {
+        $this->updatable(8);
+        $this->userManager->method('userExists')->with('maxmuster')->willReturn(true);
+        $this->members->method('findByUserId')->with('maxmuster')->willReturn(null);
+
+        $member = $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => 'maxmuster']);
+
+        $this->assertSame('maxmuster', $member->getUserId());
+    }
+
+    public function testLinkingAnUnknownAccountIsRejected(): void {
+        $this->updatable(8);
+        $this->userManager->method('userExists')->willReturn(false);
+
+        $this->expectExceptionMessage('existiert nicht');
+        $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => 'ghost']);
+    }
+
+    public function testAnAccountCanOnlyBelongToOnePerson(): void {
+        $this->updatable(8);
+        $other = $this->person(9, 'Schmidt');
+        $other->setFirstName('Anna');
+        $this->userManager->method('userExists')->willReturn(true);
+        $this->members->method('findByUserId')->willReturn($other);
+
+        $this->expectExceptionMessage('bereits mit Anna Schmidt verknüpft');
+        $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => 'maxmuster']);
+    }
+
+    public function testKeepingTheSameLinkIsNotACollisionWithItself(): void {
+        $member = $this->updatable(8);
+        $member->setUserId('maxmuster');
+        $this->userManager->expects($this->never())->method('userExists');
+
+        $result = $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => 'maxmuster']);
+
+        $this->assertSame('maxmuster', $result->getUserId());
+    }
+
+    public function testEmptyUserIdUnlinksAndMissingUserIdLeavesTheLinkAlone(): void {
+        $member = $this->updatable(8);
+        $member->setUserId('maxmuster');
+
+        $this->service->update(1, 8, ['name' => 'Mustermann']);
+        $this->assertSame('maxmuster', $member->getUserId(), 'no userId in the request = untouched');
+
+        $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => null]);
+        $this->assertSame('maxmuster', $member->getUserId(), 'null = untouched');
+
+        $this->service->update(1, 8, ['name' => 'Mustermann', 'userId' => '']);
+        $this->assertNull($member->getUserId(), 'empty string unlinks');
     }
 }

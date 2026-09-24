@@ -92,6 +92,21 @@
           placeholder="max@example.com (optional)"
         />
 
+        <div class="account-link">
+          <NcSelectUsers
+            v-model="selectedUser"
+            :options="userOptions"
+            input-label="Verknüpftes Nextcloud-Konto"
+            placeholder="Name oder Benutzername eingeben"
+            @search="onUserSearch"
+            @update:model-value="onUserPicked"
+          />
+          <p class="hint">
+            Optional. Verknüpft dieses Mitglied mit seinem Nextcloud-Login (z. B. Vorstandsmitglieder).
+            <span v-if="!formData.userId && userOptions.length">Vorschläge nach Namen stehen im Dropdown.</span>
+          </p>
+        </div>
+
         <h3 class="form-subheader">Mitgliedschaft</h3>
         <label class="date-field">
           <span>Eintrittsdatum</span>
@@ -194,6 +209,7 @@
               <th>Name</th>
               <th>E-Mail</th>
               <th>Ort</th>
+              <th>NC-Konto</th>
               <th>Alter</th>
               <th>Mitglied seit</th>
               <th>Rolle</th>
@@ -207,6 +223,10 @@
               <td>{{ displayName(member) }}</td>
               <td>{{ member.email }}</td>
               <td>{{ member.city || '-' }}</td>
+              <td>
+                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> (Konto fehlt)</span></span>
+                <span v-else class="hint">–</span>
+              </td>
               <td>{{ member.age !== null && member.age !== undefined ? member.age + ' J.' : '-' }}</td>
               <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? member.membershipYears + ' J.' : '-' }}</td>
               <td>
@@ -249,6 +269,7 @@ import { currentClub, can } from '../store/club'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
+import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import Alert from './Alert.vue'
 import ExportButtons from './ExportButtons.vue'
 
@@ -270,7 +291,8 @@ const emptyFormData = () => ({
   bic: '',
   mandateReference: '',
   mandateDate: '',
-  mandateFile: ''
+  mandateFile: '',
+  userId: ''
 })
 
 export default {
@@ -279,6 +301,7 @@ export default {
     NcButton,
     NcTextField,
     NcSelect,
+    NcSelectUsers,
     Alert,
     ExportButtons
   },
@@ -301,6 +324,44 @@ export default {
 
     const formData = reactive(emptyFormData())
     const canManage = computed(() => can('verein.member.manage'))
+
+    // Link to a Nextcloud account
+    const selectedUser = ref(null)
+    const userOptions = ref([])
+    let userSearchTimer = null
+
+    const runUserSearch = async (query) => {
+      try {
+        const response = await api.get('members/users', { params: { query } })
+        userOptions.value = (response.data.users || []).map(u => ({
+          ...u,
+          subname: u.linkedTo ? `${u.id} – bereits verknüpft mit ${u.linkedTo}` : u.id
+        }))
+      } catch (error) {
+        userOptions.value = []
+      }
+    }
+
+    const onUserSearch = (query) => {
+      if (userSearchTimer) clearTimeout(userSearchTimer)
+      if (!query || query.trim().length < 2) return
+      userSearchTimer = setTimeout(() => runUserSearch(query.trim()), 300)
+    }
+
+    const setSelectedUserFrom = (m) => {
+      selectedUser.value = m?.userId
+        ? { id: m.userId, user: m.userId, displayName: m.userDisplayName || m.userId, subname: m.userId }
+        : null
+    }
+
+    const onUserPicked = (user) => {
+      if (user && user.linkedToId && user.linkedToId !== editingId.value) {
+        showError(`${user.displayName} ist bereits mit ${user.linkedTo} verknüpft`)
+        setSelectedUserFrom(formData)
+        return
+      }
+      formData.userId = user ? user.id : ''
+    }
 
     // "Add existing person from another club"
     const lookupQuery = ref('')
@@ -443,13 +504,18 @@ export default {
     const startEdit = async (member) => {
       editingId.value = member.id
       Object.assign(formData, emptyFormData(), member)
+      setSelectedUserFrom(member)
+      userOptions.value = []
 
       try {
         const response = await api.getMember(member.id)
         const latest = response.data?.data || response.data?.member
         if (latest) {
           Object.assign(formData, emptyFormData(), latest)
+          setSelectedUserFrom(latest)
         }
+        // Suggest matching Nextcloud accounts by the member's name
+        if (!formData.userId) runUserSearch(formData.name)
       } catch (error) {
         console.error('Error loading member details:', error)
         showError(extractErrorMessage(error, 'Fehler beim Laden des Mitglieds'))
@@ -459,6 +525,8 @@ export default {
     const cancelEdit = () => {
       editingId.value = null
       Object.assign(formData, emptyFormData())
+      selectedUser.value = null
+      userOptions.value = []
     }
 
     const deleteMember = async (id) => {
@@ -499,6 +567,10 @@ export default {
       cancelEdit,
       deleteMember,
       canManage,
+      selectedUser,
+      userOptions,
+      onUserSearch,
+      onUserPicked,
       lookupQuery,
       lookupJoinDate,
       lookupResults,
@@ -632,6 +704,10 @@ export default {
 
 .hint {
   color: var(--color-text-maxcontrast);
+}
+
+.account-link {
+  grid-column: 1 / -1;
 }
 
 .form-actions {

@@ -18,6 +18,7 @@ return [
         ['name' => 'member#index', 'url' => '/members', 'verb' => 'GET'],
         // literal route must come before /members/{id}
         ['name' => 'member#lookup', 'url' => '/members/lookup', 'verb' => 'GET'],
+        ['name' => 'member#searchUsers', 'url' => '/members/users', 'verb' => 'GET'],
         ['name' => 'member#attach', 'url' => '/memberships', 'verb' => 'POST'],
         ['name' => 'member#create', 'url' => '/members', 'verb' => 'POST'],
         ['name' => 'member#show', 'url' => '/members/{id}', 'verb' => 'GET'],

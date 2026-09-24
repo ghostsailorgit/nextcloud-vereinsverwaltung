@@ -9,6 +9,7 @@ use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\IUserManager;
 
 /**
  * Members are plain persons (MemberMapper); what ties one to a club -
@@ -22,6 +23,7 @@ class MemberService {
         private MembershipMapper $membershipMapper,
         private FeeMapper $feeMapper,
         private ClubMapper $clubMapper,
+        private IUserManager $userManager,
         private ?MemberCalendarService $calendarService = null
     ) {
     }
@@ -51,6 +53,13 @@ class MemberService {
         } catch (DoesNotExistException $e) {
             throw new Exception('Member not found');
         }
+    }
+
+    /**
+     * The person linked to a Nextcloud account (null if none).
+     */
+    public function findByLinkedUser(string $userId): ?Member {
+        return $this->mapper->findByUserId($userId);
     }
 
     /**
@@ -192,7 +201,38 @@ class MemberService {
         $this->calendarService->syncMember($this->clubMapper->find($clubId), $member);
     }
 
+    /**
+     * Links or unlinks a Nextcloud account. Only touched when the request
+     * carries a userId at all: a value links, an empty string unlinks, no
+     * value (null) leaves the current link as it is. An account can belong
+     * to only one person.
+     *
+     * @throws Exception
+     */
+    private function applyUserLink(Member $member, array $data): void {
+        if (!array_key_exists('userId', $data) || $data['userId'] === null) {
+            return;
+        }
+        $userId = trim((string)$data['userId']);
+        if ($userId === '') {
+            $member->setUserId(null);
+            return;
+        }
+        if ($userId === $member->getUserId()) {
+            return;
+        }
+        if (!$this->userManager->userExists($userId)) {
+            throw new Exception('Das Nextcloud-Konto existiert nicht');
+        }
+        $other = $this->mapper->findByUserId($userId);
+        if ($other !== null && $other->getId() !== $member->getId()) {
+            throw new Exception('Das Nextcloud-Konto ist bereits mit ' . $other->getFullName() . ' verknüpft');
+        }
+        $member->setUserId($userId);
+    }
+
     private function applyPersonData(Member $member, array $data): void {
+        $this->applyUserLink($member, $data);
         $member->setName((string)($data['name'] ?? ''));
         $member->setFirstName($this->nullIfEmpty($data['firstName'] ?? null));
         $member->setSalutation($this->nullIfEmpty($data['salutation'] ?? null));

@@ -10,6 +10,7 @@ use OCA\Verein\Service\ValidationService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\IUserManager;
 use OCP\IUserSession;
 
 /**
@@ -28,7 +29,8 @@ class MemberController extends Controller {
         ValidationService $validationService,
         private RoleService $roleService,
         private ClubMapper $clubMapper,
-        private IUserSession $userSession
+        private IUserSession $userSession,
+        private IUserManager $userManager
     ) {
         parent::__construct($AppName, $request);
         $this->memberService = $memberService;
@@ -54,7 +56,7 @@ class MemberController extends Controller {
             }
             return new JSONResponse([
                 'status' => 'ok',
-                'members' => $members
+                'members' => array_map(fn ($m) => $this->present($m), $members)
             ]);
         } catch (Exception $e) {
             return new JSONResponse([
@@ -62,6 +64,34 @@ class MemberController extends Controller {
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Nextcloud accounts to pick from when linking a member to an account,
+     * with the person each one is already linked to (if any).
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.member.manage')]
+    public function searchUsers() {
+        $q = trim((string)$this->request->getParam('query', ''));
+        if (mb_strlen($q) < 2) {
+            return new JSONResponse(['status' => 'ok', 'users' => []]);
+        }
+        $users = [];
+        foreach ($this->userManager->searchDisplayName($q, 10) as $user) {
+            $linked = $this->memberService->findByLinkedUser($user->getUID());
+            $users[] = [
+                'id' => $user->getUID(),
+                'user' => $user->getUID(),
+                'displayName' => $user->getDisplayName(),
+                'subname' => $user->getUID(),
+                'linkedTo' => $linked !== null ? $linked->getFullName() : null,
+                'linkedToId' => $linked?->getId(),
+            ];
+        }
+        return new JSONResponse(['status' => 'ok', 'users' => $users]);
     }
 
     /**
@@ -150,7 +180,7 @@ class MemberController extends Controller {
             $member = $this->memberService->find($this->clubId(), $id);
             return new JSONResponse([
                 'status' => 'ok',
-                'data' => $member
+                'data' => $this->present($member)
             ]);
         } catch (Exception $e) {
             return new JSONResponse([
@@ -191,13 +221,13 @@ class MemberController extends Controller {
             $member = $this->memberService->create($this->clubId(), $data);
             return new JSONResponse([
                 'status' => 'ok',
-                'data' => $member
+                'data' => $this->present($member)
             ], 201);
         } catch (Exception $e) {
             return new JSONResponse([
                 'status' => 'error',
                 'message' => $e->getMessage()
-            ], 500);
+            ], 400);
         }
     }
 
@@ -226,6 +256,7 @@ class MemberController extends Controller {
             'mandateReference' => $this->request->getParam('mandateReference'),
             'mandateDate' => $this->request->getParam('mandateDate'),
             'mandateFile' => $this->request->getParam('mandateFile'),
+            'userId' => $this->request->getParam('userId'),
         ];
     }
 
@@ -260,13 +291,13 @@ class MemberController extends Controller {
             $member = $this->memberService->update($this->clubId(), (int)$id, $data);
             return new JSONResponse([
                 'status' => 'ok',
-                'data' => $member
+                'data' => $this->present($member)
             ]);
         } catch (Exception $e) {
             return new JSONResponse([
                 'status' => 'error',
                 'message' => $e->getMessage()
-            ], 500);
+            ], 400);
         }
     }
 
@@ -291,6 +322,24 @@ class MemberController extends Controller {
                 'message' => $e->getMessage()
             ], 404);
         }
+    }
+
+    /**
+     * The member as JSON plus the display name of the linked Nextcloud
+     * account (falls back to the uid if that account no longer exists).
+     */
+    private function present($member): array {
+        $data = $member->jsonSerialize();
+        $uid = $member->getUserId();
+        if ($uid !== null && $uid !== '') {
+            $user = $this->userManager->get($uid);
+            $data['userDisplayName'] = $user !== null ? $user->getDisplayName() : $uid;
+            $data['userExists'] = $user !== null;
+        } else {
+            $data['userDisplayName'] = null;
+            $data['userExists'] = false;
+        }
+        return $data;
     }
 
     /**

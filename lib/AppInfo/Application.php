@@ -24,6 +24,7 @@ use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\AppFramework\IAppContainer;
 use OCP\IGroupManager;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\IURLGenerator;
 use OCP\IL10N;
@@ -72,6 +73,7 @@ class Application extends App implements IBootstrap {
                 $container->query(MembershipMapper::class),
                 $container->query(FeeMapper::class),
                 $container->query(ClubMapper::class),
+                $container->query(IUserManager::class),
                 $container->query(MemberCalendarService::class)
             );
         });

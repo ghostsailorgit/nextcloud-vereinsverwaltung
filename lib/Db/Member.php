@@ -159,6 +159,8 @@ class Member extends Entity implements JsonSerializable {
             'iban' => $this->iban,
             'bic' => $this->bic,
             'birthDate' => $this->birthDate,
+            // Linked Nextcloud account (uid) or null; the display name is added by MemberController
+            'userId' => $this->userId,
             'deceased' => $this->deceased,
             // Club-specific part (defaults when no club context is attached)
             'clubId' => $this->membership?->getClubId(),

@@ -40,6 +40,23 @@ class MemberMapper extends QBMapper {
     }
 
     /**
+     * The person linked to a Nextcloud account, if any (one account belongs
+     * to at most one person).
+     */
+    public function findByUserId(string $userId): ?Member {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->setMaxResults(1);
+        try {
+            return $this->findEntity($qb);
+        } catch (DoesNotExistException $e) {
+            return null;
+        }
+    }
+
+    /**
      * All members of a club, each with their membership attached.
      *
      * @return Member[]
