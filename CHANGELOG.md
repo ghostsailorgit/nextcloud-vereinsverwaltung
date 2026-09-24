@@ -11,14 +11,20 @@ Datenschutz vervollständigt (Löschen/Anonymisieren, Admin-Export, Protokoll-Re
 ### ✨ Neu
 - **Anonymisieren statt löschen:** `POST /members/{id}/anonymize` (Recht „Rollen verwalten“) ersetzt Name,
   Anschrift, E-Mail, IBAN/BIC, Geburtsdatum und Konto-Verknüpfung einer Person durch Platzhalter. Beiträge und
-  SEPA-Historie bleiben erhalten. Geht erst, wenn die Person überall ausgetreten oder verstorben ist.
+  SEPA-Historie bleiben erhalten. Geht erst, wenn die Person überall ausgetreten oder verstorben ist. Die Person
+  muss außerdem Mitglied des aufrufenden Vereins sein (sonst 404) - sonst könnte jeder Inhaber von „Rollen
+  verwalten" in irgendeinem Verein jede Person eines fremden Vereins anonymisieren.
 - **Admin-Datenexport:** `GET /members/{id}/export` liefert die gleiche JSON-Auskunft wie die Selbstauskunft,
   für Personen, die sich nicht selbst anmelden können (Art. 15 DSGVO), mit demselben Recht wie die normale
-  Mitgliederansicht.
-- **Änderungsprotokoll ohne Klartext:** Personenbezogene Felder (Name, Anschrift, E-Mail, IBAN/BIC, Geburtsdatum,
-  Konto-Verknüpfung) werden im Protokoll nur noch als „geändert“ vermerkt, nicht mit Inhalt
-  (`AuditLogService::SENSITIVE_FIELDS`). Beim Anonymisieren werden auch ältere, schon gespeicherte Einträge der
-  Person nachträglich redigiert (`AuditLogService::scrubEntity()`).
+  Mitgliederansicht. Wie beim Anonymisieren muss die Person Mitglied des aufrufenden Vereins sein (sonst 404),
+  und der Export enthält nur die Mitgliedschaft und die Beiträge dieses Vereins, nicht die anderer Vereine der
+  Person.
+- **Änderungsprotokoll ohne Klartext:** Personenbezogene Felder werden im Protokoll nur noch als „geändert“
+  vermerkt, nicht mit Inhalt - als Erlaubnisliste, nicht als Sperrliste (`AuditLogService::SAFE_FIELDS`): für
+  Mitglieder nur `id`, `role`, `joinDate`, `leaveDate`, `foundingMember`, `deactivated`, `deceased`, `clubId` im
+  Klartext, alles andere geschwärzt - auch abgeleitete Felder wie `fullName`, `mandateReference`, `mandateFile`
+  (der Pfad enthält oft den Namen) oder `age`, die eine Sperrliste leicht übersieht. Beim Anonymisieren werden
+  auch ältere, schon gespeicherte Einträge der Person nachträglich redigiert (`AuditLogService::scrubEntity()`).
 
 ### 🔧 Technik
 - Migration `Version020008`: `verein_members.anonymized_at`.

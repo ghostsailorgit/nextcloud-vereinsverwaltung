@@ -166,4 +166,45 @@ class SelfServiceServiceTest extends TestCase {
         $this->expectException(NotFoundException::class);
         $this->service->forMemberId(999);
     }
+
+    /**
+     * The actual protection MemberController::export() relies on: without $onlyClubId this would
+     * (correctly, for forUser()) return both clubs - the filter is what keeps a club-B admin from
+     * seeing a club-B member's data in a different club. Written so it fails if the filter is
+     * removed: both club's data is set up, and club 2's name/fee never appear anywhere for club 1.
+     */
+    public function testForMemberIdWithOnlyClubIdRestrictsMembershipsAndFeesToThatClub(): void {
+        $this->members->method('find')->with(5)->willReturn($this->person());
+        $this->memberships->method('findByMember')->with(5)->willReturn([
+            $this->membership(1, 'member'),
+            $this->membership(2, 'admin'),
+        ]);
+        $this->clubs->method('find')->willReturnCallback(fn (int $id) => match ($id) {
+            1 => $this->club(1, 'Verein A'),
+            2 => $this->club(2, 'Verein B'),
+            default => throw new DoesNotExistException('x'),
+        });
+        $feeClub1 = new Fee();
+        $feeClub1->setClubId(1);
+        $feeClub1->setAmount(10.0);
+        $feeClub1->setDueDate('2026-01-01 00:00:00');
+        $feeClub2 = new Fee();
+        $feeClub2->setClubId(2);
+        $feeClub2->setAmount(20.0);
+        $feeClub2->setDueDate('2026-01-01 00:00:00');
+        $this->fees->method('findByMember')->with(5)->willReturn([$feeClub1, $feeClub2]);
+
+        $restricted = $this->service->forMemberId(5, 1);
+
+        $this->assertCount(1, $restricted['memberships']);
+        $this->assertSame('Verein A', $restricted['memberships'][0]['club']['name']);
+        $this->assertCount(1, $restricted['fees']);
+        $this->assertSame(10.0, $restricted['fees'][0]['amount']);
+        $this->assertStringNotContainsString('Verein B', json_encode($restricted), 'club 2 must not leak in');
+
+        // forUser()/forMemberId() without a club keep returning everything (unchanged behaviour)
+        $unrestricted = $this->service->forMemberId(5);
+        $this->assertCount(2, $unrestricted['memberships']);
+        $this->assertCount(2, $unrestricted['fees']);
+    }
 }
