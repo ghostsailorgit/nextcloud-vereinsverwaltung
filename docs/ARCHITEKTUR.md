@@ -67,6 +67,13 @@ selbst geänderten IBANs).
   Datenbank steht nur der Pfad.
 - Sequenztyp immer `RCUR`, fehlende BIC wird als `NOTPROVIDED` (IBAN-only) gesendet.
 
+## Sicherung
+Täglich läuft ein Nextcloud-Hintergrundjob (`DailyBackupJob`), der alle Vereinstabellen als komprimierte JSON-Datei im
+App-Datenordner ablegt (`BackupService`). Alte Sicherungen werden nach 30 Tagen gelöscht, die neuesten 7 bleiben immer erhalten,
+höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im Reiter „Verein“, können sofort sichern und
+herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
+Ein automatisches Zurückspielen gibt es noch nicht.
+
 ## Kalender
 Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Jubiläen aktiver
 Mitglieder. Er wird nur intern mit den je Verein festgelegten Nextcloud-Gruppen geteilt, nie öffentlich.

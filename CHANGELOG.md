@@ -6,6 +6,15 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.10.0-beta] - 2026-09-25
+
+### ✨ Neu
+- **Automatische Sicherung:** täglich (Nextcloud-Hintergrundjob) werden alle Vereinstabellen als komprimierte JSON-Datei im App-Datenordner gesichert. Sicherungen älter als 30 Tage werden gelöscht (mindestens die neuesten 7 bleiben immer, höchstens 100).
+- Im Reiter „Verein“ (nur Nextcloud-Administratoren): Liste der Sicherungen, „Jetzt sichern“ und Download.
+- Läuft ohne `mysqldump` oder Shell und damit auf jeder von Nextcloud unterstützten Datenbank.
+
+---
+
 ## [0.9.2-beta] - 2026-09-25
 
 ### 🔒 Sicherheit

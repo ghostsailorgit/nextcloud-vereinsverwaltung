@@ -7,6 +7,10 @@ return [
         // Dashboard data endpoints
         // Clubs (Vereine) and their bank accounts
         ['name' => 'club#index', 'url' => '/clubs', 'verb' => 'GET'],
+        // Backups of the club tables (Nextcloud administrators only)
+        ['name' => 'backup#index', 'url' => '/backups', 'verb' => 'GET'],
+        ['name' => 'backup#create', 'url' => '/backups', 'verb' => 'POST'],
+        ['name' => 'backup#download', 'url' => '/backups/{name}', 'verb' => 'GET', 'requirements' => ['name' => 'verein-backup-[0-9]{8}-[0-9]{6}\.json\.gz']],
         ['name' => 'club#create', 'url' => '/clubs', 'verb' => 'POST'],
         ['name' => 'club#update', 'url' => '/clubs/{clubId}', 'verb' => 'PUT'],
         ['name' => 'club#destroy', 'url' => '/clubs/{clubId}', 'verb' => 'DELETE'],

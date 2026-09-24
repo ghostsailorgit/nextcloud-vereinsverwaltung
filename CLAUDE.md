@@ -74,6 +74,11 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
     registrable domain could then forge writes). Only GET reads and file downloads may have it - `RoutePermissionsTest` enforces it.
     The frontend goes through `js/api.js` (`@nextcloud/axios` adds the token); do not use raw `fetch` for writes.
 
+13. **Portable by design:** the app must drop into any Nextcloud instance without host-specific setup. Use only public `OCP`
+    APIs, no shell tools (`mysqldump`, cron on the host), no hard-coded hosts/paths/groups, work on every database Nextcloud
+    supports, ship background jobs via `appinfo/info.xml`. New tables go into `BackupService::TABLES` (a test checks it).
+    Backups: `BackupService` (gzip JSON in the app data folder), `DailyBackupJob`, retention 30 days but the newest 7 always kept.
+
 ## Working conventions
 - **With every feature/fix/release update all three: `CHANGELOG.md` (new entry at the top, matching the
   `info.xml` version), `ROADMAP.md` (table "Stand dieses Forks" at the top) and the roadmap below.** Also
@@ -95,5 +100,5 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 3. Fees in daily use - done: categories per club, annual fee run with preview, mark exported fees paid, flag overdue.
    Still open: reminder letters / dunning levels (Mahnungen), pro-rata fees for members who join mid-year.
 4. Data protection: delete/lock members, per-person data export, change log - taken over by a colleague (coordinate before starting).
-5. Cleanup/publishing: slim README/docs (many stale upstream docs still in the repo), proper 404 vs 500 codes,
-   automatic backup of the club tables.
+5. Cleanup/publishing: slim README/docs (many stale upstream docs still in the repo), proper 404 vs 500 codes.
+   Automatic backup of the club tables - done (daily job, 30 days, button for Nextcloud admins).
