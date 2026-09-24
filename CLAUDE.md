@@ -1,27 +1,30 @@
 # Vereinsverwaltung (Nextcloud app `verein`)
 
 Nextcloud app for managing one or several clubs (Vereine): members, memberships, fees, SEPA direct
-debit export, roles/permissions, calendar reminders and member self-service. Private fork of
+debit export, roles/permissions, calendar reminders and member self-service. Fork of
 `Wacken2012/nextcloud-verein` (remote `upstream`; our history is grafted onto upstream `64a9b8b`).
+**The repository is public**: everything committed is world-readable, forever.
 UI language is German, code and comments are English. Target: Nextcloud 34, PHP 8.3+, Vue 3.
 
 Read `docs/ARCHITEKTUR.md` for the data model and the decisions behind it. This file is what you
 must know to change code safely.
 
-## This repo is private but must stay free of identifying data
+## Public repo: must stay free of identifying data
 - No real domain, host names, IPs, container names, user names, employer names or member data in
   code, tests, docs or commit messages. Use `cloud.example.org`, `Mustermann`, `DE89 3704 0044 0532 0130 00`.
 - Commits use the noreply identity configured for this repo; do not override it with a work e-mail.
 - Real member data lives only in the running Nextcloud database, never in the repo.
-- History was rewritten once to remove such data. Do not reintroduce it; check `git diff` before pushing.
+- History was rewritten to remove such data. Do not reintroduce it; check `git diff` before pushing and
+  scan for real names, hosts, e-mail addresses and IBANs (see the scan in "Working conventions").
 
 ## Commands
 ```
 composer update                       # dev deps: phpunit + Nextcloud OCP stubs (composer.lock is not committed)
-vendor/bin/phpunit --testsuite "Unit Tests"    # must stay green; CI runs the same (.github/workflows/tests.yml)
-npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is not committed)
+vendor/bin/phpunit                    # must stay green; CI runs the same (.github/workflows/tests.yml)
+npm ci && npm run build               # bundles js/main.js -> js/dist/ (dist is not committed)
+php scripts/ApiDocs.php               # regenerate docs/API.md after route changes (a test checks it)
 ```
-`tests/Integration` is not part of the suite (stale sanitizer tests, known).
+Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the PDF export; without it the export answers 503.
 
 ## Architecture in one screen
 - **Club (`verein_clubs`)** is the top level: name (unique), team-folder path, calendar groups, bank
@@ -94,10 +97,15 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
     Backups: `BackupService` (gzip JSON in the app data folder), `DailyBackupJob`, retention 30 days but the newest 7 always kept.
 
 ## Working conventions
-- **With every feature/fix/release update all three: `CHANGELOG.md` (new entry at the top, matching the
-  `info.xml` version), `ROADMAP.md` (table "Stand dieses Forks" at the top) and the roadmap below.** Also
-  `docs/ARCHITEKTUR.md` when the data model or rules change. Do this in the same commit as the change.
+- **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
+  `ROADMAP.md`** (move items between done/next), and `docs/ARCHITEKTUR.md` when the data model or rules change, in the same
+  commit as the change. Routes changed? Run `php scripts/ApiDocs.php`.
+- **Before every push** search the diff and the commit messages for real names, e-mail addresses, IPs, host names and
+  IBANs; the repository is public.
 - Ask before anything hard to reverse or outward-facing (data changes on a live instance, pushing, posting).
+- **Errors:** controllers catch `\Throwable` and return `$this->errorResponse($e)` (trait `RespondsWithErrors`); services throw
+  `ValidationException` (400, user-safe text), `NotFoundException` (404) or `DependencyMissingException` (503). Never put
+  `$e->getMessage()` of an unexpected exception into a response - it can contain SQL. `RespondsWithErrorsTest` enforces it.
 - Personal data: when a request could mean "public", "any user" or "specific group", ask which.
 - Test security-relevant changes with a **real non-admin Nextcloud account** (temporary, deleted afterwards);
   an admin session hides permission bugs.
@@ -108,17 +116,7 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 - The Bash tool can choke on heredocs with quotes or backticks; write helper scripts to files instead.
 - Vue files may have CRLF line endings on Windows checkouts (`autocrlf`); normalise before multi-line patches.
 
-## Roadmap (agreed order)
-1. Security & reliability - done (RBAC verified, runnable tests + CI, e-mail optional).
-2. Real-world data (IBANs, mandates, bank account/creditor ID, open import questions) - mostly manual work.
-3. Fees in daily use - done: categories per club, annual fee run with preview, mark exported fees paid, flag overdue.
-   Still open: reminder letters / dunning levels (Mahnungen), pro-rata fees for members who join mid-year.
-4. Data protection - partly done (colleague's area, coordinate before starting): deactivating a member
-   (MemberService::deactivate()/activate()) stops payments (fee run, SEPA export, new fees), birthday events and
-   automatic rights, deletes nothing; a generic audit log (AuditLogService, `verein_audit_log`) covers members/
-   memberships, fees, fee categories, clubs (incl. accounts, role mapping) and roles/assignments, readable via
-   `GET /audit-log` (`verein.audit.view`), retention 10 years for personal-data entity types and 30 days for the
-   rest (`AuditLogService::LONG_RETENTION_TYPES`, `AuditLogCleanupJob`). Still open: delete/anonymize members
-   (postponed - bookkeeping retention), per-person data export by an admin (today only `/me/export`).
-5. Cleanup/publishing: slim README/docs (many stale upstream docs still in the repo), proper 404 vs 500 codes.
-   Automatic backup of the club tables - done (daily job, 30 days, button for Nextcloud admins).
+## Planning
+The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (delete/anonymize members,
+admin data export, masking sensitive values in the audit log) is worked on by a colleague - coordinate before starting.
+Real-world data entry (bank account, creditor ID, real IBANs and mandates) happens in the running instance, not in the repo.

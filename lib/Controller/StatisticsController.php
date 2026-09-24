@@ -9,6 +9,8 @@ use OCP\IRequest;
 use OCA\Verein\Service\StatisticsService;
 
 class StatisticsController extends Controller {
+    use RespondsWithErrors;
+
     private StatisticsService $statisticsService;
 
     public function __construct(
@@ -32,11 +34,8 @@ class StatisticsController extends Controller {
                 'status' => 'ok',
                 'data' => $stats
             ]);
-        } catch (\Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -52,11 +51,8 @@ class StatisticsController extends Controller {
                 'status' => 'ok',
                 'data' => $stats
             ]);
-        } catch (\Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 }

@@ -5,11 +5,13 @@ use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\ApiController;
-use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserManager;
 
 class RoleController extends ApiController {
+    use RespondsWithErrors;
+
     private RoleService $roleService;
     private RoleMapper $roleMapper;
     private IUserManager $userManager;
@@ -37,9 +39,9 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage', clubScoped: false)]
-    public function searchUsers(string $query = ''): DataResponse {
+    public function searchUsers(string $query = ''): JSONResponse {
         if (trim($query) === '') {
-            return new DataResponse([]);
+            return new JSONResponse([]);
         }
 
         $users = $this->userManager->search($query, 10);
@@ -52,7 +54,7 @@ class RoleController extends ApiController {
             ];
         }, array_values($users));
 
-        return new DataResponse($result);
+        return new JSONResponse($result);
     }
 
     /**
@@ -62,14 +64,14 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function clubAssignments(): DataResponse {
+    public function clubAssignments(): JSONResponse {
         $clubId = (int)$this->request->getParam('clubId', 0);
         $result = array_map(function (array $entry) {
             $user = $this->userManager->get($entry['userId']);
             $entry['displayName'] = $user !== null ? $user->getDisplayName() : $entry['userId'];
             return $entry;
         }, $this->roleService->getClubAssignments($clubId));
-        return new DataResponse($result);
+        return new JSONResponse($result);
     }
 
     /**
@@ -77,12 +79,12 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage', clubScoped: false)]
-    public function index(): DataResponse {
+    public function index(): JSONResponse {
         try {
             $roles = $this->roleMapper->findAll();
-            return new DataResponse(array_map(fn($r) => $r->jsonSerialize(), $roles));
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse(array_map(fn($r) => $r->jsonSerialize(), $roles));
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -91,12 +93,12 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage', clubScoped: false)]
-    public function indexByClubType(string $clubType): DataResponse {
+    public function indexByClubType(string $clubType): JSONResponse {
         try {
             $roles = $this->roleService->getRolesForClubType($clubType);
-            return new DataResponse($roles);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse($roles);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -105,12 +107,12 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage', clubScoped: false)]
-    public function show(int $id): DataResponse {
+    public function show(int $id): JSONResponse {
         try {
             $role = $this->roleMapper->find($id);
-            return new DataResponse($role->jsonSerialize());
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => 'Rolle nicht gefunden'], 404);
+            return new JSONResponse($role->jsonSerialize());
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -121,7 +123,7 @@ class RoleController extends ApiController {
      * roles allow.
      *
      */
-    public function store(): DataResponse {
+    public function store(): JSONResponse {
         try {
             $name = $this->request->getParam('name');
             $clubType = $this->request->getParam('clubType') ?? 'music';
@@ -132,13 +134,13 @@ class RoleController extends ApiController {
                 : array_filter(array_map('trim', explode(',', (string)$permissionInput)));
             
             if (!$name) {
-                return new DataResponse(['error' => 'Name erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => 'Name erforderlich'], 400);
             }
             
             $role = $this->roleService->createRole($name, $clubType, $description, $permissions);
-            return new DataResponse($role->jsonSerialize(), 201);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse($role->jsonSerialize(), 201);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -149,7 +151,7 @@ class RoleController extends ApiController {
      * roles allow.
      *
      */
-    public function update(int $id): DataResponse {
+    public function update(int $id): JSONResponse {
         try {
             $name = $this->request->getParam('name');
             $description = $this->request->getParam('description');
@@ -162,9 +164,9 @@ class RoleController extends ApiController {
             }
             
             $role = $this->roleService->updateRole($id, $name, $description, $permissions);
-            return new DataResponse($role->jsonSerialize());
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse($role->jsonSerialize());
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -175,12 +177,12 @@ class RoleController extends ApiController {
      * roles allow.
      *
      */
-    public function destroy(int $id): DataResponse {
+    public function destroy(int $id): JSONResponse {
         try {
             $this->roleService->deleteRole($id);
-            return new DataResponse(['success' => true]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -189,14 +191,14 @@ class RoleController extends ApiController {
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function getUserRoles(string $userId, int $clubId = 0): DataResponse {
+    public function getUserRoles(string $userId, int $clubId = 0): JSONResponse {
         try {
             $clubIdParam = $this->request->getParam('clubId');
             $clubIdToUse = $clubIdParam !== null ? (int)$clubIdParam : $clubId;
             $roles = $this->roleService->getUserRoles($userId, $clubIdToUse);
-            return new DataResponse($roles);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse($roles);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -204,25 +206,25 @@ class RoleController extends ApiController {
      * @NoAdminRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function assignRole(): DataResponse {
+    public function assignRole(): JSONResponse {
         try {
             $userId = $this->request->getParam('userId');
             $roleId = (int)$this->request->getParam('roleId');
             $clubId = (int)($this->request->getParam('clubId') ?? 0);
             
             if (!$userId || !$roleId || $clubId <= 0) {
-                return new DataResponse(['error' => 'userId und roleId erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => 'userId und roleId erforderlich'], 400);
             }
             
             // rights must not be pre-assigned to an account name that does not exist (yet)
             if (!$this->userManager->userExists((string)$userId)) {
-                return new DataResponse(['error' => 'Das Nextcloud-Konto existiert nicht'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => 'Das Nextcloud-Konto existiert nicht'], 400);
             }
 
             $userRole = $this->roleService->assignRole($userId, $roleId, $clubId);
-            return new DataResponse($userRole->jsonSerialize(), 201);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse($userRole->jsonSerialize(), 201);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     
@@ -230,19 +232,19 @@ class RoleController extends ApiController {
      * @NoAdminRequired
      */
     #[RequirePermission('verein.role.manage')]
-    public function removeRoles(): DataResponse {
+    public function removeRoles(): JSONResponse {
         try {
             $userId = $this->request->getParam('userId');
             $clubId = (int)$this->request->getParam('clubId', 0);
             
             if (!$userId || $clubId <= 0) {
-                return new DataResponse(['error' => 'userId erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => 'userId erforderlich'], 400);
             }
             
             $this->roleService->removeUserRoles($userId, $clubId);
-            return new DataResponse(['success' => true]);
-        } catch (\Exception $e) {
-            return new DataResponse(['error' => $e->getMessage()], 400);
+            return new JSONResponse(['success' => true]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 }

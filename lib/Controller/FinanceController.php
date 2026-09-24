@@ -10,6 +10,8 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
 class FinanceController extends Controller {
+    use RespondsWithErrors;
+
     private FeeService $feeService;
     private ValidationService $validationService;
 
@@ -41,11 +43,8 @@ class FinanceController extends Controller {
                 'status' => 'ok',
                 'fees' => $fees
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -85,11 +84,8 @@ class FinanceController extends Controller {
                 'status' => 'ok',
                 'data' => $fee
             ], 201);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -129,11 +125,8 @@ class FinanceController extends Controller {
                 'status' => 'ok',
                 'data' => $fee
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -168,11 +161,8 @@ class FinanceController extends Controller {
                 'status' => 'ok',
                 'message' => 'Gebühr gelöscht'
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 404);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 }

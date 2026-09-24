@@ -1,7 +1,8 @@
 <?php
 namespace OCA\Verein\Service;
 
-use Exception;
+use OCA\Verein\Exception\NotFoundException;
+use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Membership;
@@ -28,7 +29,7 @@ class FeeService {
         try {
             return $this->mapper->findInClub($id, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new Exception('Fee not found');
+            throw new NotFoundException('Beitrag nicht gefunden');
         }
     }
 
@@ -42,7 +43,7 @@ class FeeService {
     ): Fee {
         $membership = $this->assertMemberOfClub($clubId, $memberId);
         if ($membership->getDeactivated()) {
-            throw new Exception('Das Mitglied ist deaktiviert - für deaktivierte Mitglieder werden keine Beiträge angelegt');
+            throw new ValidationException('Das Mitglied ist deaktiviert - für deaktivierte Mitglieder werden keine Beiträge angelegt');
         }
 
         $fee = new Fee();
@@ -133,7 +134,7 @@ class FeeService {
         try {
             return $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new Exception('Das Mitglied gehört nicht zu diesem Verein');
+            throw new ValidationException('Das Mitglied gehört nicht zu diesem Verein');
         }
     }
 }

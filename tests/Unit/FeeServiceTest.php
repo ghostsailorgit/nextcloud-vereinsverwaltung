@@ -79,7 +79,8 @@ class FeeServiceTest extends TestCase {
     public function testFeeOfAnotherClubIsNotFound(): void {
         $this->fees->method('findInClub')->with(3, 5)->willThrowException(new DoesNotExistException('x'));
 
-        $this->expectExceptionMessage('Fee not found');
+        $this->expectException(\OCA\Verein\Exception\NotFoundException::class);
+        $this->expectExceptionMessage('Beitrag nicht gefunden');
         $this->service->find(5, 3);
     }
 
@@ -92,13 +93,13 @@ class FeeServiceTest extends TestCase {
             $this->service->update(5, 3, 9, 1.0, 'open', '2026-12-01');
             $this->fail('update must fail');
         } catch (\Exception $e) {
-            $this->assertSame('Fee not found', $e->getMessage());
+            $this->assertSame('Beitrag nicht gefunden', $e->getMessage());
         }
         try {
             $this->service->delete(5, 3);
             $this->fail('delete must fail');
         } catch (\Exception $e) {
-            $this->assertSame('Fee not found', $e->getMessage());
+            $this->assertSame('Beitrag nicht gefunden', $e->getMessage());
         }
     }
 

@@ -7,16 +7,17 @@
     <description><![CDATA[
 A comprehensive club/association management solution for Nextcloud with member management, fee tracking, SEPA export, and dashboard integration.
     ]]></description>
-    <version>0.12.0-beta</version>
+    <version>0.13.0-beta</version>
     <licence>agpl</licence>
     <author>Vereinsverwaltung</author>
     <namespace>Verein</namespace>
     <category>organization</category>
     <category>tools</category>
-    <website>https://github.com/Wacken2012/nextcloud-verein</website>
-    <bugs>https://github.com/Wacken2012/nextcloud-verein/issues</bugs>
+    <website>https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung</website>
+    <bugs>https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues</bugs>
+    <repository type="git">https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung.git</repository>
     <dependencies>
-        <php min-version="7.4" max-version="8.5"/>
+        <php min-version="8.1" max-version="8.5"/>
         <nextcloud min-version="27" max-version="34"/>
     </dependencies>
     <navigations>

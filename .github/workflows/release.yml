@@ -1,212 +1,60 @@
-name: Veröffentliche Release
+name: Release
+
+# Builds an installable app archive when a version tag is pushed (git tag v0.13.0-beta && git push --tags).
+# The archive contains the built frontend and the PDF library, so it can be unpacked into custom_apps/ as it is.
 
 on:
   push:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  create-release:
+  release:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Repository auschecken
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
         with:
-          fetch-depth: 0
+          php-version: '8.3'
+          extensions: mbstring, intl, bcmath, dom, xml, zip
+          coverage: none
 
-      - name: Release-Notizen generieren
-        run: |
-          cat > release_notes.txt << 'EOF'
-          # 🎉 Nextcloud Vereins-App
-
-          ## 🌟 Was ist neu
-
-          Diese **Alpha-Version** bietet die Kernfunktionalität für die Verwaltung von Vereinen und Organisationen.
-
-          ### ✨ Hauptmerkmale
-
-          #### 👥 Mitgliederverwaltung
-          - ✅ Mitglieder anlegen, bearbeiten, löschen
-          - ✅ Mitgliederdaten: Name, E-Mail, Adresse, IBAN, BIC
-          - ✅ Rollen-Management: Mitglied, Kassierer, Admin
-          - ✅ Responsive Tabelle mit Inline-Editing
-          - ✅ Suchfunktion
-
-          #### 💰 Finanzverwaltung
-          - ✅ Gebühren und Beitragsverfolgung
-          - ✅ Status-Tracking: offen, bezahlt, überfällig
-          - ✅ Statistiken: Gesamtausstände, eingezahlte Beträge
-          - ✅ Gebührentabelle mit Bearbeitungs- und Löschfunktion
-          - ✅ Nach Mitgliedern filtern
-
-          #### 🎨 Benutzer-Erlebnis
-          - ✅ Dark Mode Support
-          - ✅ Responsive Design (Desktop, Tablet, Mobile)
-          - ✅ Nextcloud-native Authentifizierung
-          - ✅ Moderne Vue 3 + Vite Frontend
-          - ✅ Keine Fehler in der Browserkonsole
-
-          ---
-
-          ## 📋 Anforderungen
-
-          - **Nextcloud**: 28.0 oder höher
-          - **PHP**: 8.1 oder höher
-          - **Datenbank**: MySQL/MariaDB oder PostgreSQL
-          - **Browser**: Modern (Chrome, Firefox, Safari, Edge)
-
-          ---
-
-          ## 🔧 Installation
-
-          ### Methode 1: Aus dem Release (Einfach)
-
-          1. Herunterladbare Datei herunterladen: `nextcloud-verein-release.tar.gz`
-          2. In `/var/www/nextcloud/apps/` extrahieren:
-             ```bash
-             cd /var/www/nextcloud/apps/
-             tar -xzf nextcloud-verein-*-release.tar.gz
-             mv nextcloud-verein verein
-             ```
-          3. App aktivieren:
-             ```bash
-             sudo -u www-data php /var/www/nextcloud/occ app:enable verein
-             ```
-          4. Zugreifen unter: `https://your-nextcloud/apps/verein/`
-
-          ### Methode 2: Aus dem Quellcode (Entwicklung)
-
-          1. Repository klonen:
-             ```bash
-             cd /var/www/nextcloud/apps/
-             git clone https://github.com/Wacken2012/nextcloud-verein.git verein
-             cd verein
-             ```
-          2. Abhängigkeiten installieren:
-             ```bash
-             npm install
-             npm run build
-             ```
-          3. App aktivieren:
-             ```bash
-             sudo -u www-data php /var/www/nextcloud/occ app:enable verein
-             ```
-
-          ---
-
-          ## ✅ Getestete & funktionierende Funktionen
-
-          - ✅ Mitglieder-CRUD (Create, Read, Update, Delete)
-          - ✅ Gebühren-CRUD
-          - ✅ Statistiken-Dashboard
-          - ✅ Dark Mode
-          - ✅ Responsive Design
-          - ✅ API-Integration
-          - ✅ Nextcloud-Authentifizierung
-
-          ---
-
-          ## ⚠️ Bekannte Einschränkungen
-
-          - ⚠️ **Keine Berechtigungsverwaltung**: Alle angemeldeten Benutzer können alle Daten sehen/ändern
-          - ⚠️ **Keine Datenexporte**: CSV/PDF-Export nicht implementiert
-          - ⚠️ **Keine Tests**: Unit/Integration Tests ausstehend
-          - ⚠️ **Keine Dokumentation im Code**: Inline-Kommentare minimal
-          - ⚠️ **Alpha-Status**: Möglicherweise Bugs, API kann sich ändern
-
-          ---
-
-          ## 🗓️ Roadmap
-
-          ### v0.2.0 (Dezember 2025)
-          - Berechtigungsverwaltung (Ansicht, Bearbeitung, Admin)
-          - CSV-Export für Mitglieder und Gebühren
-          - Gebührenerinnerungen (E-Mail-Benachrichtigungen)
-
-          ### v0.3.0 (Januar 2026)
-          - Kalender-Integration (Nextcloud Calendar)
-          - Gebührenplan und automatische Rechnungen
-          - Mitgliedsantragsformular
-
-          ### v1.0.0 (März 2026)
-          - Vollständige Dokumentation
-          - Unit- und Integration-Tests
-          - Performance-Optimierungen
-          - Nextcloud AppStore-Veröffentlichung
-
-          ---
-
-          ## 📚 Dokumentation
-
-          - [README.md](https://github.com/Wacken2012/nextcloud-verein/blob/main/README.md) - Hauptdokumentation
-          - [INSTALLATION.md](https://github.com/Wacken2012/nextcloud-verein/blob/main/INSTALLATION.md) - Installationsanleitung
-          - [ROADMAP.md](https://github.com/Wacken2012/nextcloud-verein/blob/main/ROADMAP.md) - Entwicklungsplan
-          - [LIZENZ: AGPL-3.0](https://github.com/Wacken2012/nextcloud-verein/blob/main/LICENSE)
-
-          ---
-
-          ## 🧪 Zum Testen
-
-          1. App auf Nextcloud-Instanz installieren
-          2. Zum Tab **"Mitglieder"** navigieren und ein Mitglied hinzufügen
-          3. Zum Tab **"Finanzen"** gehen und eine Gebühr erstellen
-          4. Dark Mode testen: Nextcloud-Einstellungen > Erscheinungsbild
-          5. Auf mobilen Geräten testen
-          6. Browser-Konsole auf Fehler prüfen (F12)
-
-          ---
-
-          ## 💬 Feedback & Fehlermeldungen
-
-          Bitte erstellen Sie ein [Issue auf GitHub](https://github.com/Wacken2012/nextcloud-verein/issues) für:
-          - 🐛 Fehlerberichte
-          - 💡 Feature-Anfragen
-          - 🎨 Design-Verbesserungen
-          - 📝 Dokumentations-Verbesserungen
-
-          ---
-
-          ## 📄 Lizenz
-
-          Diese App ist lizenziert unter der **AGPL-3.0 Lizenz** - siehe [LICENSE](LICENSE) für Details.
-
-          ---
-
-          ## 👏 Credits
-
-          Entwickelt mit ❤️ für Nextcloud-Benutzer und Vereinsverwaltungen.
-
-          **Danke** an die Nextcloud-Community und alle Mitwirkenden!
-          EOF
-
-      - name: Release-Artefakte vorbereiten
-        run: |
-          mkdir -p release-assets
-          
-          # Artefakt 1: Ohne node_modules
-          tar --exclude='.git' \
-              --exclude='node_modules' \
-              --exclude='npm-debug.log' \
-              --exclude='.env' \
-              --exclude='.env.local' \
-              --exclude='*.log' \
-              --exclude='.github' \
-              -czf release-assets/nextcloud-verein-${{ github.ref_name }}.tar.gz .
-          
-          # Artefakt 2: Mit vorkompiliertem Bundle
-          cp release-assets/nextcloud-verein-${{ github.ref_name }}.tar.gz \
-             release-assets/nextcloud-verein-${{ github.ref_name }}-release.tar.gz
-          
-          ls -lh release-assets/
-
-      - name: GitHub Release erstellen
-        uses: softprops/action-gh-release@v1
+      - uses: actions/setup-node@v4
         with:
-          body_path: release_notes.txt
-          prerelease: true
-          files: |
-            release-assets/nextcloud-verein-${{ github.ref_name }}.tar.gz
-            release-assets/nextcloud-verein-${{ github.ref_name }}-release.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '22'
+          cache: npm
+
+      - name: Check that the tag matches appinfo/info.xml
+        run: |
+          version="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' appinfo/info.xml | head -1)"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match the app version v${version} in appinfo/info.xml" >&2
+            exit 1
+          fi
+
+      - name: Production PHP dependencies
+        run: composer update --no-dev --no-interaction --no-progress --optimize-autoloader
+
+      - name: Build the frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the archive
+        run: |
+          mkdir -p dist-release/verein
+          cp -r appinfo lib templates img vendor LICENSE README.md CHANGELOG.md SECURITY.md dist-release/verein/
+          mkdir -p dist-release/verein/js
+          cp -r js/dist js/admin-roles.js dist-release/verein/js/
+          tar -czf "verein-${GITHUB_REF_NAME}.tar.gz" -C dist-release verein
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: verein-${{ github.ref_name }}.tar.gz
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

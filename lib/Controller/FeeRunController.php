@@ -12,6 +12,8 @@ use OCP\IRequest;
  * The annual fee run: preview (writes nothing) and the run itself.
  */
 class FeeRunController extends Controller {
+    use RespondsWithErrors;
+
     public function __construct(
         $AppName,
         IRequest $request,
@@ -49,8 +51,8 @@ class FeeRunController extends Controller {
     private function respond(callable $action): JSONResponse {
         try {
             return new JSONResponse(['status' => 'ok'] + $action());
-        } catch (Exception $e) {
-            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 }

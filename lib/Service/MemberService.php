@@ -1,7 +1,8 @@
 <?php
 namespace OCA\Verein\Service;
 
-use Exception;
+use OCA\Verein\Exception\NotFoundException;
+use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\FeeMapper;
@@ -48,13 +49,13 @@ class MemberService {
     }
 
     /**
-     * @throws Exception if the person is not a member of the club
+     * @throws NotFoundException if the person is not a member of the club
      */
     public function find(int $clubId, int $id): Member {
         try {
             return $this->mapper->findInClub($id, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new Exception('Member not found');
+            throw new NotFoundException('Mitglied nicht gefunden');
         }
     }
 
@@ -127,7 +128,7 @@ class MemberService {
      * Adds an existing person to this club (membership only - the personal
      * data is shared and stays as it is).
      *
-     * @throws Exception if the person is already a member
+     * @throws ValidationException if the person is already a member
      */
     public function attachExisting(int $clubId, int $memberId, array $data): Member {
         $this->clubMapper->find($clubId);
@@ -135,7 +136,7 @@ class MemberService {
 
         try {
             $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
-            throw new Exception('Die Person ist bereits Mitglied in diesem Verein');
+            throw new ValidationException('Die Person ist bereits Mitglied in diesem Verein');
         } catch (DoesNotExistException $e) {
             // expected
         }
@@ -255,7 +256,7 @@ class MemberService {
      * value (null) leaves the current link as it is. An account can belong
      * to only one person.
      *
-     * @throws Exception
+     * @throws ValidationException
      */
     private function applyUserLink(Member $member, array $data): void {
         if (!array_key_exists('userId', $data) || $data['userId'] === null) {
@@ -270,11 +271,11 @@ class MemberService {
             return;
         }
         if (!$this->userManager->userExists($userId)) {
-            throw new Exception('Das Nextcloud-Konto existiert nicht');
+            throw new ValidationException('Das Nextcloud-Konto existiert nicht');
         }
         $other = $this->mapper->findByUserId($userId);
         if ($other !== null && $other->getId() !== $member->getId()) {
-            throw new Exception('Das Nextcloud-Konto ist bereits mit ' . $other->getFullName() . ' verknüpft');
+            throw new ValidationException('Das Nextcloud-Konto ist bereits mit ' . $other->getFullName() . ' verknüpft');
         }
         $member->setUserId($userId);
     }
@@ -310,7 +311,7 @@ class MemberService {
      * The fee category of the membership: an id sets it (must belong to the
      * same club), an empty string clears it, no value leaves it as it is.
      *
-     * @throws Exception
+     * @throws ValidationException
      */
     private function applyFeeRate(Membership $membership, array $data): void {
         if (!array_key_exists('feeRateId', $data) || $data['feeRateId'] === null) {
@@ -324,10 +325,10 @@ class MemberService {
         try {
             $rate = $this->feeRates->find((int)$raw);
         } catch (DoesNotExistException $e) {
-            throw new Exception('Die Beitragskategorie existiert nicht');
+            throw new ValidationException('Die Beitragskategorie existiert nicht');
         }
         if ($rate->getClubId() !== $membership->getClubId()) {
-            throw new Exception('Die Beitragskategorie gehört zu einem anderen Verein');
+            throw new ValidationException('Die Beitragskategorie gehört zu einem anderen Verein');
         }
         $membership->setFeeRateId($rate->getId());
     }

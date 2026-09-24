@@ -7,6 +7,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\Response;
 use OCP\IRequest;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\FeeService;
@@ -19,6 +20,8 @@ use Psr\Log\LoggerInterface;
  * Provides CSV and PDF export endpoints for members and fees
  */
 class ExportController extends Controller {
+    use RespondsWithErrors;
+
     private MemberService $memberService;
     private FeeService $feeService;
     private CsvExporter $csvExporter;
@@ -47,10 +50,10 @@ class ExportController extends Controller {
      *
      * @NoCSRFRequired
      * @NoAdminRequired
-     * @return DataDownloadResponse
+     * @return Response the file, or a JSON error response
      */
     #[RequirePermission('verein.member.view')]
-    public function exportMembersAsCsv(int $clubId): DataDownloadResponse {
+    public function exportMembersAsCsv(int $clubId): Response {
         try {
             // Get all members
             $members = $this->memberService->findAll($clubId);
@@ -72,13 +75,8 @@ class ExportController extends Controller {
             );
 
             return $response;
-        } catch (\Exception $e) {
-            $this->logger->error('CSV Export Error: ' . $e->getMessage(), ['exception' => $e]);
-            return new DataDownloadResponse(
-                "Error: " . $e->getMessage(),
-                'error.txt',
-                'text/plain'
-            );
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -87,10 +85,10 @@ class ExportController extends Controller {
      *
      * @NoCSRFRequired
      * @NoAdminRequired
-     * @return DataDownloadResponse
+     * @return Response the file, or a JSON error response
      */
     #[RequirePermission('verein.member.view')]
-    public function exportMembersAsPdf(int $clubId): DataDownloadResponse {
+    public function exportMembersAsPdf(int $clubId): Response {
         try {
             // Get all members
             $members = $this->memberService->findAll($clubId);
@@ -111,13 +109,8 @@ class ExportController extends Controller {
             );
 
             return $response;
-        } catch (\Exception $e) {
-            $this->logger->error('PDF Export Error: ' . $e->getMessage(), ['exception' => $e]);
-            return new DataDownloadResponse(
-                "Error: " . $e->getMessage(),
-                'error.txt',
-                'text/plain'
-            );
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -126,10 +119,10 @@ class ExportController extends Controller {
      *
      * @NoCSRFRequired
      * @NoAdminRequired
-     * @return DataDownloadResponse
+     * @return Response the file, or a JSON error response
      */
     #[RequirePermission('verein.finance.read')]
-    public function exportFeesAsCsv(int $clubId): DataDownloadResponse {
+    public function exportFeesAsCsv(int $clubId): Response {
         try {
             // Get all fees
             $fees = $this->feeService->findAll($clubId);
@@ -151,13 +144,8 @@ class ExportController extends Controller {
             );
 
             return $response;
-        } catch (\Exception $e) {
-            $this->logger->error('CSV Export Error: ' . $e->getMessage(), ['exception' => $e]);
-            return new DataDownloadResponse(
-                "Error: " . $e->getMessage(),
-                'error.txt',
-                'text/plain'
-            );
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -166,10 +154,10 @@ class ExportController extends Controller {
      *
      * @NoCSRFRequired
      * @NoAdminRequired
-     * @return DataDownloadResponse
+     * @return Response the file, or a JSON error response
      */
     #[RequirePermission('verein.finance.read')]
-    public function exportFeesAsPdf(int $clubId): DataDownloadResponse {
+    public function exportFeesAsPdf(int $clubId): Response {
         try {
             // Get all fees
             $fees = $this->feeService->findAll($clubId);
@@ -190,13 +178,8 @@ class ExportController extends Controller {
             );
 
             return $response;
-        } catch (\Exception $e) {
-            $this->logger->error('PDF Export Error: ' . $e->getMessage(), ['exception' => $e]);
-            return new DataDownloadResponse(
-                "Error: " . $e->getMessage(),
-                'error.txt',
-                'text/plain'
-            );
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 }

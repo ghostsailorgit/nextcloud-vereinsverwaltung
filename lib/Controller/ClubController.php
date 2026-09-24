@@ -18,6 +18,8 @@ use OCP\IUserSession;
  * its accounts needs the 'verein.club.manage' permission in that club.
  */
 class ClubController extends Controller {
+    use RespondsWithErrors;
+
     public function __construct(
         $AppName,
         IRequest $request,
@@ -173,8 +175,8 @@ class ClubController extends Controller {
             return $action();
         } catch (DoesNotExistException $e) {
             return new JSONResponse(['status' => 'error', 'message' => 'Nicht gefunden'], 404);
-        } catch (Exception $e) {
-            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 

@@ -14,6 +14,8 @@ use OCP\IRequest;
  * administrators (no @NoAdminRequired - Nextcloud itself rejects everybody else).
  */
 class BackupController extends Controller {
+    use RespondsWithErrors;
+
     public function __construct(string $appName, IRequest $request, private BackupService $backups) {
         parent::__construct($appName, $request);
     }
@@ -32,7 +34,7 @@ class BackupController extends Controller {
             $this->backups->prune();
             return new JSONResponse(['status' => 'ok', 'backup' => $backup], Http::STATUS_CREATED);
         } catch (\Throwable $e) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Sicherung fehlgeschlagen'], Http::STATUS_INTERNAL_SERVER_ERROR);
+            return $this->errorResponse($e);
         }
     }
 

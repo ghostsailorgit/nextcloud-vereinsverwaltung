@@ -1,16 +1,15 @@
 {
-    "name": "nextcloud/verein",
+    "name": "ghostsailorgit/nextcloud-vereinsverwaltung",
     "description": "Nextcloud app for club/association management",
     "type": "project",
     "license": "AGPL-3.0-or-later",
     "authors": [
         {
-            "name": "Your Name",
-            "email": "your-email@example.com"
+            "name": "Vereinsverwaltung contributors"
         }
     ],
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.1",
         "tecnickcom/tcpdf": "^6.4"
     },
     "require-dev": {
@@ -32,8 +31,7 @@
         }
     },
     "scripts": {
-        "test": "phpunit --configuration phpunit.xml",
-        "test-fast": "phpunit --configuration phpunit.xml --testsuite Fast"
+        "test": "phpunit --configuration phpunit.xml"
     },
     "minimum-stability": "dev",
     "prefer-stable": true

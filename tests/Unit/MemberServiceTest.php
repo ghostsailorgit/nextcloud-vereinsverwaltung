@@ -59,7 +59,8 @@ class MemberServiceTest extends TestCase {
     public function testFindTranslatesMissingMembershipToNotFound(): void {
         $this->members->method('findInClub')->willThrowException(new DoesNotExistException('x'));
 
-        $this->expectExceptionMessage('Member not found');
+        $this->expectException(\OCA\Verein\Exception\NotFoundException::class);
+        $this->expectExceptionMessage('Mitglied nicht gefunden');
         $this->service->find(1, 5);
     }
 

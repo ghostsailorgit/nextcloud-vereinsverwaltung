@@ -5,6 +5,9 @@ on:
     branches: [master, main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   phpunit:
     runs-on: ubuntu-latest
@@ -22,7 +25,29 @@ jobs:
         run: composer update --no-interaction --no-progress
 
       - name: Unit tests
-        run: vendor/bin/phpunit --testsuite "Unit Tests"
+        run: vendor/bin/phpunit
 
       - name: Syntax check
-        run: find lib appinfo -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+        run: find lib appinfo scripts -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Known vulnerabilities in PHP dependencies
+        run: composer audit --no-dev
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Known vulnerabilities in JavaScript dependencies
+        run: npm audit --omit=dev

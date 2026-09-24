@@ -19,6 +19,8 @@ use OCP\IUserSession;
  * AuthorizationMiddleware before any method here runs).
  */
 class MemberController extends Controller {
+    use RespondsWithErrors;
+
     private MemberService $memberService;
     private ValidationService $validationService;
 
@@ -69,11 +71,8 @@ class MemberController extends Controller {
                 'status' => 'ok',
                 'members' => array_map(fn ($m) => $this->present($m), $members)
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -130,11 +129,8 @@ class MemberController extends Controller {
                     'city' => $m->getCity(),
                 ], $members)
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 500);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -174,11 +170,8 @@ class MemberController extends Controller {
 
             $member = $this->memberService->attachExisting($this->clubId(), $memberId, $data);
             return new JSONResponse(['status' => 'ok', 'data' => $member], 201);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -194,11 +187,8 @@ class MemberController extends Controller {
                 'status' => 'ok',
                 'data' => $this->present($member)
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 404);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -238,11 +228,8 @@ class MemberController extends Controller {
                 'status' => 'ok',
                 'data' => $this->present($member)
             ], 201);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -313,11 +300,8 @@ class MemberController extends Controller {
                 'status' => 'ok',
                 'data' => $this->present($member)
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -335,11 +319,8 @@ class MemberController extends Controller {
                 'status' => 'ok',
                 'message' => 'Mitglied gelöscht'
             ]);
-        } catch (Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 404);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -359,8 +340,8 @@ class MemberController extends Controller {
         try {
             $member = $this->memberService->deactivate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
-        } catch (Exception $e) {
-            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
 
@@ -372,8 +353,8 @@ class MemberController extends Controller {
         try {
             $member = $this->memberService->activate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
-        } catch (Exception $e) {
-            return new JSONResponse(['status' => 'error', 'message' => $e->getMessage()], 404);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
     }
     /**

@@ -22,6 +22,7 @@ export default defineConfig({
       entry: path.resolve(__dirname, 'js/main.js'),
       name: 'VereinApp',
       formats: ['es'],
+      cssFileName: 'style',
       fileName: (format) => `nextcloud-verein.mjs`
     },
     rollupOptions: {

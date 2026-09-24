@@ -19,7 +19,7 @@ class PdfExporter {
      */
     private function createPdf() {
         if (!class_exists('TCPDF')) {
-            throw new \RuntimeException('TCPDF library not available on server. Ensure vendor dependencies are deployed.');
+            throw new \OCA\Verein\Exception\DependencyMissingException('PDF-Export nicht verfügbar: Die Bibliothek TCPDF fehlt auf dem Server. Der Administrator muss im App-Verzeichnis "composer install --no-dev" ausführen.');
         }
         $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 

@@ -4,7 +4,6 @@ namespace OCA\Verein\Controller;
 use OCA\Verein\Attributes\RequirePermission;
 use OCP\IRequest;
 use OCP\AppFramework\Http\DataDownloadResponse;
-use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\ApiController;
@@ -14,6 +13,8 @@ use OCA\Verein\Service\SepaService;
  * SEPA Controller for generating SEPA-XML files for direct debit
  */
 class SepaController extends ApiController {
+    use RespondsWithErrors;
+
     private SepaService $service;
 
     public function __construct(
@@ -39,11 +40,8 @@ class SepaController extends ApiController {
     public function export(int $clubId, ?int $accountId = null): Response {
         try {
             $result = $this->service->generateSepaXml($clubId, $accountId);
-        } catch (\Exception $e) {
-            return new JSONResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
 
         // StreamResponse expects a file path/resource, not raw string content
@@ -69,16 +67,13 @@ class SepaController extends ApiController {
      * Preview SEPA export (without downloading)
      */
     #[RequirePermission('verein.sepa.export')]
-    public function preview(int $clubId, ?int $accountId = null): DataResponse {
+    public function preview(int $clubId, ?int $accountId = null): JSONResponse {
         try {
             $preview = $this->service->previewSepaExport($clubId, $accountId);
-        } catch (\Exception $e) {
-            return new DataResponse([
-                'status' => 'error',
-                'message' => $e->getMessage()
-            ], 400);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
         }
 
-        return new DataResponse($preview);
+        return new JSONResponse($preview);
     }
 }

@@ -6,6 +6,7 @@ use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
@@ -38,7 +39,7 @@ class SepaService {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
         if ($account->getCreditorId() === '') {
-            throw new \Exception('Für das Bankkonto ist keine Gläubiger-ID hinterlegt (Reiter "Vereine")');
+            throw new ValidationException('Für das Bankkonto ist keine Gläubiger-ID hinterlegt (Reiter "Vereine")');
         }
 
         $collected = $this->collectFees($clubId);
@@ -49,9 +50,9 @@ class SepaService {
                     fn($s) => $s['memberName'] . ' (' . $s['reason'] . ')',
                     $collected['skipped']
                 ));
-                throw new \Exception('Keine Zahlung exportierbar. Nicht berücksichtigt: ' . $names);
+                throw new ValidationException('Keine Zahlung exportierbar. Nicht berücksichtigt: ' . $names);
             }
-            throw new \Exception('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
+            throw new ValidationException('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
         }
 
         return [
