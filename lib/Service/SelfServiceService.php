@@ -12,11 +12,12 @@ use OCA\Verein\Exception\NotFoundException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
- * Selbstauskunft: what the club register holds about one person, across all
- * their clubs. forUser() is self-service (whoever is linked may see their
- * own record, no role needed); forMemberId() is the same data for an admin
- * exporting someone else's record on request (Art. 15 GDPR) - the caller
- * decides who may call which (MeController vs. MemberController::export()).
+ * Selbstauskunft: what the club register holds about one person. forUser() is self-service
+ * (whoever is linked may see their own record, across all their clubs, no role needed);
+ * forMemberId() is the same data for an admin exporting someone else's record on request
+ * (Art. 15 GDPR), restricted to one club via $onlyClubId - neither method checks permissions
+ * itself, that is the caller's job (MeController vs. MemberController::export(), which must
+ * confirm club membership first - see the club-scoping note on forMemberId()).
  */
 class SelfServiceService {
     public function __construct(
@@ -39,24 +40,30 @@ class SelfServiceService {
     }
 
     /**
+     * @param int|null $onlyClubId Restricts memberships and fees to this club - the caller
+     *   (MemberController::export()) must already have confirmed the person is a member of it;
+     *   this method does not check permissions itself, same as forUser().
      * @throws NotFoundException
      */
-    public function forMemberId(int $memberId): array {
+    public function forMemberId(int $memberId, ?int $onlyClubId = null): array {
         try {
             $person = $this->members->find($memberId);
         } catch (DoesNotExistException $e) {
             throw new NotFoundException('Mitglied nicht gefunden');
         }
-        return $this->buildExport($person, $person->getUserId());
+        return $this->buildExport($person, $person->getUserId(), $onlyClubId);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildExport(Member $person, ?string $userId): array {
+    private function buildExport(Member $person, ?string $userId, ?int $onlyClubId = null): array {
         $clubNames = [];
         $memberships = [];
         foreach ($this->memberships->findByMember($person->getId()) as $membership) {
+            if ($onlyClubId !== null && $membership->getClubId() !== $onlyClubId) {
+                continue;
+            }
             try {
                 $club = $this->clubs->find($membership->getClubId());
             } catch (DoesNotExistException $e) {
@@ -86,6 +93,9 @@ class SelfServiceService {
 
         $fees = [];
         foreach ($this->fees->findByMember($person->getId()) as $fee) {
+            if ($onlyClubId !== null && $fee->getClubId() !== $onlyClubId) {
+                continue;
+            }
             $fees[] = [
                 'club' => $clubNames[$fee->getClubId()] ?? '',
                 'amount' => $fee->getAmount(),

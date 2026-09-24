@@ -235,15 +235,19 @@ class MemberService {
     }
 
     /**
-     * Replaces a person's personal data with placeholders (GDPR erasure), keeping the row itself
-     * so fees, SEPA history and the audit log stay attributable to it - deleting it outright would
-     * either break bookkeeping retention or (via ON DELETE CASCADE-free foreign keys) leave orphaned
-     * fee rows with no visible owner. Only allowed once the person has left (or is deceased in) every
-     * club they belong to - an active member's data is still needed to run the club.
+     * Replaces a person's personal data with placeholders (GDPR erasure), keeping the row itself so
+     * fees and SEPA history stay attributable to it - a hard delete would break bookkeeping retention.
+     * Only allowed once the person has left (or is deceased in) every club they belong to - an active
+     * member's data is still needed to run the club. Does not touch the membership's mandateReference
+     * or mandateFile (may contain the name, e.g. in the file path); mandates have their own retention
+     * duty and the signed file itself stays in Nextcloud Files regardless.
      *
      * The audit log keeps knowing *that* something changed but not what: past entries about this person
      * (and their memberships) are scrubbed too (see AuditLogService::scrubEntity()), and this action
      * itself is recorded without the erased values.
+     *
+     * The caller (MemberController::anonymize()) must confirm the person belongs to the requesting
+     * club before calling this - it looks the person up globally and does not check that itself.
      *
      * @throws ValidationException if already anonymized or still an active member somewhere
      */

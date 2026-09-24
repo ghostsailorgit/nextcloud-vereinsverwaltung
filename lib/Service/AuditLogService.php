@@ -28,14 +28,16 @@ class AuditLogService {
     public const SHORT_RETENTION_DAYS = 30;
 
     /**
-     * Fields whose value is never stored in the log, only the fact that they changed - the log is
+     * Fields safe to store as-is in the log for entities about a person - an allow-list, not a
+     * deny-list of known-sensitive fields: a deny-list missed derived/joined fields that also carry
+     * PII (fullName, mandateReference/mandateFile - the path often contains the name, age). Anything
+     * not on this list is redacted, so a new field on the entity is safe by default. The log is
      * itself personal data (Article 5(1)(c) GDPR: data minimisation), and unlike the live record it
      * has no "anonymize" of its own; scrubEntity() only re-applies this redaction to older entries
-     * written before a field was added here or before anonymize() ran.
+     * written before a field was added to (or removed from) this list, or before anonymize() ran.
      */
-    private const SENSITIVE_FIELDS = [
-        'member' => ['name', 'firstName', 'salutation', 'address', 'street', 'postalCode', 'city',
-            'email', 'iban', 'bic', 'birthDate', 'userId'],
+    private const SAFE_FIELDS = [
+        'member' => ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'deactivated', 'deceased', 'clubId'],
     ];
 
     public function __construct(
@@ -66,16 +68,20 @@ class AuditLogService {
     }
 
     /**
-     * Replaces the value of every field in SENSITIVE_FIELDS[$entityType] with a marker that only says
+     * Replaces the value of every field NOT in SAFE_FIELDS[$entityType] with a marker that only says
      * the field changed, not what to or from. Diff-shaped entries (['old' => ..., 'new' => ...]) become
-     * ['redacted' => true]; a plain create-style value becomes true. Fields not on the list, and entity
-     * types with no list at all, pass through untouched.
+     * ['redacted' => true]; a plain create-style value becomes true. Entity types with no list at all
+     * (clubs, fees, fee categories, fee runs, roles, user_role assignments) pass through untouched -
+     * this only guards entities that can carry a person's own data.
      */
     private function redact(string $entityType, array $changes): array {
-        $sensitive = self::SENSITIVE_FIELDS[$entityType] ?? [];
-        foreach ($sensitive as $field) {
-            if (array_key_exists($field, $changes)) {
-                $changes[$field] = is_array($changes[$field]) ? ['redacted' => true] : true;
+        if (!isset(self::SAFE_FIELDS[$entityType])) {
+            return $changes;
+        }
+        $safe = self::SAFE_FIELDS[$entityType];
+        foreach ($changes as $field => $value) {
+            if (!in_array($field, $safe, true)) {
+                $changes[$field] = is_array($value) ? ['redacted' => true] : true;
             }
         }
         return $changes;
@@ -83,12 +89,13 @@ class AuditLogService {
 
     /**
      * Re-applies redact() to every existing log entry of one entity, in place - for data written
-     * before anonymize() ran, or before a field was added to SENSITIVE_FIELDS. Entries with nothing
-     * left to redact (no sensitive field was ever stored, e.g. a 'delete' or 'lock' action) are
-     * skipped; the log is append-mostly, this is the one place that rewrites past rows.
+     * before anonymize() ran, or before SAFE_FIELDS changed. Entries with nothing left to redact
+     * (only safe fields were ever stored, e.g. a role-only update, or a 'delete' action with no
+     * changes at all) are skipped; the log is append-mostly, this is the one place that rewrites
+     * past rows.
      */
     public function scrubEntity(string $entityType, int $entityId): void {
-        if (!isset(self::SENSITIVE_FIELDS[$entityType])) {
+        if (!isset(self::SAFE_FIELDS[$entityType])) {
             return;
         }
         foreach ($this->mapper->findAllForEntity($entityType, $entityId) as $entry) {

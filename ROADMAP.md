@@ -17,7 +17,9 @@ Stand: Version 0.14.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 ## Als Nächstes
 
-- **Oberfläche für das Änderungsprotokoll und das Anonymisieren** (bisher nur per API abrufbar/auslösbar).
+- **Oberfläche für das Änderungsprotokoll und das Anonymisieren** (bisher nur per API abrufbar/auslösbar). Anonymisieren
+  ist unumkehrbar - die Oberfläche muss vor dem Auslösen ausdrücklich rückfragen („Person <Name> unwiderruflich
+  anonymisieren?“), nicht nur ein normaler Löschen-Dialog.
 - **Mitgliederimport** aus CSV, mit Vorschau und Prüfung von IBAN und Doppelten.
 - **Mahnwesen:** Mahnstufen und Mahnschreiben für überfällige Beiträge.
 - **Anteilige Beiträge** bei Eintritt im laufenden Jahr.

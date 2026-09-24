@@ -364,7 +364,9 @@ class MemberController extends Controller {
     /**
      * Replaces the person's personal data with placeholders (see MemberService::anonymize()).
      * Same permission as deactivate()/activate(): it touches data across every club the person
-     * is (or was) a member of, not just this one.
+     * is (or was) a member of, not just this one - but the person must be a member of *this* club
+     * (find() throws 404 otherwise), so holding 'verein.role.manage' in one club is not enough to
+     * anonymize a person who only ever belonged to a different one.
      *
      * Deliberately no @NoCSRFRequired: it changes data (RoutePermissionsTest).
      *
@@ -373,6 +375,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.role.manage')]
     public function anonymize($id) {
         try {
+            $this->memberService->find($this->clubId(), (int)$id);
             $member = $this->memberService->anonymize((int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (\Throwable $e) {
@@ -381,10 +384,13 @@ class MemberController extends Controller {
     }
 
     /**
-     * A person's full record as a downloadable file, for an administrator to answer a data-access
-     * request (Art. 15 GDPR) for someone who cannot (or no longer can) use the self-service export
-     * themselves. Same permission as show()/index() - it exposes nothing that verein.member.view
-     * does not already show on screen.
+     * A person's full record as a downloadable file, restricted to this club's membership and fees,
+     * for an administrator to answer a data-access request (Art. 15 GDPR) for someone who cannot (or
+     * no longer can) use the self-service export themselves. Same permission as show()/index() - it
+     * exposes nothing that verein.member.view does not already show on screen. find() first confirms
+     * the person is actually a member of this club; without it, holding verein.member.view in one
+     * club would let someone pull the full record - every club, every fee - of a person who only
+     * belongs to a different one.
      *
      * @NoAdminRequired
      * @NoCSRFRequired
@@ -392,12 +398,13 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.view')]
     public function export($id) {
         try {
-            $data = $this->selfService->forMemberId((int)$id);
+            $this->memberService->find($this->clubId(), (int)$id);
+            $data = $this->selfService->forMemberId((int)$id, $this->clubId());
             $data['status'] = 'ok';
             $data['exportedAt'] = date('c');
             return new DataDownloadResponse(
                 json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                'mitgliedsdaten-' . $id . '.json',
+                'mitgliedsdaten-' . (int)$id . '.json',
                 'application/json'
             );
         } catch (\Throwable $e) {
