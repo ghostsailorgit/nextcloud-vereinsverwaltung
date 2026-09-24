@@ -94,4 +94,4 @@ Keine echten Mitgliederdaten, Domains, Servernamen oder Firmenbezüge in Code, T
 - Rechte je Endpunkt (`#[RequirePermission]`), Mandantentrennung über `clubId` (jede ID-Abfrage prüft die Vereinszugehörigkeit).
 - Schreibende Endpunkte behalten den CSRF-Schutz von Nextcloud; nur lesende Endpunkte und Downloads dürfen `@NoCSRFRequired` tragen (Test).
 - SQL nur über Query-Builder mit Parametern, SEPA-XML mit Escaping, CSV-Export gegen Formelinjektion geschützt.
-- Bekannte Abwägung: Personen sind vereinsübergreifend geteilt. Wer in Verein A Mitglieder verwalten darf, kann die Stammdaten einer Person ändern, die auch in Verein B ist (Name, IBAN, „verstorben“).
+- Entscheidung (bewusst so belassen): Personen sind vereinsübergreifend geteilt. Wer in Verein A Mitglieder verwalten darf, kann die Stammdaten einer Person ändern, die auch in Verein B ist (Name, IBAN, „verstorben“).

@@ -15,7 +15,7 @@ Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind 
 | 3 | Beiträge im Alltag: Kategorien, Beitragslauf, SEPA-Export mit „bezahlt“-Markierung, Überfällige | ✅ fertig |
 | 3a | Mahnschreiben / Mahnstufen, anteilige Beiträge bei Eintritt im Jahr | 📋 offen |
 | 2 | Echte Daten: Vereinskonto und Gläubiger-ID, echte IBANs und Mandate, offene Importfragen (Verstorbene/Ausgetretene, doppelte Einträge); Testdaten vorher entfernen | 🔧 überwiegend manuell |
-| 4 | Datenschutz: Mitglieder löschen/sperren, Auskunft je Person, Änderungsprotokoll | 📋 offen |
+| 4 | Datenschutz: Mitglieder löschen/sperren, Auskunft je Person, Änderungsprotokoll | 👤 Kollege übernimmt |
 | 5 | Aufräumen und Veröffentlichung: schlanke README/Doku (viele veraltete Upstream-Dateien), saubere 404/500-Codes, automatische Sicherung der Vereinstabellen, veraltete Integrationstests | 📋 offen |
 
 Ideen ohne Termin: Vorstand → App-Rolle zuordnen, JS-Bundle (3,3 MB) verkleinern, Reaktion auf GitHub-Issues.

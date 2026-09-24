@@ -94,6 +94,6 @@ npm install && npm run build          # bundles js/main.js -> js/dist/ (dist is 
 2. Real-world data (IBANs, mandates, bank account/creditor ID, open import questions) - mostly manual work.
 3. Fees in daily use - done: categories per club, annual fee run with preview, mark exported fees paid, flag overdue.
    Still open: reminder letters / dunning levels (Mahnungen), pro-rata fees for members who join mid-year.
-4. Data protection: delete/lock members, per-person data export, change log.
+4. Data protection: delete/lock members, per-person data export, change log - taken over by a colleague (coordinate before starting).
 5. Cleanup/publishing: slim README/docs (many stale upstream docs still in the repo), proper 404 vs 500 codes,
    automatic backup of the club tables.
