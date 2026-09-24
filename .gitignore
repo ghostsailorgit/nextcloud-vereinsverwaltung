@@ -58,3 +58,6 @@ certificates/*.crt
 # Local scratch/working files
 scratch/
 tmp/
+
+# PHPUnit
+.phpunit.result.cache
