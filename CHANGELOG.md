@@ -6,6 +6,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.9.1-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Die Suche im Dropdown „Verknüpftes Nextcloud-Konto“ und die vereinsübergreifende Personensuche fanden nichts: `api.get()` gab die Suchparameter nicht weiter.
+
+---
+
 ## [0.9.0-beta] - 2026-09-25
 
 Stand dieses Forks (mehrere Vereine, Rechte, Beiträge). Die älteren Einträge unten stammen vom Upstream-Projekt.
