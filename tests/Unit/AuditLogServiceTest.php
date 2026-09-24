@@ -51,7 +51,8 @@ class AuditLogServiceTest extends TestCase {
             return $e;
         });
 
-        $this->service->record(3, 'member', 42, 'update', ['name' => ['old' => 'A', 'new' => 'B']]);
+        // 'status' is not on member's SENSITIVE_FIELDS list, unlike e.g. 'name' or 'iban'
+        $this->service->record(3, 'member', 42, 'update', ['status' => ['old' => 'A', 'new' => 'B']]);
 
         $this->assertSame(3, $stored->getClubId());
         $this->assertSame('member', $stored->getEntityType());
@@ -59,7 +60,7 @@ class AuditLogServiceTest extends TestCase {
         $this->assertSame('update', $stored->getAction());
         $this->assertSame('max', $stored->getActorUserId());
         $this->assertSame('Max Mustermann', $stored->getActorDisplayName());
-        $this->assertSame(['name' => ['old' => 'A', 'new' => 'B']], json_decode($stored->getChanges(), true));
+        $this->assertSame(['status' => ['old' => 'A', 'new' => 'B']], json_decode($stored->getChanges(), true));
     }
 
     public function testRecordWithoutALoggedInUserLeavesTheActorEmpty(): void {
@@ -110,4 +111,84 @@ class AuditLogServiceTest extends TestCase {
             ['2026-08-31 12:00:00', AuditLogService::LONG_RETENTION_TYPES, false],
             ['2016-09-30 12:00:00', null, true],
         ], $calls);
-    }}
+    }
+
+    // --- redaction of sensitive fields (member data)
+
+    public function testRecordRedactsSensitiveMemberFieldsButKeepsOthers(): void {
+        $stored = null;
+        $this->mapper->method('insert')->willReturnCallback(function (AuditLogEntry $e) use (&$stored) {
+            $stored = $e;
+            return $e;
+        });
+
+        $this->service->record(1, 'member', 8, 'update', [
+            'iban' => ['old' => 'DE89370400440532013000', 'new' => 'DE02120300000000202051'],
+            'deceased' => ['old' => false, 'new' => true],
+        ]);
+
+        $changes = json_decode($stored->getChanges(), true);
+        $this->assertSame(['redacted' => true], $changes['iban']);
+        $this->assertSame(['old' => false, 'new' => true], $changes['deceased'], 'not on the sensitive list');
+    }
+
+    public function testRecordRedactsSensitiveFieldsOfACreatePayloadTooWherePlainValuesAreStored(): void {
+        $stored = null;
+        $this->mapper->method('insert')->willReturnCallback(function (AuditLogEntry $e) use (&$stored) {
+            $stored = $e;
+            return $e;
+        });
+
+        $this->service->record(1, 'member', 8, 'create', ['name' => 'Mustermann', 'deceased' => false]);
+
+        $changes = json_decode($stored->getChanges(), true);
+        $this->assertTrue($changes['name']);
+        $this->assertFalse($changes['deceased']);
+    }
+
+    public function testRecordDoesNotRedactEntityTypesWithNoSensitiveFieldsList(): void {
+        $stored = null;
+        $this->mapper->method('insert')->willReturnCallback(function (AuditLogEntry $e) use (&$stored) {
+            $stored = $e;
+            return $e;
+        });
+
+        $this->service->record(1, 'club', 1, 'update', ['iban' => ['old' => 'a', 'new' => 'b']]);
+
+        $this->assertSame(['iban' => ['old' => 'a', 'new' => 'b']], json_decode($stored->getChanges(), true));
+    }
+
+    public function testScrubEntityRewritesOnlyEntriesThatStillHoldSensitiveValues(): void {
+        $clean = new AuditLogEntry();
+        $clean->setId(1);
+        $clean->setChanges(json_encode(['iban' => ['redacted' => true]]));
+        $dirty = new AuditLogEntry();
+        $dirty->setId(2);
+        $dirty->setChanges(json_encode(['iban' => ['old' => 'DE00', 'new' => 'DE11'], 'deceased' => ['old' => false, 'new' => true]]));
+        $noChanges = new AuditLogEntry();
+        $noChanges->setId(3);
+        $noChanges->setChanges(null);
+
+        $this->mapper->method('findAllForEntity')->with('member', 8)->willReturn([$clean, $dirty, $noChanges]);
+        $updated = [];
+        $this->mapper->expects($this->once())->method('update')->willReturnCallback(function (AuditLogEntry $e) use (&$updated) {
+            $updated[] = $e;
+            return $e;
+        });
+
+        $this->service->scrubEntity('member', 8);
+
+        $this->assertCount(1, $updated, 'only the entry that still had a real IBAN needed rewriting');
+        $this->assertSame(2, $updated[0]->getId());
+        $this->assertSame(
+            ['iban' => ['redacted' => true], 'deceased' => ['old' => false, 'new' => true]],
+            json_decode($updated[0]->getChanges(), true)
+        );
+    }
+
+    public function testScrubEntityDoesNothingForEntityTypesWithNoSensitiveFieldsList(): void {
+        $this->mapper->expects($this->never())->method('findAllForEntity');
+
+        $this->service->scrubEntity('club', 1);
+    }
+}

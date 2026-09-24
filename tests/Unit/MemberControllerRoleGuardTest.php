@@ -7,6 +7,7 @@ use OCA\Verein\Db\Member;
 use OCA\Verein\Db\Membership;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\RBAC\RoleService;
+use OCA\Verein\Service\SelfServiceService;
 use OCA\Verein\Service\ValidationService;
 use OCP\IRequest;
 use OCP\IUser;
@@ -51,7 +52,8 @@ class MemberControllerRoleGuardTest extends TestCase {
             $this->roleService,
             $this->createMock(ClubMapper::class),
             $session,
-            $this->createMock(IUserManager::class)
+            $this->createMock(IUserManager::class),
+            $this->createMock(SelfServiceService::class)
         );
 
         $this->params = ['clubId' => '3', 'name' => 'Muster', 'email' => '', 'role' => 'admin', 'userId' => 'evil-account'];

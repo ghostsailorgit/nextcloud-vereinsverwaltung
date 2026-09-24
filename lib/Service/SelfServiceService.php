@@ -5,15 +5,18 @@ namespace OCA\Verein\Service;
 
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Exception\NotFoundException;
 use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
- * Self-service ("Selbstauskunft"): what the club register holds about the
- * person linked to a Nextcloud account - their own data only, across all
- * their clubs. Not tied to any role: whoever is linked may see their own
- * record, nothing else.
+ * Selbstauskunft: what the club register holds about one person, across all
+ * their clubs. forUser() is self-service (whoever is linked may see their
+ * own record, no role needed); forMemberId() is the same data for an admin
+ * exporting someone else's record on request (Art. 15 GDPR) - the caller
+ * decides who may call which (MeController vs. MemberController::export()).
  */
 class SelfServiceService {
     public function __construct(
@@ -32,7 +35,25 @@ class SelfServiceService {
         if ($person === null) {
             return ['linked' => false];
         }
+        return $this->buildExport($person, $userId);
+    }
 
+    /**
+     * @throws NotFoundException
+     */
+    public function forMemberId(int $memberId): array {
+        try {
+            $person = $this->members->find($memberId);
+        } catch (DoesNotExistException $e) {
+            throw new NotFoundException('Mitglied nicht gefunden');
+        }
+        return $this->buildExport($person, $person->getUserId());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildExport(Member $person, ?string $userId): array {
         $clubNames = [];
         $memberships = [];
         foreach ($this->memberships->findByMember($person->getId()) as $membership) {

@@ -96,6 +96,13 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     supports, ship background jobs via `appinfo/info.xml`. New tables go into `BackupService::TABLES` (a test checks it).
     Backups: `BackupService` (gzip JSON in the app data folder), `DailyBackupJob`, retention 30 days but the newest 7 always kept.
 
+15. **Anonymize, don't delete:** `MemberService::anonymize()` replaces a person's PII with placeholders but keeps the row -
+    fees and SEPA history stay attributable, and a hard delete would either break bookkeeping retention or orphan fee rows.
+    Only allowed once the person has left (or is deceased in) every club - an active member's data is still needed. It also
+    calls `AuditLogService::scrubEntity()` for the person and every membership, redacting *already-stored* log entries, not
+    just future ones. A new sensitive field on `Member` needs adding to `AuditLogService::SENSITIVE_FIELDS` too, or it keeps
+    showing up in plain text in new log entries (`record()` redacts by entity type, not automatically).
+
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
   `ROADMAP.md`** (move items between done/next), and `docs/ARCHITEKTUR.md` when the data model or rules change, in the same
@@ -117,6 +124,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - Vue files may have CRLF line endings on Windows checkouts (`autocrlf`); normalise before multi-line patches.
 
 ## Planning
-The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (delete/anonymize members,
-admin data export, masking sensitive values in the audit log) is worked on by a colleague - coordinate before starting.
+The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (anonymize/delete members,
+admin data export, masking sensitive values in the audit log) is done (see rule 15) - built by the colleague it was
+assigned to (`feature/anonymisieren`), coordinate before changing that area further.
 Real-world data entry (bank account, creditor ID, real IBANs and mandates) happens in the running instance, not in the repo.

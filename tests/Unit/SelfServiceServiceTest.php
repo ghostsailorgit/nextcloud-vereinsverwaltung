@@ -9,6 +9,7 @@ use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
+use OCA\Verein\Exception\NotFoundException;
 use OCA\Verein\Service\SelfServiceService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -130,5 +131,39 @@ class SelfServiceServiceTest extends TestCase {
         $this->assertArrayNotHasKey('id', $person);
         $this->assertArrayNotHasKey('userId', $person);
         $this->assertArrayNotHasKey('createdAt', $person);
+    }
+
+    // --- forMemberId() (admin export, MemberController::export())
+
+    public function testForMemberIdReturnsTheSameShapeAsForUser(): void {
+        $this->members->method('find')->with(5)->willReturn($this->person());
+        $this->memberships->method('findByMember')->with(5)->willReturn([$this->membership(1, 'member')]);
+        $this->clubs->method('find')->willReturn($this->club(1, 'Verein A'));
+        $this->fees->method('findByMember')->willReturn([]);
+
+        $data = $this->service->forMemberId(5);
+
+        $this->assertTrue($data['linked']);
+        $this->assertSame('maxmuster', $data['nextcloudAccount']);
+        $this->assertSame('Max Mustermann', $data['person']['fullName']);
+    }
+
+    public function testForMemberIdWorksForAPersonWithNoLinkedAccount(): void {
+        $unlinked = $this->person();
+        $unlinked->setUserId(null);
+        $this->members->method('find')->with(5)->willReturn($unlinked);
+        $this->memberships->method('findByMember')->willReturn([]);
+        $this->fees->method('findByMember')->willReturn([]);
+
+        $data = $this->service->forMemberId(5);
+
+        $this->assertNull($data['nextcloudAccount']);
+    }
+
+    public function testForMemberIdOfAMissingPersonThrows(): void {
+        $this->members->method('find')->willThrowException(new DoesNotExistException('x'));
+
+        $this->expectException(NotFoundException::class);
+        $this->service->forMemberId(999);
     }
 }

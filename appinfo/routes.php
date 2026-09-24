@@ -38,6 +38,8 @@ return [
         ['name' => 'member#destroy', 'url' => '/members/{id}', 'verb' => 'DELETE'],
         ['name' => 'member#deactivate', 'url' => '/members/{id}/deactivate', 'verb' => 'POST'],
         ['name' => 'member#activate', 'url' => '/members/{id}/activate', 'verb' => 'POST'],
+        ['name' => 'member#anonymize', 'url' => '/members/{id}/anonymize', 'verb' => 'POST'],
+        ['name' => 'member#export', 'url' => '/members/{id}/export', 'verb' => 'GET'],
         
         ['name' => 'finance#index', 'url' => '/finance', 'verb' => 'GET'],
         ['name' => 'finance#markPaid', 'url' => '/finance/mark-paid', 'verb' => 'POST'],

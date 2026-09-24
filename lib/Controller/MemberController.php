@@ -6,8 +6,10 @@ use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\RBAC\RoleService;
+use OCA\Verein\Service\SelfServiceService;
 use OCA\Verein\Service\ValidationService;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserManager;
@@ -32,7 +34,8 @@ class MemberController extends Controller {
         private RoleService $roleService,
         private ClubMapper $clubMapper,
         private IUserSession $userSession,
-        private IUserManager $userManager
+        private IUserManager $userManager,
+        private SelfServiceService $selfService
     ) {
         parent::__construct($AppName, $request);
         $this->memberService = $memberService;
@@ -357,6 +360,51 @@ class MemberController extends Controller {
             return $this->errorResponse($e);
         }
     }
+
+    /**
+     * Replaces the person's personal data with placeholders (see MemberService::anonymize()).
+     * Same permission as deactivate()/activate(): it touches data across every club the person
+     * is (or was) a member of, not just this one.
+     *
+     * Deliberately no @NoCSRFRequired: it changes data (RoutePermissionsTest).
+     *
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.role.manage')]
+    public function anonymize($id) {
+        try {
+            $member = $this->memberService->anonymize((int)$id);
+            return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * A person's full record as a downloadable file, for an administrator to answer a data-access
+     * request (Art. 15 GDPR) for someone who cannot (or no longer can) use the self-service export
+     * themselves. Same permission as show()/index() - it exposes nothing that verein.member.view
+     * does not already show on screen.
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.member.view')]
+    public function export($id) {
+        try {
+            $data = $this->selfService->forMemberId((int)$id);
+            $data['status'] = 'ok';
+            $data['exportedAt'] = date('c');
+            return new DataDownloadResponse(
+                json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'mitgliedsdaten-' . $id . '.json',
+                'application/json'
+            );
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
     /**
      * The member as JSON plus the display name of the linked Nextcloud
      * account (falls back to the uid if that account no longer exists).

@@ -55,6 +55,8 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | DELETE | `/members/{id}` | `verein.member.manage` |
 | POST | `/members/{id}/deactivate` | `verein.role.manage` |
 | POST | `/members/{id}/activate` | `verein.role.manage` |
+| POST | `/members/{id}/anonymize` | `verein.role.manage` |
+| GET | `/members/{id}/export` | `verein.member.view` |
 
 ## Beiträge (Finanzen)
 

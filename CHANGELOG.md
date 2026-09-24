@@ -4,6 +4,27 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.14.0-beta] - 2026-10-01
+
+Datenschutz vervollständigt (Löschen/Anonymisieren, Admin-Export, Protokoll-Redaktion).
+
+### ✨ Neu
+- **Anonymisieren statt löschen:** `POST /members/{id}/anonymize` (Recht „Rollen verwalten“) ersetzt Name,
+  Anschrift, E-Mail, IBAN/BIC, Geburtsdatum und Konto-Verknüpfung einer Person durch Platzhalter. Beiträge und
+  SEPA-Historie bleiben erhalten. Geht erst, wenn die Person überall ausgetreten oder verstorben ist.
+- **Admin-Datenexport:** `GET /members/{id}/export` liefert die gleiche JSON-Auskunft wie die Selbstauskunft,
+  für Personen, die sich nicht selbst anmelden können (Art. 15 DSGVO), mit demselben Recht wie die normale
+  Mitgliederansicht.
+- **Änderungsprotokoll ohne Klartext:** Personenbezogene Felder (Name, Anschrift, E-Mail, IBAN/BIC, Geburtsdatum,
+  Konto-Verknüpfung) werden im Protokoll nur noch als „geändert“ vermerkt, nicht mit Inhalt
+  (`AuditLogService::SENSITIVE_FIELDS`). Beim Anonymisieren werden auch ältere, schon gespeicherte Einträge der
+  Person nachträglich redigiert (`AuditLogService::scrubEntity()`).
+
+### 🔧 Technik
+- Migration `Version020008`: `verein_members.anonymized_at`.
+
+---
+
 ## [0.13.0-beta] - 2026-09-30
 
 Aufräumen und Vorbereitung auf die Veröffentlichung.
