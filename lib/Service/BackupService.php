@@ -7,6 +7,7 @@ use OCP\Files\IAppData;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
+use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use Psr\Log\LoggerInterface;
 
@@ -187,6 +188,153 @@ class BackupService {
             throw new NotFoundException('Sicherung nicht gefunden');
         }
         return $folder->getFile($name)->getContent();
+    }
+
+    /**
+     * Reads a backup either from the app data folder (by name) or from a local file
+     * (a downloaded backup, e.g. when moving to a fresh instance).
+     *
+     * @throws NotFoundException
+     */
+    public function readBackup(string $nameOrPath): string {
+        if (self::isValidName($nameOrPath)) {
+            return $this->getContent($nameOrPath);
+        }
+        if (is_file($nameOrPath) && is_readable($nameOrPath)) {
+            $data = file_get_contents($nameOrPath);
+            if ($data !== false) {
+                return $data;
+            }
+        }
+        throw new NotFoundException('Sicherung nicht gefunden: ' . $nameOrPath);
+    }
+
+    /**
+     * Decodes and validates the content of a backup file. Nothing is written.
+     *
+     * @return array{created: string, appVersion: string, tables: array<string, array<int, array<string, mixed>>>}
+     * @throws \InvalidArgumentException if the file is not a usable backup of this app
+     */
+    public static function parse(string $gzipped): array {
+        $json = @gzdecode($gzipped);
+        if ($json === false) {
+            throw new \InvalidArgumentException('Die Datei ist keine gültige (gzip-komprimierte) Sicherung');
+        }
+        $data = json_decode($json, true);
+        if (!is_array($data) || ($data['app'] ?? null) !== 'verein' || !is_array($data['tables'] ?? null)) {
+            throw new \InvalidArgumentException('Die Datei ist keine Sicherung der Vereinsverwaltung');
+        }
+        foreach (self::TABLES as $table) {
+            if (!isset($data['tables'][$table]) || !is_array($data['tables'][$table])) {
+                throw new \InvalidArgumentException('In der Sicherung fehlt die Tabelle ' . $table);
+            }
+            foreach ($data['tables'][$table] as $row) {
+                if (!is_array($row) || $row === []) {
+                    throw new \InvalidArgumentException('Ungültige Zeile in Tabelle ' . $table);
+                }
+                foreach ($row as $column => $value) {
+                    if (!is_string($column) || preg_match('/^[a-z][a-z0-9_]*$/', $column) !== 1 || is_array($value) || is_object($value)) {
+                        throw new \InvalidArgumentException('Ungültige Spalte in Tabelle ' . $table);
+                    }
+                }
+            }
+        }
+        return [
+            'created' => (string)($data['created'] ?? ''),
+            'appVersion' => (string)($data['appVersion'] ?? ''),
+            'tables' => array_intersect_key($data['tables'], array_flip(self::TABLES)),
+        ];
+    }
+
+    /**
+     * Number of rows currently in each club table.
+     *
+     * @return array<string, int>
+     */
+    public function currentCounts(): array {
+        $counts = [];
+        foreach (self::TABLES as $table) {
+            $counts[$table] = count($this->dumpTable($table));
+        }
+        return $counts;
+    }
+
+    /**
+     * Replaces the content of all club tables with the given (already parsed) backup.
+     *
+     * A fresh backup of the current state is written first, so a restore can be undone.
+     * The replacement itself is one transaction: it either fully succeeds or changes nothing.
+     * Calendars and their shares are not part of the backup; they refresh when a member is saved.
+     *
+     * @param array{tables: array<string, array<int, array<string, mixed>>>} $backup result of parse()
+     * @return array{safetyBackup: string, tables: array<string, int>}
+     */
+    public function restore(array $backup): array {
+        $safety = $this->createBackup();
+
+        $this->db->beginTransaction();
+        try {
+            foreach (self::TABLES as $table) {
+                $qb = $this->db->getQueryBuilder();
+                $qb->delete($table)->executeStatement();
+            }
+            foreach (self::TABLES as $table) {
+                foreach ($backup['tables'][$table] as $row) {
+                    $this->insertRow($table, $row);
+                }
+            }
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            $this->logger->error('Verein: Wiederherstellung fehlgeschlagen, nichts wurde geändert', ['exception' => $e]);
+            throw $e;
+        }
+
+        $this->realignSequences();
+
+        $counts = [];
+        foreach (self::TABLES as $table) {
+            $counts[$table] = count($backup['tables'][$table]);
+        }
+        return ['safetyBackup' => $safety['name'], 'tables' => $counts];
+    }
+
+    private function insertRow(string $table, array $row): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->insert($table);
+        foreach ($row as $column => $value) {
+            if ($value === null) {
+                $qb->setValue($column, $qb->createNamedParameter(null, IQueryBuilder::PARAM_NULL));
+            } elseif (is_bool($value)) {
+                $qb->setValue($column, $qb->createNamedParameter($value, IQueryBuilder::PARAM_BOOL));
+            } elseif (is_int($value)) {
+                $qb->setValue($column, $qb->createNamedParameter($value, IQueryBuilder::PARAM_INT));
+            } else {
+                $qb->setValue($column, $qb->createNamedParameter((string)$value));
+            }
+        }
+        $qb->executeStatement();
+    }
+
+    /**
+     * PostgreSQL does not advance its id counters when rows are inserted with explicit ids,
+     * so the next new row would collide. Other databases do this by themselves.
+     */
+    private function realignSequences(): void {
+        if (!method_exists($this->db, 'getDatabaseProvider')
+            || !defined(IDBConnection::class . '::PLATFORM_POSTGRES')
+            || $this->db->getDatabaseProvider() !== IDBConnection::PLATFORM_POSTGRES) {
+            return;
+        }
+        foreach (self::TABLES as $table) {
+            try {
+                $this->db->executeQuery(
+                    "SELECT setval(pg_get_serial_sequence('*PREFIX*$table', 'id'), COALESCE((SELECT MAX(id) FROM *PREFIX*$table), 1))"
+                )->closeCursor();
+            } catch (\Throwable $e) {
+                $this->logger->warning('Verein: ID-Zähler von ' . $table . ' konnte nicht angeglichen werden', ['exception' => $e]);
+            }
+        }
     }
 
     private function dumpTable(string $table): array {

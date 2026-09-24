@@ -72,7 +72,10 @@ Täglich läuft ein Nextcloud-Hintergrundjob (`DailyBackupJob`), der alle Verein
 App-Datenordner ablegt (`BackupService`). Alte Sicherungen werden nach 30 Tagen gelöscht, die neuesten 7 bleiben immer erhalten,
 höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im Reiter „Verein“, können sofort sichern und
 herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
-Ein automatisches Zurückspielen gibt es noch nicht.
+Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` (nur per Kommandozeile, bewusst nicht in der
+Weboberfläche). Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
+Kalender und ihre Freigaben sind nicht Teil der Sicherung; sie werden beim nächsten Speichern eines Mitglieds angeglichen.
+Getestet ist das Zurückspielen mit MariaDB/MySQL; für PostgreSQL werden die ID-Zähler nachgezogen, aber nicht praktisch geprüft.
 
 ## Kalender
 Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Jubiläen aktiver

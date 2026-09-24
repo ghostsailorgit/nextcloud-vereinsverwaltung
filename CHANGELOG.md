@@ -6,6 +6,28 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/) und fo
 
 ---
 
+## [0.11.2-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Sicherungsliste: fünf Einträge sichtbar, dann Scrollen (die globale Tabellen-Regel der App überschrieb die Zeilenhöhe).
+
+---
+
+## [0.11.1-beta] - 2026-09-25
+
+### 🐛 Behoben
+- Die Sicherungsliste zeigte wegen fremder Tabellen-Styles nur etwa 4 statt 5 Einträge vor dem Scrollen.
+
+---
+
+## [0.11.0-beta] - 2026-09-25
+
+### ✨ Neu
+- **Wiederherstellung aus einer Sicherung** per `occ verein:backup:restore <Dateiname oder Pfad>` (zeigt vorher Zeilenzahlen jetzt/Sicherung, fragt nach, legt automatisch eine Sicherung des aktuellen Stands an und ersetzt alle Vereinsdaten in einer Transaktion; bei einem Fehler bleibt alles unverändert). `occ verein:backup:list` listet die Sicherungen.
+- Die Liste der Sicherungen zeigt 5 Einträge, darüber wird gescrollt.
+
+---
+
 ## [0.10.0-beta] - 2026-09-25
 
 ### ✨ Neu

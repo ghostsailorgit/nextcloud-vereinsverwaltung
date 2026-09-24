@@ -4,7 +4,7 @@
 
 ---
 
-## Stand dieses Forks (aktuell, Version 0.10.0-beta)
+## Stand dieses Forks (aktuell, Version 0.11.2-beta)
 
 Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind teils überholt. Maßgeblich ist diese Liste.
 
@@ -16,7 +16,7 @@ Die folgenden Abschnitte ab „Deutsch“ stammen vom Upstream-Projekt und sind 
 | 3a | Mahnschreiben / Mahnstufen, anteilige Beiträge bei Eintritt im Jahr | 📋 offen |
 | 2 | Echte Daten: Vereinskonto und Gläubiger-ID, echte IBANs und Mandate, offene Importfragen (Verstorbene/Ausgetretene, doppelte Einträge); Testdaten vorher entfernen | 🔧 überwiegend manuell |
 | 4 | Datenschutz: Mitglieder löschen/sperren, Auskunft je Person, Änderungsprotokoll | 👤 Kollege übernimmt |
-| 5a | Automatische Sicherung der Vereinstabellen (täglich, 30 Tage, Knopf „Jetzt sichern“) | ✅ fertig |
+| 5a | Automatische Sicherung der Vereinstabellen (täglich, 30 Tage, Knopf „Jetzt sichern“) und Wiederherstellung per `occ` | ✅ fertig |
 | 5 | Aufräumen und Veröffentlichung: schlanke README/Doku (viele veraltete Upstream-Dateien), saubere 404/500-Codes, veraltete Integrationstests | 📋 offen |
 
 Ideen ohne Termin: Vorstand → App-Rolle zuordnen, JS-Bundle (3,3 MB) verkleinern, Reaktion auf GitHub-Issues.

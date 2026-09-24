@@ -7,7 +7,7 @@
     <description><![CDATA[
 A comprehensive club/association management solution for Nextcloud with member management, fee tracking, SEPA export, and dashboard integration.
     ]]></description>
-    <version>0.10.0-beta</version>
+    <version>0.11.2-beta</version>
     <licence>agpl</licence>
     <author>Vereinsverwaltung</author>
     <namespace>Verein</namespace>
@@ -32,6 +32,11 @@ A comprehensive club/association management solution for Nextcloud with member m
     <background-jobs>
         <job>OCA\Verein\BackgroundJob\DailyBackupJob</job>
     </background-jobs>
+
+    <commands>
+        <command>OCA\Verein\Command\ListBackups</command>
+        <command>OCA\Verein\Command\RestoreBackup</command>
+    </commands>
 
     <settings>
         <admin>OCA\Verein\Settings\AdminSettings</admin>

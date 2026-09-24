@@ -10,7 +10,8 @@
       <NcButton variant="primary" :disabled="busy" @click="create">Jetzt sichern</NcButton>
     </p>
     <p v-if="loaded && !backups.length" class="hint">Noch keine Sicherung vorhanden.</p>
-    <table v-if="backups.length" class="list">
+    <div v-if="backups.length" class="scroll">
+    <table class="list">
       <thead>
         <tr><th>Zeitpunkt</th><th>Größe</th><th /></tr>
       </thead>
@@ -22,6 +23,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </template>
 
@@ -81,6 +83,9 @@ export default {
 
 <style scoped>
 .hint { color: var(--color-text-maxcontrast); }
-.list { border-collapse: collapse; }
-.list th, .list td { text-align: left; padding: 4px 16px 4px 0; }
+.scroll { max-height: calc(36px * 6); overflow-y: auto; } /* header + 5 rows, then scroll */
+.list { border-collapse: collapse; width: 100%; }
+/* the app-wide rule "#app-content-vue table td { padding: 12px !important }" needs the same weight here */
+#app-content-vue .backups .list th, #app-content-vue .backups .list td { text-align: left; padding: 0 16px 0 0 !important; height: 36px !important; line-height: 22px; box-sizing: border-box; }
+.list thead th { position: sticky; top: 0; background: var(--color-main-background); }
 </style>

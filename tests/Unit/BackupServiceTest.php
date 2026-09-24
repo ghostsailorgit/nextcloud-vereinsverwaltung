@@ -105,6 +105,99 @@ class BackupServiceTest extends TestCase {
         $this->assertEqualsCanonicalizing(array_unique($created), BackupService::TABLES, 'add new tables to BackupService::TABLES');
     }
 
+    private function backupFile(array $overrides = [], ?array $tables = null): string {
+        $tables ??= array_fill_keys(BackupService::TABLES, []);
+        $tables['verein_fee_rates'] = [['id' => 1, 'club_id' => 1, 'name' => 'Erwachsene', 'amount' => '24.00', 'is_default' => 1]];
+        return gzencode(json_encode(array_merge(['app' => 'verein', 'appVersion' => '0.10.0-beta', 'created' => '2026-09-25T03:00:00+00:00', 'tables' => $tables], $overrides)));
+    }
+
+    public function testParseAcceptsAValidBackup(): void {
+        $parsed = BackupService::parse($this->backupFile());
+        $this->assertSame('2026-09-25T03:00:00+00:00', $parsed['created']);
+        $this->assertCount(1, $parsed['tables']['verein_fee_rates']);
+        $this->assertSame(BackupService::TABLES, array_keys($parsed['tables']));
+    }
+
+    /**
+     * @dataProvider brokenBackups
+     */
+    public function testParseRejectsBrokenBackups(string $content): void {
+        $this->expectException(\InvalidArgumentException::class);
+        BackupService::parse($content);
+    }
+
+    public static function brokenBackups(): array {
+        $tables = array_fill_keys(BackupService::TABLES, []);
+        $gz = static fn (array $d) => gzencode(json_encode($d));
+        $missing = $tables;
+        unset($missing['verein_fees']);
+        return [
+            'not gzip' => ['{"app":"verein"}'],
+            'not json' => [gzencode('nope')],
+            'other app' => [$gz(['app' => 'other', 'tables' => $tables])],
+            'table missing' => [$gz(['app' => 'verein', 'tables' => $missing])],
+            'empty row' => [$gz(['app' => 'verein', 'tables' => array_merge($tables, ['verein_fees' => [[]]])])],
+            'bad column name' => [$gz(['app' => 'verein', 'tables' => array_merge($tables, ['verein_fees' => [['id; DROP TABLE x' => 1]]])])],
+            'nested value' => [$gz(['app' => 'verein', 'tables' => array_merge($tables, ['verein_fees' => [['id' => [1]]]])])],
+        ];
+    }
+
+    /** A service whose query builder accepts everything and throws on the Nth write statement. */
+    private function serviceWithFailingWrite(?int $failOnStatement, \OCP\IDBConnection &$db = null): BackupService {
+        $result = $this->createMock(\OCP\DB\IResult::class);
+        $result->method('fetchAll')->willReturn([]);
+        $calls = 0;
+        $qb = $this->createMock(\OCP\DB\QueryBuilder\IQueryBuilder::class);
+        foreach (['select', 'from', 'delete', 'insert', 'setValue'] as $m) {
+            $qb->method($m)->willReturnSelf();
+        }
+        $qb->method('createNamedParameter')->willReturn(':p');
+        $qb->method('executeQuery')->willReturn($result);
+        $qb->method('executeStatement')->willReturnCallback(function () use (&$calls, $failOnStatement) {
+            $calls++;
+            if ($failOnStatement !== null && $calls === $failOnStatement) {
+                throw new \RuntimeException('boom');
+            }
+            return 1;
+        });
+        $db = $this->createMock(IDBConnection::class);
+        $db->method('getQueryBuilder')->willReturn($qb);
+
+        $folder = $this->createMock(\OCP\Files\SimpleFS\ISimpleFolder::class);
+        $folder->method('fileExists')->willReturn(false);
+        $appData = $this->createMock(IAppData::class);
+        $appData->method('getFolder')->willReturn($folder);
+        $factory = $this->createMock(IAppDataFactory::class);
+        $factory->method('get')->willReturn($appData);
+        $time = $this->createMock(ITimeFactory::class);
+        $time->method('getTime')->willReturn(1790000000);
+        return new BackupService($db, $factory, $this->createMock(IAppManager::class), $time, $this->createMock(LoggerInterface::class));
+    }
+
+    public function testRestoreCommitsInOneTransactionAndWritesASafetyBackupFirst(): void {
+        $service = $this->serviceWithFailingWrite(null, $db);
+        $db->expects($this->once())->method('beginTransaction');
+        $db->expects($this->once())->method('commit');
+        $db->expects($this->never())->method('rollBack');
+
+        $result = $service->restore(BackupService::parse($this->backupFile()));
+
+        $this->assertSame('verein-backup-' . gmdate('Ymd-His', 1790000000) . '.json.gz', $result['safetyBackup']);
+        $this->assertSame(1, $result['tables']['verein_fee_rates']);
+        $this->assertSame(0, $result['tables']['verein_members']);
+    }
+
+    public function testFailedRestoreRollsBackAndRethrows(): void {
+        // statements 1-8 delete the tables, 9 is the first insert
+        $service = $this->serviceWithFailingWrite(9, $db);
+        $db->expects($this->once())->method('beginTransaction');
+        $db->expects($this->never())->method('commit');
+        $db->expects($this->once())->method('rollBack');
+
+        $this->expectException(\RuntimeException::class);
+        $service->restore(BackupService::parse($this->backupFile()));
+    }
+
     public function testDownloadRejectsInvalidAndUnknownNames(): void {
         $folder = $this->createMock(\OCP\Files\SimpleFS\ISimpleFolder::class);
         $folder->method('fileExists')->willReturn(false);
