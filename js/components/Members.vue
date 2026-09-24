@@ -1,5 +1,5 @@
 <template>
-  <div class="members-container">
+  <div class="members-container" :class="{ 'no-form': !canManage }">
     <!-- Alert Komponente -->
     <Alert
       ref="alertRef"
@@ -9,8 +9,34 @@
     />
 
     <!-- Form für neues/zu bearbeitendes Mitglied -->
-    <div class="form-section">
+    <div v-if="canManage" class="form-section">
       <h2>{{ editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen' }}</h2>
+
+      <!-- Add a person who is already a member of another club (no duplicate) -->
+      <div v-if="!editingId" class="lookup-box">
+        <h3 class="form-subheader">Person aus einem anderen Verein übernehmen</h3>
+        <NcTextField
+          :model-value="lookupQuery"
+          @update:model-value="onLookupInput"
+          type="text"
+          label="Name suchen"
+          placeholder="Nachname oder Vorname"
+        />
+        <label class="date-field">
+          <span>Eintrittsdatum in diesen Verein</span>
+          <input v-model="lookupJoinDate" type="date" class="form-input" />
+        </label>
+        <ul v-if="lookupResults.length" class="lookup-results">
+          <li v-for="r in lookupResults" :key="r.id">
+            <span>{{ r.fullName }} <small>({{ r.birthDate || 'kein Geburtsdatum' }}, {{ r.city || 'kein Ort' }})</small></span>
+            <NcButton variant="secondary" :disabled="loading" @click="attachExisting(r)">Übernehmen</NcButton>
+          </li>
+        </ul>
+        <p v-else-if="lookupQuery.trim().length >= 2 && lookupDone" class="hint">
+          Keine passende Person in deinen anderen Vereinen gefunden.
+        </p>
+      </div>
+
       <form @submit.prevent="saveMember" class="member-form">
         <h3 class="form-subheader">Persönliche Daten</h3>
         <NcSelect
@@ -107,6 +133,28 @@
           label="BIC"
         />
 
+        <h3 class="form-subheader">SEPA-Lastschriftmandat (für diesen Verein)</h3>
+        <NcTextField
+          :model-value="formData.mandateReference"
+          @update:model-value="formData.mandateReference = $event"
+          type="text"
+          label="Mandatsreferenz"
+          placeholder="leer = automatisch"
+        />
+        <label class="date-field">
+          <span>Unterschriftsdatum</span>
+          <input v-model="formData.mandateDate" type="date" class="form-input" />
+        </label>
+        <div class="mandate-file">
+          <span>Unterschriebenes Mandat (PDF)</span>
+          <div class="mandate-file-row">
+            <a v-if="formData.mandateFile" :href="mandateFileUrl(formData.mandateFile)" target="_blank" rel="noopener">{{ formData.mandateFile }}</a>
+            <span v-else class="hint">keine Datei verknüpft</span>
+            <NcButton type="button" variant="secondary" @click="pickMandateFile">Datei wählen</NcButton>
+            <NcButton v-if="formData.mandateFile" type="button" variant="tertiary" @click="formData.mandateFile = ''">Entfernen</NcButton>
+          </div>
+        </div>
+
         <div class="form-actions">
           <NcButton type="submit" variant="primary" :disabled="loading">
             {{ loading ? 'Wird gespeichert...' : (editingId ? 'Speichern' : 'Hinzufügen') }}
@@ -151,7 +199,7 @@
               <th>Mitglied seit</th>
               <th>Rolle</th>
               <th>Status</th>
-              <th>Aktionen</th>
+              <th v-if="canManage">Aktionen</th>
             </tr>
           </thead>
           <tbody>
@@ -171,7 +219,7 @@
                 <span v-else class="status-badge active">Aktiv</span>
                 <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
               </td>
-              <td class="actions">
+              <td v-if="canManage" class="actions">
                 <NcButton @click="startEdit(member)" variant="secondary">
                   Bearbeiten
                 </NcButton>
@@ -180,7 +228,7 @@
                   variant="error"
                   :disabled="loading"
                 >
-                  Löschen
+                  Aus Verein entfernen
                 </NcButton>
               </td>
             </tr>
@@ -195,8 +243,10 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { api } from '../api'
-import { showSuccess, showError } from '@nextcloud/dialogs'
+import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
+import { absoluteUrl } from '../absoluteUrl'
+import { currentClub, can } from '../store/club'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -218,7 +268,10 @@ const emptyFormData = () => ({
   foundingMember: false,
   deceased: false,
   iban: '',
-  bic: ''
+  bic: '',
+  mandateReference: '',
+  mandateDate: '',
+  mandateFile: ''
 })
 
 export default {
@@ -248,6 +301,78 @@ export default {
     const salutationOptions = ['Herr', 'Frau', 'Divers', 'Firma']
 
     const formData = reactive(emptyFormData())
+    const canManage = computed(() => can('verein.member.manage'))
+
+    // "Add existing person from another club"
+    const lookupQuery = ref('')
+    const lookupJoinDate = ref('')
+    const lookupResults = ref([])
+    const lookupDone = ref(false)
+    let lookupTimer = null
+
+    const onLookupInput = (value) => {
+      lookupQuery.value = value
+      lookupDone.value = false
+      if (lookupTimer) clearTimeout(lookupTimer)
+      if (value.trim().length < 2) {
+        lookupResults.value = []
+        return
+      }
+      lookupTimer = setTimeout(async () => {
+        try {
+          const response = await api.get('members/lookup', { params: { query: value.trim() } })
+          lookupResults.value = response.data.members || []
+        } catch (error) {
+          lookupResults.value = []
+        } finally {
+          lookupDone.value = true
+        }
+      }, 300)
+    }
+
+    const attachExisting = async (person) => {
+      loading.value = true
+      try {
+        await api.post('memberships', {
+          memberId: person.id,
+          joinDate: lookupJoinDate.value,
+          role: 'member'
+        })
+        showSuccess(person.fullName + ' wurde dem Verein hinzugefügt')
+        lookupQuery.value = ''
+        lookupResults.value = []
+        lookupJoinDate.value = ''
+        await fetchMembers()
+      } catch (error) {
+        showError(extractErrorMessage(error, 'Person konnte nicht hinzugefügt werden'))
+      } finally {
+        loading.value = false
+      }
+    }
+
+    // Signed mandate PDFs live in the club's team folder in Nextcloud Files
+    const pickMandateFile = async () => {
+      try {
+        const start = currentClub.value?.documentsPath || '/'
+        const path = await getFilePickerBuilder('Unterschriebenes SEPA-Mandat wählen')
+          .setMultiSelect(false)
+          .setMimeTypeFilter(['application/pdf', 'image/jpeg', 'image/png'])
+          .startAt(start)
+          .allowDirectories(false)
+          .build()
+          .pick()
+        if (path) formData.mandateFile = path
+      } catch (error) {
+        // dialog closed without a selection
+      }
+    }
+
+    const mandateFileUrl = (path) => {
+      const idx = path.lastIndexOf('/')
+      const dir = idx > 0 ? path.slice(0, idx) : '/'
+      const file = path.slice(idx + 1)
+      return absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(dir) + '&openfile=true&scrollto=' + encodeURIComponent(file))
+    }
 
     onMounted(async () => {
       await fetchMembers()
@@ -338,7 +463,7 @@ export default {
     }
 
     const deleteMember = async (id) => {
-      if (!confirm('Soll dieses Mitglied wirklich gelöscht werden?')) return
+      if (!confirm('Soll dieses Mitglied aus dem Verein entfernt werden? Seine Beiträge in diesem Verein werden ebenfalls gelöscht; die Person bleibt in anderen Vereinen erhalten.')) return
 
       loading.value = true
       try {
@@ -374,6 +499,15 @@ export default {
       startEdit,
       cancelEdit,
       deleteMember,
+      canManage,
+      lookupQuery,
+      lookupJoinDate,
+      lookupResults,
+      lookupDone,
+      onLookupInput,
+      attachExisting,
+      pickMandateFile,
+      mandateFileUrl,
       alertRef,
       alertError,
       alertErrors
@@ -398,6 +532,8 @@ export default {
     align-items: start;
   }
 }
+
+.members-container.no-form { display: flex; }
 
 .form-section,
 .table-section {
@@ -456,6 +592,47 @@ export default {
   &:first-child {
     margin-top: 0;
   }
+}
+
+.lookup-box {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 12px;
+}
+
+.lookup-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
+.mandate-file {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mandate-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hint {
+  color: var(--color-text-maxcontrast);
 }
 
 .form-actions {

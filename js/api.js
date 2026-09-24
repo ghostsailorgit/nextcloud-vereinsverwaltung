@@ -1,5 +1,6 @@
 import axios from '@nextcloud/axios'
 import { absoluteUrl } from './absoluteUrl'
+import { clubState } from './store/club'
 
 const instance = axios.create({
   baseURL: absoluteUrl('/apps/verein/'),
@@ -9,8 +10,19 @@ const instance = axios.create({
   }
 })
 
-// Transform plain objects to URL-encoded payloads for Nextcloud controllers
+// Transform plain objects to URL-encoded payloads for Nextcloud controllers,
+// and tell the backend which club the request is about (everything except
+// the club administration itself is scoped to the currently selected club)
 instance.interceptors.request.use(config => {
+  const clubId = clubState.currentId
+  if (clubId && !/^clubs(\/|$)/.test(config.url || '')) {
+    const method = (config.method || 'get').toLowerCase()
+    if (method === 'get' || method === 'delete') {
+      config.params = { ...config.params, clubId }
+    } else {
+      config.data = { ...(config.data && typeof config.data === 'object' ? config.data : {}), clubId }
+    }
+  }
   if (config.data && typeof config.data === 'object' && !FormData.prototype.isPrototypeOf(config.data)) {
     const params = new URLSearchParams()
     for (const [key, value] of Object.entries(config.data)) {
@@ -56,10 +68,27 @@ export const api = {
     return instance.get('statistics/fees')
   },
 
-  // App settings (read-only from the frontend - documents_path is not
-  // user-editable, only via occ config:app:set verein documents_path)
-  getAppSettings() {
-    return instance.get('settings')
+  // Clubs (club administration - not scoped to the selected club)
+  getClubs() {
+    return instance.get('clubs')
+  },
+  createClub(data) {
+    return instance.post('clubs', data)
+  },
+  updateClub(id, data) {
+    return instance.put(`clubs/${id}`, data)
+  },
+  deleteClub(id) {
+    return instance.delete(`clubs/${id}`)
+  },
+  createClubAccount(clubId, data) {
+    return instance.post(`clubs/${clubId}/accounts`, data)
+  },
+  updateClubAccount(clubId, accountId, data) {
+    return instance.put(`clubs/${clubId}/accounts/${accountId}`, data)
+  },
+  deleteClubAccount(clubId, accountId) {
+    return instance.delete(`clubs/${clubId}/accounts/${accountId}`)
   },
 
   // Fees

@@ -17,8 +17,8 @@ class StatisticsService {
         $this->feeMapper = $feeMapper;
     }
 
-    public function getMemberStatistics(): array {
-        $members = $this->memberMapper->findAll();
+    public function getMemberStatistics(int $clubId): array {
+        $members = $this->memberMapper->findByClub($clubId);
         $total = count($members);
 
         // Group by role
@@ -165,8 +165,8 @@ class StatisticsService {
         return ['labels' => $labels, 'data' => $data];
     }
 
-    public function getFeeStatistics(): array {
-        $fees = $this->feeMapper->findAll();
+    public function getFeeStatistics(int $clubId): array {
+        $fees = $this->feeMapper->findByClub($clubId);
         $totalAmount = 0.0;
         $paidAmount = 0.0;
         $pendingAmount = 0.0;

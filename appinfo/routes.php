@@ -5,7 +5,20 @@ return [
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
 
         // Dashboard data endpoints
+        // Clubs (Vereine) and their bank accounts
+        ['name' => 'club#index', 'url' => '/clubs', 'verb' => 'GET'],
+        ['name' => 'club#create', 'url' => '/clubs', 'verb' => 'POST'],
+        ['name' => 'club#update', 'url' => '/clubs/{clubId}', 'verb' => 'PUT'],
+        ['name' => 'club#destroy', 'url' => '/clubs/{clubId}', 'verb' => 'DELETE'],
+        ['name' => 'club#createAccount', 'url' => '/clubs/{clubId}/accounts', 'verb' => 'POST'],
+        ['name' => 'club#updateAccount', 'url' => '/clubs/{clubId}/accounts/{accountId}', 'verb' => 'PUT'],
+        ['name' => 'club#destroyAccount', 'url' => '/clubs/{clubId}/accounts/{accountId}', 'verb' => 'DELETE'],
+
+        // Members - all of these need a clubId parameter
         ['name' => 'member#index', 'url' => '/members', 'verb' => 'GET'],
+        // literal route must come before /members/{id}
+        ['name' => 'member#lookup', 'url' => '/members/lookup', 'verb' => 'GET'],
+        ['name' => 'member#attach', 'url' => '/memberships', 'verb' => 'POST'],
         ['name' => 'member#create', 'url' => '/members', 'verb' => 'POST'],
         ['name' => 'member#show', 'url' => '/members/{id}', 'verb' => 'GET'],
         ['name' => 'member#update', 'url' => '/members/{id}', 'verb' => 'PUT'],
@@ -35,6 +48,7 @@ return [
         // literal single-segment routes must come before /roles/{id}, which
         // would otherwise greedily match them (e.g. id='search-users')
         ['name' => 'role#searchUsers', 'url' => '/roles/search-users', 'verb' => 'GET'],
+        ['name' => 'role#clubAssignments', 'url' => '/roles/assignments', 'verb' => 'GET'],
         ['name' => 'role#assignRole', 'url' => '/roles/users', 'verb' => 'POST'],
         ['name' => 'role#removeRoles', 'url' => '/roles/users', 'verb' => 'DELETE'],
         ['name' => 'role#indexByClubType', 'url' => '/roles/club/{clubType}', 'verb' => 'GET'],
@@ -45,7 +59,5 @@ return [
 
         ['name' => 'permission#index', 'url' => '/permissions', 'verb' => 'GET'],
 
-        // App settings (read-only - see AppSettingsService)
-        ['name' => 'settings#getAppSettings', 'url' => '/settings', 'verb' => 'GET'],
     ]
 ];

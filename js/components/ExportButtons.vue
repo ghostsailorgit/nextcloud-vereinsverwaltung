@@ -26,6 +26,7 @@ import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import { clubState } from '../store/club'
 
 export default {
   name: 'ExportButtons',
@@ -68,7 +69,7 @@ export default {
       this.busyCsv = true
       try {
         const endpoint = generateUrl(`/apps/verein/export/${this.resource}/csv`)
-        const response = await axios.get(endpoint, { responseType: 'blob' })
+        const response = await axios.get(endpoint, { responseType: 'blob', params: { clubId: clubState.currentId } })
         const ct = (response.headers && response.headers['content-type']) || response.data?.type || ''
         if (!ct.includes('text/csv') && !ct.includes('application/csv')) {
           const text = await new Response(response.data).text()
@@ -88,7 +89,7 @@ export default {
       this.busyPdf = true
       try {
         const endpoint = generateUrl(`/apps/verein/export/${this.resource}/pdf`)
-        const response = await axios.get(endpoint, { responseType: 'blob' })
+        const response = await axios.get(endpoint, { responseType: 'blob', params: { clubId: clubState.currentId } })
         const ct = (response.headers && response.headers['content-type']) || response.data?.type || ''
         if (!ct.includes('application/pdf')) {
           const text = await new Response(response.data).text()

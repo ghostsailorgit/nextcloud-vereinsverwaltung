@@ -2,6 +2,7 @@
 
 namespace OCA\Verein\Controller;
 
+use OCA\Verein\Attributes\RequirePermission;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -23,9 +24,10 @@ class StatisticsController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function getMemberStatistics(): JSONResponse {
+    #[RequirePermission('verein.member.view')]
+    public function getMemberStatistics(int $clubId): JSONResponse {
         try {
-            $stats = $this->statisticsService->getMemberStatistics();
+            $stats = $this->statisticsService->getMemberStatistics($clubId);
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $stats
@@ -42,9 +44,10 @@ class StatisticsController extends Controller {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    public function getFeeStatistics(): JSONResponse {
+    #[RequirePermission('verein.finance.read')]
+    public function getFeeStatistics(int $clubId): JSONResponse {
         try {
-            $stats = $this->statisticsService->getFeeStatistics();
+            $stats = $this->statisticsService->getFeeStatistics($clubId);
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $stats

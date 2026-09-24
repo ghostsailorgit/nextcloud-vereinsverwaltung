@@ -1,0 +1,234 @@
+<template>
+  <div class="clubs-page">
+    <h2>Verein: {{ club ? club.name : '–' }}</h2>
+
+    <!-- Club data -->
+    <div v-if="club && canManage" class="card">
+      <h3>Vereinsdaten</h3>
+      <form class="grid" @submit.prevent="saveClub">
+        <NcTextField :model-value="form.name" @update:model-value="form.name = $event" label="Name des Vereins" required />
+        <NcTextField :model-value="form.street" @update:model-value="form.street = $event" label="Straße" />
+        <NcTextField :model-value="form.postalCode" @update:model-value="form.postalCode = $event" label="PLZ" />
+        <NcTextField :model-value="form.city" @update:model-value="form.city = $event" label="Ort" />
+        <NcTextField
+          :model-value="form.documentsPath"
+          @update:model-value="form.documentsPath = $event"
+          label="Team-Ordner in Nextcloud Files"
+          placeholder="/Vereinsverwaltung"
+          helper-text="Pfad des Vereinsordners; hier liegen Dokumente und die unterschriebenen SEPA-Mandate."
+        />
+        <NcTextField
+          :model-value="form.calendarGroups"
+          @update:model-value="form.calendarGroups = $event"
+          label="Nextcloud-Gruppen für den Vereinskalender"
+          placeholder="board-read, members-read"
+          helper-text="Kommagetrennt. Diese Gruppen können den Kalender „Vereinstermine“ (Geburtstage, Jubiläen) sehen."
+        />
+        <div class="actions">
+          <NcButton type="submit" variant="primary" :disabled="busy">Speichern</NcButton>
+        </div>
+      </form>
+    </div>
+    <p v-else-if="club" class="hint">Du hast keine Berechtigung, die Vereinsdaten zu ändern.</p>
+
+    <!-- Bank accounts -->
+    <div v-if="club && canManage" class="card">
+      <h3>Bankkonten</h3>
+      <p class="hint">
+        Ein Verein kann mehrere Konten haben. Bezeichnung, BIC und Gläubiger-ID werden beim SEPA-Export verwendet.
+      </p>
+      <table v-if="club.accounts.length" class="accounts">
+        <thead>
+          <tr><th>Bezeichnung</th><th>IBAN</th><th>BIC</th><th>Gläubiger-ID</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in club.accounts" :key="a.id">
+            <td>{{ a.label || '–' }} <span v-if="a.isDefault" class="badge">Standard</span></td>
+            <td>{{ a.iban }}</td>
+            <td>{{ a.bic || '–' }}</td>
+            <td>{{ a.creditorId || '–' }}</td>
+            <td class="row-actions">
+              <NcButton variant="secondary" @click="editAccount(a)">Bearbeiten</NcButton>
+              <NcButton variant="error" @click="removeAccount(a)">Löschen</NcButton>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="hint">Noch kein Konto hinterlegt.</p>
+
+      <h4>{{ accountForm.id ? 'Konto bearbeiten' : 'Konto hinzufügen' }}</h4>
+      <form class="grid" @submit.prevent="saveAccount">
+        <NcTextField :model-value="accountForm.label" @update:model-value="accountForm.label = $event" label="Bezeichnung" placeholder="z.B. Vereinskonto" />
+        <NcTextField :model-value="accountForm.iban" @update:model-value="accountForm.iban = $event" label="IBAN" required />
+        <NcTextField :model-value="accountForm.bic" @update:model-value="accountForm.bic = $event" label="BIC" />
+        <NcTextField :model-value="accountForm.creditorId" @update:model-value="accountForm.creditorId = $event" label="Gläubiger-ID (SEPA)" placeholder="DE98ZZZ09999999999" />
+        <label class="checkbox-field">
+          <input v-model="accountForm.isDefault" type="checkbox" />
+          <span>Standardkonto</span>
+        </label>
+        <div class="actions">
+          <NcButton type="submit" variant="primary" :disabled="busy">{{ accountForm.id ? 'Speichern' : 'Hinzufügen' }}</NcButton>
+          <NcButton v-if="accountForm.id" type="button" variant="tertiary" @click="resetAccountForm">Abbrechen</NcButton>
+        </div>
+      </form>
+    </div>
+
+    <!-- Nextcloud administrators: add / remove clubs -->
+    <div v-if="isAdmin" class="card">
+      <h3>Vereine verwalten (Administrator)</h3>
+      <form class="grid" @submit.prevent="createClub">
+        <NcTextField :model-value="newClubName" @update:model-value="newClubName = $event" label="Name des neuen Vereins" required />
+        <div class="actions">
+          <NcButton type="submit" variant="primary" :disabled="busy">Verein anlegen</NcButton>
+        </div>
+      </form>
+      <p v-if="club" class="delete-row">
+        <NcButton variant="error" :disabled="busy" @click="deleteClub">„{{ club.name }}“ löschen</NcButton>
+        <span class="hint">Nur möglich, wenn der Verein keine Mitglieder mehr hat.</span>
+      </p>
+    </div>
+  </div>
+</template>
+
+<script>
+import { reactive, ref, computed, watch } from 'vue'
+import { showSuccess, showError } from '@nextcloud/dialogs'
+import NcButton from '@nextcloud/vue/components/NcButton'
+import NcTextField from '@nextcloud/vue/components/NcTextField'
+import { api } from '../api'
+import { extractErrorMessage } from '../errorMessage'
+import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
+
+const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId: '', isDefault: false })
+
+export default {
+  name: 'Clubs',
+  components: { NcButton, NcTextField },
+  setup() {
+    const busy = ref(false)
+    const newClubName = ref('')
+    const accountForm = reactive(emptyAccount())
+    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '' })
+
+    const club = computed(() => currentClub.value)
+    const isAdmin = computed(() => clubState.isAdmin)
+    const canManage = computed(() => can('verein.club.manage'))
+
+    const fillForm = () => {
+      const c = club.value
+      Object.assign(form, {
+        name: c?.name || '',
+        street: c?.street || '',
+        postalCode: c?.postalCode || '',
+        city: c?.city || '',
+        documentsPath: c?.documentsPath || '',
+        calendarGroups: (c?.calendarGroups || []).join(', ')
+      })
+    }
+    watch(club, fillForm, { immediate: true })
+
+    const run = async (action, okMessage) => {
+      busy.value = true
+      try {
+        await action()
+        if (okMessage) showSuccess(okMessage)
+        return true
+      } catch (error) {
+        showError(extractErrorMessage(error, 'Aktion fehlgeschlagen'))
+        return false
+      } finally {
+        busy.value = false
+      }
+    }
+
+    const saveClub = () => run(async () => {
+      await api.updateClub(club.value.id, { ...form })
+      await loadClubs()
+    }, 'Vereinsdaten gespeichert')
+
+    const createClub = async () => {
+      let createdId = null
+      const ok = await run(async () => {
+        const res = await api.createClub({ name: newClubName.value })
+        createdId = res.data?.data?.id
+        await loadClubs()
+      }, 'Verein angelegt')
+      if (ok) {
+        newClubName.value = ''
+        if (createdId) setCurrentClub(createdId)
+      }
+    }
+
+    const deleteClub = async () => {
+      if (!confirm(`Verein „${club.value.name}“ wirklich löschen? Bankkonten und Rollenzuweisungen gehen verloren.`)) return
+      const ok = await run(async () => {
+        await api.deleteClub(club.value.id)
+        clubState.currentId = null
+        await loadClubs()
+      }, 'Verein gelöscht')
+      if (!ok) await loadClubs()
+    }
+
+    const resetAccountForm = () => Object.assign(accountForm, emptyAccount())
+    const editAccount = (a) => Object.assign(accountForm, emptyAccount(), a)
+
+    const saveAccount = async () => {
+      const ok = await run(async () => {
+        const payload = { ...accountForm }
+        if (accountForm.id) {
+          await api.updateClubAccount(club.value.id, accountForm.id, payload)
+        } else {
+          await api.createClubAccount(club.value.id, payload)
+        }
+        await loadClubs()
+      }, 'Konto gespeichert')
+      if (ok) resetAccountForm()
+    }
+
+    const removeAccount = async (a) => {
+      if (!confirm(`Konto ${a.iban} wirklich löschen?`)) return
+      await run(async () => {
+        await api.deleteClubAccount(club.value.id, a.id)
+        await loadClubs()
+      }, 'Konto gelöscht')
+    }
+
+    return {
+      busy, club, isAdmin, canManage, form, accountForm, newClubName,
+      saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm
+    }
+  }
+}
+</script>
+
+<style scoped>
+.clubs-page { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.card {
+  background: var(--color-main-background);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.card h3 { margin-top: 0; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.hint { color: var(--color-text-maxcontrast); }
+.accounts { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.accounts th, .accounts td { padding: 8px; text-align: left; border-bottom: 1px solid var(--color-border); }
+.row-actions { display: flex; gap: 8px; }
+.badge {
+  background: var(--color-primary-element);
+  color: var(--color-primary-element-text);
+  border-radius: 8px;
+  padding: 1px 8px;
+  font-size: 12px;
+  margin-left: 6px;
+}
+.checkbox-field { display: flex; gap: 8px; align-items: center; }
+.delete-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+</style>

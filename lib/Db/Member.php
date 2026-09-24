@@ -27,16 +27,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setIban(?string $iban)
  * @method ?string getBic()
  * @method void setBic(?string $bic)
- * @method string getRole()
- * @method void setRole(string $role)
  * @method ?string getBirthDate()
  * @method void setBirthDate(?string $birthDate)
- * @method ?string getJoinDate()
- * @method void setJoinDate(?string $joinDate)
- * @method ?string getLeaveDate()
- * @method void setLeaveDate(?string $leaveDate)
- * @method bool getFoundingMember()
- * @method void setFoundingMember(bool $foundingMember)
  * @method bool getDeceased()
  * @method void setDeceased(bool $deceased)
  * @method ?string getUserId()
@@ -57,11 +49,7 @@ class Member extends Entity implements JsonSerializable {
     protected string $email = '';
     protected ?string $iban = null;
     protected ?string $bic = null;
-    protected string $role = 'member';
     protected ?string $birthDate = null;
-    protected ?string $joinDate = null;
-    protected ?string $leaveDate = null;
-    protected bool $foundingMember = false;
     protected bool $deceased = false;
     protected ?string $userId = null;
     protected ?string $createdAt = null;
@@ -76,8 +64,39 @@ class Member extends Entity implements JsonSerializable {
      * already equals its PHP default and never gets marked dirty at all.
      */
     public function __construct() {
-        $this->addType('foundingMember', 'bool');
         $this->addType('deceased', 'bool');
+    }
+
+    /**
+     * Not a database column: the membership in the club this member is being
+     * viewed in (set by MemberMapper). A Member is a plain person; join/leave
+     * date, role, founding-member flag and SEPA mandate belong to a club and
+     * are read through here.
+     */
+    private ?Membership $membership = null;
+
+    public function setMembership(?Membership $membership): void {
+        $this->membership = $membership;
+    }
+
+    public function getMembership(): ?Membership {
+        return $this->membership;
+    }
+
+    public function getRole(): string {
+        return $this->membership?->getRole() ?? 'member';
+    }
+
+    public function getJoinDate(): ?string {
+        return $this->membership?->getJoinDate();
+    }
+
+    public function getLeaveDate(): ?string {
+        return $this->membership?->getLeaveDate();
+    }
+
+    public function getFoundingMember(): bool {
+        return $this->membership?->getFoundingMember() ?? false;
     }
 
     /**
@@ -91,7 +110,7 @@ class Member extends Entity implements JsonSerializable {
      * A member is "ehemalig" (former) once they've left or passed away.
      */
     public function isFormer(): bool {
-        return $this->deceased || !empty($this->leaveDate);
+        return $this->deceased || !empty($this->getLeaveDate());
     }
 
     /**
@@ -106,7 +125,7 @@ class Member extends Entity implements JsonSerializable {
      * still active. Null if no join date is set.
      */
     public function getMembershipYears(): ?int {
-        return $this->yearsBetween($this->joinDate, $this->leaveDate ?? date('Y-m-d'));
+        return $this->yearsBetween($this->getJoinDate(), $this->getLeaveDate() ?? date('Y-m-d'));
     }
 
     private function yearsBetween(?string $from, string $to): ?int {
@@ -139,12 +158,17 @@ class Member extends Entity implements JsonSerializable {
             'email' => $this->email,
             'iban' => $this->iban,
             'bic' => $this->bic,
-            'role' => $this->role,
             'birthDate' => $this->birthDate,
-            'joinDate' => $this->joinDate,
-            'leaveDate' => $this->leaveDate,
-            'foundingMember' => $this->foundingMember,
             'deceased' => $this->deceased,
+            // Club-specific part (defaults when no club context is attached)
+            'clubId' => $this->membership?->getClubId(),
+            'role' => $this->getRole(),
+            'joinDate' => $this->getJoinDate(),
+            'leaveDate' => $this->getLeaveDate(),
+            'foundingMember' => $this->getFoundingMember(),
+            'mandateReference' => $this->membership?->getMandateReference(),
+            'mandateDate' => $this->membership?->getMandateDate(),
+            'mandateFile' => $this->membership?->getMandateFile(),
             'age' => $this->getAge(),
             'membershipYears' => $this->getMembershipYears(),
             'isFormer' => $this->isFormer(),

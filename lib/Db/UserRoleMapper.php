@@ -104,7 +104,18 @@ class UserRoleMapper extends QBMapper {
             ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId, IQueryBuilder::PARAM_STR)))
             ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, IQueryBuilder::PARAM_INT)));
 
-        return $qb->execute();
+        return $qb->executeStatement();
+    }
+
+    /**
+     * Lösche alle Zuordnungen eines Clubs
+     */
+    public function deleteByClub(int $clubId): int {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete($this->getTableName())
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, IQueryBuilder::PARAM_INT)));
+
+        return $qb->executeStatement();
     }
 
     /**
@@ -115,7 +126,7 @@ class UserRoleMapper extends QBMapper {
         $qb->delete($this->getTableName())
             ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId, IQueryBuilder::PARAM_STR)));
 
-        return $qb->execute();
+        return $qb->executeStatement();
     }
 
     /**

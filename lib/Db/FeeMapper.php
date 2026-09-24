@@ -24,6 +24,34 @@ class FeeMapper extends QBMapper {
         return $this->findEntity($qb);
     }
 
+    /**
+     * @return Fee[]
+     */
+    public function findByClub(int $clubId): array {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+        return $this->findEntities($qb);
+    }
+
+    public function findInClub(int $id, int $clubId): Fee {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+        return $this->findEntity($qb);
+    }
+
+    public function deleteByMemberInClub(int $memberId, int $clubId): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete($this->getTableName())
+            ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+
     public function findByStatus(string $status): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')
@@ -36,11 +64,12 @@ class FeeMapper extends QBMapper {
      * @param string[] $statuses
      * @return Fee[]
      */
-    public function findByStatuses(array $statuses): array {
+    public function findByStatusesInClub(array $statuses, int $clubId): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')
             ->from($this->getTableName())
-            ->where($qb->expr()->in('status', $qb->createNamedParameter($statuses, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+            ->where($qb->expr()->in('status', $qb->createNamedParameter($statuses, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
         return $this->findEntities($qb);
     }
 }

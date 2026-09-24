@@ -36,7 +36,7 @@ class RoleController extends ApiController {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function searchUsers(string $query = ''): DataResponse {
         if (trim($query) === '') {
             return new DataResponse([]);
@@ -56,10 +56,27 @@ class RoleController extends ApiController {
     }
 
     /**
+     * Who holds a role in the current club.
+     *
      * @NoAdminRequired
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.role.manage')]
+    public function clubAssignments(): DataResponse {
+        $clubId = (int)$this->request->getParam('clubId', 0);
+        $result = array_map(function (array $entry) {
+            $user = $this->userManager->get($entry['userId']);
+            $entry['displayName'] = $user !== null ? $user->getDisplayName() : $entry['userId'];
+            return $entry;
+        }, $this->roleService->getClubAssignments($clubId));
+        return new DataResponse($result);
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function index(): DataResponse {
         try {
             $roles = $this->roleMapper->findAll();
@@ -73,7 +90,7 @@ class RoleController extends ApiController {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function indexByClubType(string $clubType): DataResponse {
         try {
             $roles = $this->roleService->getRolesForClubType($clubType);
@@ -87,7 +104,7 @@ class RoleController extends ApiController {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function show(int $id): DataResponse {
         try {
             $role = $this->roleMapper->find($id);
@@ -98,10 +115,13 @@ class RoleController extends ApiController {
     }
     
     /**
-     * @NoAdminRequired
+     * The role definitions are shared by all clubs, so changing them is
+     * reserved for Nextcloud administrators (no @NoAdminRequired) - a board
+     * member of one club must not be able to change what another club's
+     * roles allow.
+     *
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
     public function store(): DataResponse {
         try {
             $name = $this->request->getParam('name');
@@ -124,10 +144,13 @@ class RoleController extends ApiController {
     }
     
     /**
-     * @NoAdminRequired
+     * The role definitions are shared by all clubs, so changing them is
+     * reserved for Nextcloud administrators (no @NoAdminRequired) - a board
+     * member of one club must not be able to change what another club's
+     * roles allow.
+     *
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
     public function update(int $id): DataResponse {
         try {
             $name = $this->request->getParam('name');
@@ -148,10 +171,13 @@ class RoleController extends ApiController {
     }
     
     /**
-     * @NoAdminRequired
+     * The role definitions are shared by all clubs, so changing them is
+     * reserved for Nextcloud administrators (no @NoAdminRequired) - a board
+     * member of one club must not be able to change what another club's
+     * roles allow.
+     *
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
     public function destroy(int $id): DataResponse {
         try {
             $this->roleService->deleteRole($id);
@@ -188,7 +214,7 @@ class RoleController extends ApiController {
             $roleId = (int)$this->request->getParam('roleId');
             $clubId = (int)($this->request->getParam('clubId') ?? 0);
             
-            if (!$userId || !$roleId) {
+            if (!$userId || !$roleId || $clubId <= 0) {
                 return new DataResponse(['error' => 'userId und roleId erforderlich'], 400);
             }
             
@@ -207,10 +233,9 @@ class RoleController extends ApiController {
     public function removeRoles(): DataResponse {
         try {
             $userId = $this->request->getParam('userId');
-            $clubIdParam = $this->request->getParam('clubId');
-            $clubId = $clubIdParam !== null ? (int)$clubIdParam : null;
+            $clubId = (int)$this->request->getParam('clubId', 0);
             
-            if (!$userId) {
+            if (!$userId || $clubId <= 0) {
                 return new DataResponse(['error' => 'userId erforderlich'], 400);
             }
             

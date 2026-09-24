@@ -2,9 +2,13 @@
   <div class="roles-page">
     <h2>Rollenverwaltung</h2>
 
-    <div class="controls">
+    <div v-if="isAdmin" class="controls">
       <NcButton @click="openCreate" variant="primary">➕ Neue Rolle</NcButton>
     </div>
+    <p v-else class="hint">
+      Die Rollen und ihre Berechtigungen gelten für alle Vereine und werden von Nextcloud-Administratoren gepflegt.
+      Hier kannst du sie Benutzern für <strong>{{ clubName }}</strong> zuweisen.
+    </p>
 
     <div v-if="showForm" class="modal-overlay">
       <div class="modal">
@@ -69,8 +73,10 @@
             <td>{{ role.description || '-' }}</td>
             <td class="permissions"><small>{{ (role.permissions || []).join(', ') }}</small></td>
             <td class="actions">
+              <template v-if="isAdmin">
               <NcButton @click="editRole(role)" variant="secondary" aria-label="Rolle bearbeiten">✏️</NcButton>
               <NcButton @click="deleteRole(role.id)" variant="error" aria-label="Rolle löschen">🗑️</NcButton>
+              </template>
             </td>
           </tr>
         </tbody>
@@ -79,7 +85,7 @@
 
     <!-- Assign Role To User -->
     <div class="form-card">
-      <h3>Rolle einem Benutzer zuweisen</h3>
+      <h3>Rolle einem Benutzer zuweisen – {{ clubName }}</h3>
       <div class="assign-row">
         <NcSelectUsers
           v-model="assign.selectedUser"
@@ -98,18 +104,32 @@
           placeholder="-- Rolle wählen --"
         />
 
-        <NcTextField
-          id="assign-club"
-          :model-value="assign.clubId"
-          @update:model-value="assign.clubId = $event"
-          label="Club ID (optional)"
-          placeholder="z.B. 1"
-        />
-
         <div class="form-actions">
           <NcButton variant="primary" @click="assignRoleToUser">Zuweisen</NcButton>
         </div>
       </div>
+    </div>
+
+    <!-- Who holds a role in this club -->
+    <div class="table-card">
+      <h3>Zugewiesene Rollen – {{ clubName }}</h3>
+      <table class="assignments">
+        <thead>
+          <tr><th>Benutzer</th><th>Rollen</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in assignments" :key="a.userId">
+            <td>{{ a.displayName }} <small>({{ a.userId }})</small></td>
+            <td>{{ a.roles.join(', ') }}</td>
+            <td>
+              <NcButton variant="error" @click="removeAssignments(a)">Alle Rollen entziehen</NcButton>
+            </td>
+          </tr>
+          <tr v-if="assignments.length === 0">
+            <td colspan="3">In diesem Verein sind noch keine Rollen vergeben.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -124,13 +144,19 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import { clubState, currentClub } from '../store/club'
 
 export default {
   name: 'Roles',
   components: { NcButton, NcTextField, NcSelect, NcSelectUsers, NcCheckboxRadioSwitch },
+  computed: {
+    isAdmin() { return clubState.isAdmin },
+    clubName() { return currentClub.value?.name || '' }
+  },
   data() {
     return {
       roles: [],
+      assignments: [],
       permissionsList: [],
       permissionTemplates: [],
       showForm: false,
@@ -145,7 +171,6 @@ export default {
         // the picked Nextcloud account ({ id, user, displayName, ... }), not a club Member
         selectedUser: null,
         roleId: null,
-        clubId: '',
         // remote Nextcloud-account search results (NcSelectUsersModel[])
         searchResults: [],
         // debounce timer
@@ -156,6 +181,7 @@ export default {
   mounted() {
     this.loadRoles()
     this.loadPermissions()
+    this.loadAssignments()
   },
   methods: {
     async loadRoles() {
@@ -165,6 +191,26 @@ export default {
       } catch (e) {
         console.error('Error loading roles', e)
         showError(extractErrorMessage(e, 'Fehler beim Laden der Rollen'))
+      }
+    },
+    async loadAssignments() {
+      try {
+        const res = await axios.get(generateUrl('/apps/verein/roles/assignments'), { params: { clubId: clubState.currentId } })
+        this.assignments = Array.isArray(res.data) ? res.data : []
+      } catch (e) {
+        console.error('Error loading assignments', e)
+        this.assignments = []
+      }
+    },
+    async removeAssignments(entry) {
+      if (!confirm('Alle Rollen von ' + entry.displayName + ' in diesem Verein entziehen?')) return
+      try {
+        await axios.delete(generateUrl('/apps/verein/roles/users'), { params: { userId: entry.userId, clubId: clubState.currentId } })
+        showSuccess('Rollen entzogen')
+        this.loadAssignments()
+      } catch (e) {
+        console.error('Error removing roles', e)
+        showError(extractErrorMessage(e, 'Fehler beim Entziehen der Rollen'))
       }
     },
     async loadPermissions() {
@@ -251,14 +297,14 @@ export default {
         const payload = {
           userId,
           roleId: this.assign.roleId,
-          clubId: this.assign.clubId ? parseInt(this.assign.clubId) : 0
+          clubId: clubState.currentId
         }
         await axios.post(generateUrl('/apps/verein/roles/users'), payload)
         showSuccess('Rolle zugewiesen')
         // clear selection but keep search results
         this.assign.selectedUser = null
         this.assign.roleId = null
-        this.assign.clubId = ''
+        this.loadAssignments()
       } catch (e) {
         console.error('Error assigning role', e)
         showError(extractErrorMessage(e, 'Fehler beim Zuweisen der Rolle'))
@@ -281,6 +327,7 @@ export default {
 
 <style scoped>
 .roles-page { padding: 20px }
+.hint { color: var(--color-text-maxcontrast); margin-bottom: 12px }
 .controls { margin-bottom: 12px }
 .form-card, .table-card { background: var(--color-main-background); border: 1px solid var(--color-border); padding: 16px; border-radius: 6px; margin-bottom: 16px }
 .form-actions { display:flex; gap:8px }

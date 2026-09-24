@@ -6,6 +6,8 @@ use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Middleware\AuthorizationMiddleware;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCA\Verein\Service\Export\CsvExporter;
@@ -49,7 +51,8 @@ class Application extends App implements IBootstrap {
             return new AuthorizationMiddleware(
                 $container->query(RoleService::class),
                 $container->query(IUserSession::class),
-                $container->query(LoggerInterface::class)
+                $container->query(LoggerInterface::class),
+                $container->query(\OCP\IRequest::class)
             );
         });
 
@@ -66,13 +69,17 @@ class Application extends App implements IBootstrap {
         $context->registerService(MemberService::class, function (IAppContainer $container): MemberService {
             return new MemberService(
                 $container->query(MemberMapper::class),
+                $container->query(MembershipMapper::class),
+                $container->query(FeeMapper::class),
+                $container->query(ClubMapper::class),
                 $container->query(MemberCalendarService::class)
             );
         });
 
         $context->registerService(FeeService::class, function (IAppContainer $container): FeeService {
             return new FeeService(
-                $container->query(FeeMapper::class)
+                $container->query(FeeMapper::class),
+                $container->query(MembershipMapper::class)
             );
         });
 

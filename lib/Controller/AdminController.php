@@ -27,7 +27,7 @@ class AdminController extends Controller {
      * Zeige die Rollen-Admin-Seite
      * @return TemplateResponse
      */
-    #[RequirePermission('verein.role.manage')]
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function roles(): TemplateResponse {
         try {
             $roles = $this->roleMapper->findAll();

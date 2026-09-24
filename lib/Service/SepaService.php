@@ -1,59 +1,63 @@
 <?php
 namespace OCA\Verein\Service;
 
+use OCA\Verein\Db\ClubAccount;
+use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\MemberMapper;
+use OCA\Verein\Db\MembershipMapper;
+use OCP\AppFramework\Db\DoesNotExistException;
 
 /**
  * Service for generating SEPA-XML files for direct debit
  * Based on SEPA pain.008.001.02 format
+ *
+ * Works for one club at a time: the creditor (name, IBAN, BIC, creditor ID)
+ * comes from one of the club's bank accounts, the debtors from the club's
+ * open fees, and each debtor's mandate (reference + signature date) from
+ * their membership in that club.
  */
 class SepaService {
-    private FeeMapper $feeMapper;
-    private MemberMapper $memberMapper;
-
     public function __construct(
-        FeeMapper $feeMapper,
-        MemberMapper $memberMapper
+        private FeeMapper $feeMapper,
+        private MemberMapper $memberMapper,
+        private MembershipMapper $membershipMapper,
+        private ClubMapper $clubMapper,
+        private ClubService $clubService
     ) {
-        $this->feeMapper = $feeMapper;
-        $this->memberMapper = $memberMapper;
     }
 
     /**
-     * Generate SEPA-XML for all open fees
-     * 
-     * @param string $creditorName Name of the creditor (club/association)
-     * @param string $creditorIban IBAN of the creditor
-     * @param string $creditorBic BIC of the creditor
-     * @param string $creditorId SEPA Creditor ID
-     * @return array{xml: string, skippedCount: int} XML plus number of fees left out for lack of IBAN
+     * Generate SEPA-XML for all open fees of a club
+     *
+     * @param int|null $accountId Club bank account to collect on (default account if null)
+     * @return array{xml: string, skippedCount: int} XML plus number of fees left out
+     *   (no IBAN / no signed mandate) - see previewSepaExport() for who and why
      */
-    public function generateSepaXml(
-        string $creditorName,
-        string $creditorIban,
-        string $creditorBic,
-        string $creditorId
-    ): array {
-        $collected = $this->collectFees();
+    public function generateSepaXml(int $clubId, ?int $accountId = null): array {
+        $club = $this->clubMapper->find($clubId);
+        $account = $this->clubService->resolveAccount($clubId, $accountId);
+        if ($account->getCreditorId() === '') {
+            throw new \Exception('Für das Bankkonto ist keine Gläubiger-ID hinterlegt (Reiter "Vereine")');
+        }
+
+        $collected = $this->collectFees($clubId);
 
         if (empty($collected['transactions'])) {
             if (!empty($collected['skipped'])) {
                 $names = implode(', ', array_map(
-                    fn($s) => $s['memberName'],
+                    fn($s) => $s['memberName'] . ' (' . $s['reason'] . ')',
                     $collected['skipped']
                 ));
-                throw new \Exception('Keine Zahlung exportierbar: Bei folgenden Mitgliedern mit offener Zahlung ist keine IBAN hinterlegt: ' . $names);
+                throw new \Exception('Keine Zahlung exportierbar. Nicht berücksichtigt: ' . $names);
             }
             throw new \Exception('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
         }
 
         return [
             'xml' => $this->buildSepaXml(
-                $creditorName,
-                $creditorIban,
-                $creditorBic,
-                $creditorId,
+                $club->getName(),
+                $account,
                 $collected['totalAmount'],
                 $collected['transactions']
             ),
@@ -62,26 +66,65 @@ class SepaService {
     }
 
     /**
-     * Collect all fees that still need to be debited (open and overdue -
-     * overdue is a manually-set status, not an automatic transition, so it
-     * still represents money owed that hasn't been debited yet).
-     *
-     * Members without an IBAN cannot be debited; they are returned in
-     * 'skipped' so callers can tell the user instead of silently dropping them.
+     * Preview SEPA export without generating XML
      */
-    private function collectFees(): array {
+    public function previewSepaExport(int $clubId, ?int $accountId = null): array {
+        $club = $this->clubMapper->find($clubId);
+        $account = $this->clubService->resolveAccount($clubId, $accountId);
+        $collected = $this->collectFees($clubId);
+
+        return [
+            'creditorName' => $club->getName(),
+            'creditorIban' => $account->getIban(),
+            'creditorBic' => $account->getBic(),
+            'creditorId' => $account->getCreditorId(),
+            'totalAmount' => $collected['totalAmount'],
+            'transactionCount' => count($collected['transactions']),
+            'transactions' => $collected['transactions'],
+            'skipped' => $collected['skipped']
+        ];
+    }
+
+    /**
+     * Collect all fees of the club that still need to be debited (open and
+     * overdue - overdue is a manually-set status, not an automatic
+     * transition, so it still represents money owed that hasn't been
+     * debited yet).
+     *
+     * A fee can only be debited if the member has an IBAN and a signed
+     * mandate (signature date on their membership). The others are returned
+     * in 'skipped' with the reason, so callers can tell the user instead of
+     * silently dropping them.
+     *
+     * @return array{transactions: array, skipped: array, totalAmount: float}
+     */
+    private function collectFees(int $clubId): array {
         $totalAmount = 0;
         $transactions = [];
         $skipped = [];
 
-        foreach ($this->feeMapper->findByStatuses(['open', 'overdue']) as $fee) {
+        foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
             $member = $this->memberMapper->find($fee->getMemberId());
 
+            try {
+                $membership = $this->membershipMapper->findByMemberAndClub($fee->getMemberId(), $clubId);
+            } catch (DoesNotExistException $e) {
+                $membership = null;
+            }
+
+            $reason = null;
             if (empty($member->getIban())) {
+                $reason = 'keine IBAN hinterlegt';
+            } elseif ($membership === null || empty($membership->getMandateDate())) {
+                $reason = 'kein unterschriebenes SEPA-Mandat erfasst';
+            }
+
+            if ($reason !== null) {
                 $skipped[] = [
                     'memberName' => $member->getFullName(),
                     'amount' => $fee->getAmount(),
-                    'dueDate' => $fee->getDueDate()
+                    'dueDate' => $fee->getDueDate(),
+                    'reason' => $reason
                 ];
                 continue;
             }
@@ -94,7 +137,9 @@ class SepaService {
                 'bic' => $member->getBic(),
                 'amount' => $fee->getAmount(),
                 'dueDate' => $fee->getDueDate(),
-                'reference' => 'Mitgliedsbeitrag ' . date('Y'),
+                'mandateReference' => $membership->getEffectiveMandateReference(),
+                'mandateDate' => $membership->getMandateDate(),
+                'reference' => $this->paymentReference($fee->getDescription(), $fee->getDueDate()),
                 'feeId' => $fee->getId()
             ];
         }
@@ -102,25 +147,32 @@ class SepaService {
         return ['transactions' => $transactions, 'skipped' => $skipped, 'totalAmount' => $totalAmount];
     }
 
-    /**
-     * Preview SEPA export without generating XML
-     */
-    public function previewSepaExport(
-        string $creditorName,
-        string $creditorIban,
-        string $creditorBic,
-        string $creditorId
-    ): array {
-        $collected = $this->collectFees();
+    private function paymentReference(?string $description, string $dueDate): string {
+        $description = trim((string)$description);
+        if ($description !== '') {
+            return $description;
+        }
+        $year = substr($dueDate, 0, 4);
+        return 'Mitgliedsbeitrag ' . (ctype_digit($year) ? $year : date('Y'));
+    }
 
-        return [
-            'creditorName' => $creditorName,
-            'creditorIban' => $creditorIban,
-            'totalAmount' => $collected['totalAmount'],
-            'transactionCount' => count($collected['transactions']),
-            'transactions' => $collected['transactions'],
-            'skipped' => $collected['skipped']
-        ];
+    /**
+     * BIC element, or the SEPA-conformant "not provided" marker: within the
+     * SEPA area the BIC is optional (IBAN-only).
+     */
+    private function agentXml(string $bic): string {
+        $bic = trim($bic);
+        if ($bic === '') {
+            return '<FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId>';
+        }
+        return '<FinInstnId><BIC>' . htmlspecialchars($bic) . '</BIC></FinInstnId>';
+    }
+
+    /**
+     * SEPA restricts names/reference to 70 / 140 characters
+     */
+    private function text(string $value, int $max = 70): string {
+        return htmlspecialchars(mb_substr($value, 0, $max), ENT_XML1);
     }
 
     /**
@@ -128,29 +180,27 @@ class SepaService {
      */
     private function buildSepaXml(
         string $creditorName,
-        string $creditorIban,
-        string $creditorBic,
-        string $creditorId,
+        ClubAccount $account,
         float $totalAmount,
         array $transactions
     ): string {
         $msgId = 'VEREIN-' . date('YmdHis');
         $creationDateTime = date('Y-m-d\TH:i:s');
         $collectionDate = date('Y-m-d', strtotime('+5 days'));
-        
+
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . "\n";
         $xml .= '  <CstmrDrctDbtInitn>' . "\n";
-        
+
         // Group Header
         $xml .= '    <GrpHdr>' . "\n";
         $xml .= '      <MsgId>' . htmlspecialchars($msgId) . '</MsgId>' . "\n";
         $xml .= '      <CreDtTm>' . $creationDateTime . '</CreDtTm>' . "\n";
         $xml .= '      <NbOfTxs>' . count($transactions) . '</NbOfTxs>' . "\n";
         $xml .= '      <CtrlSum>' . number_format($totalAmount, 2, '.', '') . '</CtrlSum>' . "\n";
-        $xml .= '      <InitgPty><Nm>' . htmlspecialchars($creditorName) . '</Nm></InitgPty>' . "\n";
+        $xml .= '      <InitgPty><Nm>' . $this->text($creditorName) . '</Nm></InitgPty>' . "\n";
         $xml .= '    </GrpHdr>' . "\n";
-        
+
         // Payment Information
         $xml .= '    <PmtInf>' . "\n";
         $xml .= '      <PmtInfId>' . htmlspecialchars($msgId) . '-1</PmtInfId>' . "\n";
@@ -158,32 +208,33 @@ class SepaService {
         $xml .= '      <BtchBookg>true</BtchBookg>' . "\n";
         $xml .= '      <NbOfTxs>' . count($transactions) . '</NbOfTxs>' . "\n";
         $xml .= '      <CtrlSum>' . number_format($totalAmount, 2, '.', '') . '</CtrlSum>' . "\n";
+        // RCUR for all: since the SEPA Core rulebook 2016 the FRST marker is optional
         $xml .= '      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl><LclInstrm><Cd>CORE</Cd></LclInstrm><SeqTp>RCUR</SeqTp></PmtTpInf>' . "\n";
         $xml .= '      <ReqdColltnDt>' . $collectionDate . '</ReqdColltnDt>' . "\n";
-        
+
         // Creditor
-        $xml .= '      <Cdtr><Nm>' . htmlspecialchars($creditorName) . '</Nm></Cdtr>' . "\n";
-        $xml .= '      <CdtrAcct><Id><IBAN>' . $creditorIban . '</IBAN></Id></CdtrAcct>' . "\n";
-        $xml .= '      <CdtrAgt><FinInstnId><BIC>' . $creditorBic . '</BIC></FinInstnId></CdtrAgt>' . "\n";
-        $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . $creditorId . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
-        
+        $xml .= '      <Cdtr><Nm>' . $this->text($creditorName) . '</Nm></Cdtr>' . "\n";
+        $xml .= '      <CdtrAcct><Id><IBAN>' . htmlspecialchars($account->getIban()) . '</IBAN></Id></CdtrAcct>' . "\n";
+        $xml .= '      <CdtrAgt>' . $this->agentXml($account->getBic()) . '</CdtrAgt>' . "\n";
+        $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . htmlspecialchars($account->getCreditorId()) . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
+
         // Transactions
-        foreach ($transactions as $idx => $txn) {
+        foreach ($transactions as $txn) {
             $xml .= '      <DrctDbtTxInf>' . "\n";
             $xml .= '        <PmtId><EndToEndId>FEE-' . $txn['feeId'] . '</EndToEndId></PmtId>' . "\n";
             $xml .= '        <InstdAmt Ccy="EUR">' . number_format($txn['amount'], 2, '.', '') . '</InstdAmt>' . "\n";
-            $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>MAND-' . $txn['feeId'] . '</MndtId><DtOfSgntr>2024-01-01</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
-            $xml .= '        <DbtrAgt><FinInstnId><BIC>' . $txn['bic'] . '</BIC></FinInstnId></DbtrAgt>' . "\n";
-            $xml .= '        <Dbtr><Nm>' . htmlspecialchars($txn['name']) . '</Nm></Dbtr>' . "\n";
-            $xml .= '        <DbtrAcct><Id><IBAN>' . $txn['iban'] . '</IBAN></Id></DbtrAcct>' . "\n";
-            $xml .= '        <RmtInf><Ustrd>' . htmlspecialchars($txn['reference']) . '</Ustrd></RmtInf>' . "\n";
+            $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>' . htmlspecialchars($txn['mandateReference']) . '</MndtId><DtOfSgntr>' . htmlspecialchars($txn['mandateDate']) . '</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
+            $xml .= '        <DbtrAgt>' . $this->agentXml((string)$txn['bic']) . '</DbtrAgt>' . "\n";
+            $xml .= '        <Dbtr><Nm>' . $this->text($txn['name']) . '</Nm></Dbtr>' . "\n";
+            $xml .= '        <DbtrAcct><Id><IBAN>' . htmlspecialchars(str_replace(' ', '', (string)$txn['iban'])) . '</IBAN></Id></DbtrAcct>' . "\n";
+            $xml .= '        <RmtInf><Ustrd>' . $this->text($txn['reference'], 140) . '</Ustrd></RmtInf>' . "\n";
             $xml .= '      </DrctDbtTxInf>' . "\n";
         }
-        
+
         $xml .= '    </PmtInf>' . "\n";
         $xml .= '  </CstmrDrctDbtInitn>' . "\n";
         $xml .= '</Document>';
-        
+
         return $xml;
     }
 }

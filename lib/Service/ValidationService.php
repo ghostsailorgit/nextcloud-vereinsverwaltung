@@ -65,6 +65,11 @@ class ValidationService {
 
         $joinDateObj = $this->validateOptionalDate($joinDate, 'Eintrittsdatum', $errors);
         $leaveDateObj = $this->validateOptionalDate($leaveDate, 'Austrittsdatum', $errors);
+        $this->validateOptionalDate($data['mandateDate'] ?? null, 'Unterschriftsdatum des Mandats', $errors);
+        $mandateRef = (string)($data['mandateReference'] ?? '');
+        if ($mandateRef !== '' && !preg_match('/^[A-Za-z0-9+?\/\-:().,\' ]{1,35}$/', $mandateRef)) {
+            $errors[] = 'Mandatsreferenz darf nur Buchstaben, Ziffern und einfache Sonderzeichen enthalten (max. 35 Zeichen)';
+        }
         if ($joinDateObj !== null && $leaveDateObj !== null && $leaveDateObj < $joinDateObj) {
             $errors[] = 'Austrittsdatum darf nicht vor dem Eintrittsdatum liegen';
         }
@@ -158,7 +163,7 @@ class ValidationService {
      * @param string $iban
      * @return bool
      */
-    private function validateIBAN(string $iban): bool {
+    public function validateIBAN(string $iban): bool {
         // Leerzeichen entfernen und zu Großbuchstaben
         $iban = str_replace(' ', '', strtoupper($iban));
 
@@ -206,6 +211,14 @@ class ValidationService {
     }
 
     /**
+     * Validates a SEPA creditor identifier (Gläubiger-ID), e.g. DE98ZZZ09999999999.
+     */
+    public function validateCreditorId(string $creditorId): bool {
+        $creditorId = str_replace(' ', '', $creditorId);
+        return (bool)preg_match('/^[A-Z]{2}\d{2}[A-Z0-9]{3}[A-Za-z0-9+?\/\-:().,\']{1,28}$/', $creditorId);
+    }
+
+    /**
      * Validiert den Status einer Gebühr
      *
      * @param string $status
@@ -223,7 +236,7 @@ class ValidationService {
      * @return bool
      */
     public function validateRole(string $role): bool {
-    $validRoles = ['member', 'treasurer', 'admin'];
+        $validRoles = ['member', 'treasurer', 'admin'];
         return in_array($role, $validRoles, true);
     }
 }

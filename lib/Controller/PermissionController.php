@@ -23,7 +23,7 @@ class PermissionController extends ApiController {
      * @NoAdminRequired
      * @NoCSRFRequired
      */
-    #[RequirePermission('verein.role.manage')]
+    #[RequirePermission('verein.role.manage', clubScoped: false)]
     public function index(): DataResponse {
         return new DataResponse([
             'permissions' => $this->roleService->getAvailablePermissions(),

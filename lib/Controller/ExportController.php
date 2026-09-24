@@ -2,6 +2,7 @@
 
 namespace OCA\Verein\Controller;
 
+use OCA\Verein\Attributes\RequirePermission;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDownloadResponse;
@@ -48,10 +49,11 @@ class ExportController extends Controller {
      * @NoAdminRequired
      * @return DataDownloadResponse
      */
-    public function exportMembersAsCsv(): DataDownloadResponse {
+    #[RequirePermission('verein.member.view')]
+    public function exportMembersAsCsv(int $clubId): DataDownloadResponse {
         try {
             // Get all members
-            $members = $this->memberService->findAll();
+            $members = $this->memberService->findAll($clubId);
 
             // Format and export (works with empty array too)
             $formatted = $this->csvExporter->formatMembers($members);
@@ -87,10 +89,11 @@ class ExportController extends Controller {
      * @NoAdminRequired
      * @return DataDownloadResponse
      */
-    public function exportMembersAsPdf(): DataDownloadResponse {
+    #[RequirePermission('verein.member.view')]
+    public function exportMembersAsPdf(int $clubId): DataDownloadResponse {
         try {
             // Get all members
-            $members = $this->memberService->findAll();
+            $members = $this->memberService->findAll($clubId);
 
             // Export to PDF
             $result = $this->pdfExporter->exportMembers($members);
@@ -125,10 +128,11 @@ class ExportController extends Controller {
      * @NoAdminRequired
      * @return DataDownloadResponse
      */
-    public function exportFeesAsCsv(): DataDownloadResponse {
+    #[RequirePermission('verein.finance.read')]
+    public function exportFeesAsCsv(int $clubId): DataDownloadResponse {
         try {
             // Get all fees
-            $fees = $this->feeService->findAll();
+            $fees = $this->feeService->findAll($clubId);
 
             // Format and export (works with empty array too)
             $formatted = $this->csvExporter->formatFees($fees);
@@ -164,10 +168,11 @@ class ExportController extends Controller {
      * @NoAdminRequired
      * @return DataDownloadResponse
      */
-    public function exportFeesAsPdf(): DataDownloadResponse {
+    #[RequirePermission('verein.finance.read')]
+    public function exportFeesAsPdf(int $clubId): DataDownloadResponse {
         try {
             // Get all fees
-            $fees = $this->feeService->findAll();
+            $fees = $this->feeService->findAll($clubId);
 
             // Export to PDF
             $result = $this->pdfExporter->exportFees($fees);

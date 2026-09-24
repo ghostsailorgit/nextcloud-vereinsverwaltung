@@ -6,6 +6,8 @@ namespace OCA\Verein\Service;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCA\DAV\CalDAV\Sharing\Service as CalendarSharingService;
 use OCA\DAV\DAV\Sharing\Backend as SharingBackend;
+use OCA\Verein\Db\Club;
+use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Member;
 use OCP\IConfig;
 use OCP\IGroupManager;
@@ -16,19 +18,19 @@ use Throwable;
 
 /**
  * Creates/removes yearly-recurring "birthday" and "membership anniversary"
- * calendar reminders for members, via a dedicated, always-on "Vereinstermine"
- * calendar - no admin configuration needed. The calendar technically has to
+ * calendar reminders for members, via one dedicated "Vereinstermine" calendar
+ * per club - no admin configuration needed. The calendar technically has to
  * belong to some real Nextcloud user principal, so the first account in the
  * "admin" group is picked automatically the first time it's needed and
  * cached in app config; nobody has to enter a username anywhere.
  *
- * The calendar is shared read-only with this deployment's club groups (see
- * SHARE_GROUPS) via Nextcloud's normal internal CalDAV group sharing -
- * exactly what the Calendar app's own "share with group" feature does, the
- * same way any logged-in club member would see any other shared calendar:
- * it shows up under "Weitere Kalender" for them to enable. Deliberately NOT
- * a public/unauthenticated link - only real Nextcloud accounts in those
- * groups can ever see it.
+ * Each club's calendar is shared read-only with the Nextcloud groups
+ * configured for that club (Club::getCalendarGroupsArray()) via Nextcloud's
+ * normal internal CalDAV group sharing - exactly what the Calendar app's own
+ * "share with group" feature does, the same way any logged-in club member
+ * would see any other shared calendar: it shows up under "Weitere Kalender"
+ * for them to enable. Deliberately NOT a public/unauthenticated link - only
+ * real Nextcloud accounts in those groups can ever see it.
  *
  * Uses OCA\DAV\CalDAV\CalDavBackend directly (the same internal API apps
  * like Tasks/Deck use) because the public OCP\Calendar API only supports
@@ -39,39 +41,27 @@ use Throwable;
  * hiccup never blocks saving a member.
  */
 class MemberCalendarService {
-    private const CALENDAR_URI = 'vereinstermine';
     private const CALENDAR_DISPLAY_NAME = 'Vereinstermine';
-
-    /**
-     * The Nextcloud groups that get read access to the calendar - every
-     * tier of this specific club's existing group structure (see
-     * the groupfolders setup), i.e.
-     * every member with a Nextcloud account. Groups that don't exist (yet)
-     * are silently skipped.
-     */
-    private const SHARE_GROUPS = [
-        'exec-board-read', 'exec-board-write',
-        'board-read', 'board-write',
-        'members-read', 'members-write',
-    ];
 
     public function __construct(
         private IConfig $config,
         private string $appName,
         private LoggerInterface $logger,
         private IGroupManager $groupManager,
-        private IUserManager $userManager
+        private IUserManager $userManager,
+        private ClubMapper $clubMapper
     ) {
     }
 
     /**
-     * Creates/updates the birthday + join-anniversary reminders for an
-     * active member, or removes both once the member is former (left or
-     * deceased).
+     * Creates/updates the birthday + join-anniversary reminders for a member
+     * in the given club (the member must carry that club's membership - see
+     * MemberMapper::findInClub()), or removes both once the member is
+     * former (left or deceased).
      */
-    public function syncMember(Member $member): void {
+    public function syncMember(Club $club, Member $member): void {
         try {
-            $calendarId = $this->getOrCreateCalendarId();
+            $calendarId = $this->getOrCreateCalendarId($club);
             if ($calendarId === null) {
                 return;
             }
@@ -100,17 +90,19 @@ class MemberCalendarService {
         } catch (Throwable $e) {
             $this->logger->warning('Verein: Kalender-Sync für Mitglied fehlgeschlagen', [
                 'memberId' => $member->getId(),
+                'clubId' => $club->getId(),
                 'exception' => $e,
             ]);
         }
     }
 
     /**
-     * Removes both reminders, e.g. when a member is deleted outright.
+     * Removes both reminders from the club calendar, e.g. when a member is
+     * removed from the club.
      */
-    public function removeMember(Member $member): void {
+    public function removeMember(Club $club, Member $member): void {
         try {
-            $calendarId = $this->getOrCreateCalendarId(false);
+            $calendarId = $this->getOrCreateCalendarId($club, false);
             if ($calendarId === null) {
                 return;
             }
@@ -120,6 +112,39 @@ class MemberCalendarService {
         } catch (Throwable $e) {
             $this->logger->warning('Verein: Kalender-Erinnerungen für Mitglied konnten nicht entfernt werden', [
                 'memberId' => $member->getId(),
+                'clubId' => $club->getId(),
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /**
+     * Brings the club calendar's name and group shares in line with the
+     * club's current settings (called after a club is created or edited).
+     */
+    public function syncClubCalendar(Club $club): void {
+        try {
+            $this->getOrCreateCalendarId($club);
+        } catch (Throwable $e) {
+            $this->logger->warning('Verein: Vereinskalender konnte nicht aktualisiert werden', [
+                'clubId' => $club->getId(),
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /**
+     * Deletes the club calendar (when the club itself is deleted).
+     */
+    public function deleteClubCalendar(Club $club): void {
+        try {
+            $calendarId = $this->getOrCreateCalendarId($club, false);
+            if ($calendarId !== null) {
+                $this->getBackend()->deleteCalendar($calendarId, true);
+            }
+        } catch (Throwable $e) {
+            $this->logger->warning('Verein: Vereinskalender konnte nicht gelöscht werden', [
+                'clubId' => $club->getId(),
                 'exception' => $e,
             ]);
         }
@@ -130,12 +155,12 @@ class MemberCalendarService {
     }
 
     /**
-     * The Nextcloud account that technically owns the "Vereinstermine"
-     * calendar. Auto-picked once (first account in the "admin" group) and
-     * cached in app config - never asked of anyone. Re-validated on every
-     * call (userExists() is a cheap lookup) rather than trusted blindly:
-     * if that account is later deleted, a stale cached UID would silently
-     * orphan the calendar under a principal nobody can reach anymore.
+     * The Nextcloud account that technically owns the club calendars.
+     * Auto-picked once (first account in the "admin" group) and cached in
+     * app config - never asked of anyone. Re-validated on every call
+     * (userExists() is a cheap lookup) rather than trusted blindly: if that
+     * account is later deleted, a stale cached UID would silently orphan the
+     * calendars under a principal nobody can reach anymore.
      */
     private function resolveOwnerUid(): ?string {
         $cached = trim($this->config->getAppValue($this->appName, 'calendar_owner_user', ''));
@@ -155,11 +180,29 @@ class MemberCalendarService {
     }
 
     /**
-     * @param bool $create Whether to create the calendar if it's missing.
+     * The club's calendar URI: the one stored on the club, or - assigned and
+     * stored on first use - a URI unique to the club.
+     */
+    private function calendarUri(Club $club): string {
+        $uri = trim((string)$club->getCalendarUri());
+        if ($uri === '') {
+            $uri = 'vereinstermine-' . $club->getId();
+            $club->setCalendarUri($uri);
+            $this->clubMapper->update($club);
+        }
+        return $uri;
+    }
+
+    private function displayName(Club $club): string {
+        return self::CALENDAR_DISPLAY_NAME . ' ' . $club->getName();
+    }
+
+    /**
+     * @param bool $create Whether to create the calendar if it is missing.
      *   False when just removing an object - no point creating a calendar
      *   only to leave it empty.
      */
-    private function getOrCreateCalendarId(bool $create = true): ?int {
+    private function getOrCreateCalendarId(Club $club, bool $create = true): ?int {
         $owner = $this->resolveOwnerUid();
         if ($owner === null) {
             return null;
@@ -167,11 +210,15 @@ class MemberCalendarService {
 
         $backend = $this->getBackend();
         $principal = 'principals/users/' . $owner;
+        $uri = $this->calendarUri($club);
 
-        $existing = $backend->getCalendarByUri($principal, self::CALENDAR_URI);
+        $existing = $backend->getCalendarByUri($principal, $uri);
         if ($existing !== null) {
             $calendarId = (int)$existing['id'];
-            $this->ensureGroupShares($calendarId);
+            if ($create) {
+                $this->ensureDisplayName($backend, $calendarId, $existing, $club);
+                $this->ensureGroupShares($calendarId, $club);
+            }
             return $calendarId;
         }
 
@@ -179,34 +226,52 @@ class MemberCalendarService {
             return null;
         }
 
-        $calendarId = $backend->createCalendar($principal, self::CALENDAR_URI, [
-            '{DAV:}displayname' => self::CALENDAR_DISPLAY_NAME,
+        $calendarId = $backend->createCalendar($principal, $uri, [
+            '{DAV:}displayname' => $this->displayName($club),
         ]);
-        $this->ensureGroupShares($calendarId);
+        $this->ensureGroupShares($calendarId, $club);
         return $calendarId;
     }
 
+    private function ensureDisplayName(CalDavBackend $backend, int $calendarId, array $calendar, Club $club): void {
+        $wanted = $this->displayName($club);
+        if (($calendar['{DAV:}displayname'] ?? null) === $wanted) {
+            return;
+        }
+        $patch = new \Sabre\DAV\PropPatch(['{DAV:}displayname' => $wanted]);
+        $backend->updateCalendar($calendarId, $patch);
+        $patch->commit();
+    }
+
     /**
-     * Shares the calendar read-only with every SHARE_GROUPS group that
-     * exists, skipping ones already shared. Cheap no-op once all groups
-     * are shared; self-heals if a group is created later.
+     * Makes the calendar's group shares match the club's configured groups:
+     * shares read-only with every configured group that exists and removes
+     * shares with groups that are no longer configured (so taking a group
+     * off the list really withdraws its access). Cheap no-op once in sync.
      */
-    private function ensureGroupShares(int $calendarId): void {
+    private function ensureGroupShares(int $calendarId, Club $club): void {
         $sharingService = Server::get(CalendarSharingService::class);
         $existing = array_map(
             static fn (array $share) => $share['{http://owncloud.org/ns}principal'] ?? null,
             $sharingService->getShares($calendarId)
         );
 
-        foreach (self::SHARE_GROUPS as $gid) {
-            if (!$this->groupManager->groupExists($gid)) {
-                continue;
+        $wanted = [];
+        foreach ($club->getCalendarGroupsArray() as $gid) {
+            if ($this->groupManager->groupExists($gid)) {
+                $wanted[] = 'principals/groups/' . $gid;
             }
-            $principal = 'principals/groups/' . $gid;
-            if (in_array($principal, $existing, true)) {
-                continue;
+        }
+
+        foreach ($wanted as $principal) {
+            if (!in_array($principal, $existing, true)) {
+                $sharingService->shareWith($calendarId, $principal, SharingBackend::ACCESS_READ);
             }
-            $sharingService->shareWith($calendarId, $principal, SharingBackend::ACCESS_READ);
+        }
+        foreach ($existing as $principal) {
+            if (is_string($principal) && str_starts_with($principal, 'principals/groups/') && !in_array($principal, $wanted, true)) {
+                $sharingService->deleteShare($calendarId, $principal);
+            }
         }
     }
 

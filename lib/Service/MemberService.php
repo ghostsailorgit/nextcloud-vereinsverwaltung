@@ -2,76 +2,197 @@
 namespace OCA\Verein\Service;
 
 use Exception;
+use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
+use OCA\Verein\Db\Membership;
+use OCA\Verein\Db\MembershipMapper;
+use OCP\AppFramework\Db\DoesNotExistException;
 
+/**
+ * Members are plain persons (MemberMapper); what ties one to a club -
+ * join/leave date, role, founding member, SEPA mandate - is a Membership.
+ * Every operation here works in the context of one club: a person is only
+ * visible/editable through a club they belong to.
+ */
 class MemberService {
-    private MemberMapper $mapper;
-    private ?MemberCalendarService $calendarService;
-
-    public function __construct(MemberMapper $mapper, ?MemberCalendarService $calendarService = null) {
-        $this->mapper = $mapper;
-        $this->calendarService = $calendarService;
+    public function __construct(
+        private MemberMapper $mapper,
+        private MembershipMapper $membershipMapper,
+        private FeeMapper $feeMapper,
+        private ClubMapper $clubMapper,
+        private ?MemberCalendarService $calendarService = null
+    ) {
     }
 
-    public function findAll(): array {
-        return $this->mapper->findAll();
+    /** @return Member[] members of the club, each with their membership */
+    public function findAll(int $clubId): array {
+        return $this->mapper->findByClub($clubId);
     }
 
     /**
-     * Search members by query (name, first name, email, or exact member
-     * id), remote-friendly for autocomplete.
-     *
-     * @param string $query
-     * @param int $limit
-     * @return array
+     * Search members of a club by query (name, first name, email, or exact
+     * member id), remote-friendly for autocomplete.
      */
-    public function search(string $query, int $limit = 50): array {
+    public function search(int $clubId, string $query, int $limit = 50): array {
         if (trim($query) === '') {
             return [];
         }
-        return $this->mapper->search($query, $limit);
+        return $this->mapper->searchInClub($query, $clubId, $limit);
     }
 
-    public function find(int $id): Member {
+    /**
+     * @throws Exception if the person is not a member of the club
+     */
+    public function find(int $clubId, int $id): Member {
         try {
-            return $this->mapper->find($id);
-        } catch (Exception $e) {
+            return $this->mapper->findInClub($id, $clubId);
+        } catch (DoesNotExistException $e) {
             throw new Exception('Member not found');
         }
     }
 
     /**
-     * @param array $data Accepted keys: name, firstName, salutation,
-     *   address, street, postalCode, city, email, iban, bic, role,
-     *   birthDate, joinDate, leaveDate, foundingMember, deceased
+     * Persons from other clubs that could be added to this one - restricted
+     * to the clubs the caller may look into (see MemberController::lookup()).
+     *
+     * @param int[] $visibleClubIds
+     * @return Member[]
      */
-    public function create(array $data): Member {
+    public function lookupInOtherClubs(int $clubId, string $query, array $visibleClubIds): array {
+        if (trim($query) === '') {
+            return [];
+        }
+        $visibleClubIds = array_values(array_diff($visibleClubIds, [$clubId]));
+        return $this->mapper->searchInOtherClubs($query, $visibleClubIds, $clubId);
+    }
+
+    /**
+     * Whether the person belongs to at least one of the given clubs.
+     *
+     * @param int[] $clubIds
+     */
+    public function isMemberOfAny(int $memberId, array $clubIds): bool {
+        foreach ($this->membershipMapper->findByMember($memberId) as $membership) {
+            if (in_array($membership->getClubId(), $clubIds, true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Creates a new person and their membership in the club.
+     *
+     * @param array $data Person keys: name, firstName, salutation, address,
+     *   street, postalCode, city, email, iban, bic, birthDate, deceased.
+     *   Membership keys: role, joinDate, leaveDate, foundingMember,
+     *   mandateReference, mandateDate, mandateFile
+     */
+    public function create(int $clubId, array $data): Member {
+        $this->clubMapper->find($clubId);
         $member = new Member();
-        $this->applyData($member, $data);
+        $this->applyPersonData($member, $data);
         $member->setCreatedAt(date('Y-m-d H:i:s'));
         $member->setUpdatedAt(date('Y-m-d H:i:s'));
         $member = $this->mapper->insert($member);
-        $this->calendarService?->syncMember($member);
+
+        $membership = new Membership();
+        $membership->setMemberId($member->getId());
+        $membership->setClubId($clubId);
+        $this->applyMembershipData($membership, $data);
+        $membership->setCreatedAt(date('Y-m-d H:i:s'));
+        $membership->setUpdatedAt(date('Y-m-d H:i:s'));
+        $member->setMembership($this->membershipMapper->insert($membership));
+
+        $this->syncCalendar($clubId, $member);
         return $member;
     }
 
-    public function update(int $id, array $data): Member {
-        $member = $this->mapper->find($id);
-        $this->applyData($member, $data);
+    /**
+     * Adds an existing person to this club (membership only - the personal
+     * data is shared and stays as it is).
+     *
+     * @throws Exception if the person is already a member
+     */
+    public function attachExisting(int $clubId, int $memberId, array $data): Member {
+        $this->clubMapper->find($clubId);
+        $member = $this->mapper->find($memberId);
+
+        try {
+            $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
+            throw new Exception('Die Person ist bereits Mitglied in diesem Verein');
+        } catch (DoesNotExistException $e) {
+            // expected
+        }
+
+        $membership = new Membership();
+        $membership->setMemberId($memberId);
+        $membership->setClubId($clubId);
+        $this->applyMembershipData($membership, $data);
+        $membership->setCreatedAt(date('Y-m-d H:i:s'));
+        $membership->setUpdatedAt(date('Y-m-d H:i:s'));
+        $member->setMembership($this->membershipMapper->insert($membership));
+
+        $this->syncCalendar($clubId, $member);
+        return $member;
+    }
+
+    public function update(int $clubId, int $id, array $data): Member {
+        $member = $this->find($clubId, $id);
+
+        $this->applyPersonData($member, $data);
         $member->setUpdatedAt(date('Y-m-d H:i:s'));
         $member = $this->mapper->update($member);
-        $this->calendarService?->syncMember($member);
+
+        $membership = $this->membershipMapper->findByMemberAndClub($id, $clubId);
+        $this->applyMembershipData($membership, $data);
+        $membership->setUpdatedAt(date('Y-m-d H:i:s'));
+        $member->setMembership($this->membershipMapper->update($membership));
+
+        // The person's name/birth date show up in the calendars of every
+        // club they belong to
+        foreach ($this->membershipMapper->findByMember($id) as $other) {
+            if ($other->getClubId() === $clubId) {
+                $this->syncCalendar($clubId, $member);
+                continue;
+            }
+            $inOther = clone $member;
+            $inOther->setMembership($other);
+            $this->syncCalendar($other->getClubId(), $inOther);
+        }
+
         return $member;
     }
 
-    public function delete(int $id): Member {
-        $member = $this->mapper->find($id);
-        $this->calendarService?->removeMember($member);
-        return $this->mapper->delete($member);
+    /**
+     * Removes the person from the club: their membership and this club's
+     * fees for them. The person record itself is deleted only when no other
+     * club still has them as a member.
+     */
+    public function remove(int $clubId, int $id): void {
+        $member = $this->find($clubId, $id);
+
+        $club = $this->clubMapper->find($clubId);
+        $this->calendarService?->removeMember($club, $member);
+
+        $this->feeMapper->deleteByMemberInClub($id, $clubId);
+        $this->membershipMapper->delete($member->getMembership());
+
+        if ($this->membershipMapper->findByMember($id) === []) {
+            $this->mapper->delete($member);
+        }
     }
 
-    private function applyData(Member $member, array $data): void {
+    private function syncCalendar(int $clubId, Member $member): void {
+        if ($this->calendarService === null) {
+            return;
+        }
+        $this->calendarService->syncMember($this->clubMapper->find($clubId), $member);
+    }
+
+    private function applyPersonData(Member $member, array $data): void {
         $member->setName((string)($data['name'] ?? ''));
         $member->setFirstName($this->nullIfEmpty($data['firstName'] ?? null));
         $member->setSalutation($this->nullIfEmpty($data['salutation'] ?? null));
@@ -82,12 +203,18 @@ class MemberService {
         $member->setEmail((string)($data['email'] ?? ''));
         $member->setIban($this->nullIfEmpty($data['iban'] ?? null));
         $member->setBic($this->nullIfEmpty($data['bic'] ?? null));
-        $member->setRole((string)($data['role'] ?? 'member'));
         $member->setBirthDate($this->nullIfEmpty($data['birthDate'] ?? null));
-        $member->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
-        $member->setLeaveDate($this->nullIfEmpty($data['leaveDate'] ?? null));
-        $member->setFoundingMember($this->toBool($data['foundingMember'] ?? false));
         $member->setDeceased($this->toBool($data['deceased'] ?? false));
+    }
+
+    private function applyMembershipData(Membership $membership, array $data): void {
+        $membership->setRole((string)($data['role'] ?? 'member'));
+        $membership->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
+        $membership->setLeaveDate($this->nullIfEmpty($data['leaveDate'] ?? null));
+        $membership->setFoundingMember($this->toBool($data['foundingMember'] ?? false));
+        $membership->setMandateReference($this->nullIfEmpty($data['mandateReference'] ?? null));
+        $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
+        $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));
     }
 
     private function nullIfEmpty(mixed $value): ?string {

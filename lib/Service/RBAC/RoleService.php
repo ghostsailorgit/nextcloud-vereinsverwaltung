@@ -155,6 +155,7 @@ class RoleService {
         'verein.finance.export',
         'verein.role.manage',
         'verein.sepa.export',
+        'verein.club.manage',
     ];
 
     private const ENFORCED_PERMISSION_DESCRIPTIONS = [
@@ -166,6 +167,7 @@ class RoleService {
         'verein.finance.export' => 'Finanzdaten exportieren',
         'verein.role.manage' => 'Rollen und Berechtigungen verwalten',
         'verein.sepa.export' => 'SEPA-Export erstellen',
+        'verein.club.manage' => 'Vereinsdaten, Bankkonten und Kalender verwalten',
     ];
 
     private IUserSession $userSession;
@@ -192,13 +194,19 @@ class RoleService {
      * Checks whether a user holds a role granting the given permission.
      * Nextcloud admins always pass, since they administer the whole instance
      * anyway; everyone else needs an explicit Role assignment (see assignRole()).
+     * Role assignments are per club: with a $clubId only assignments for that
+     * club count, with null the permission may be held in any club.
      */
-    public function userHasPermission(string $userId, string $permission): bool {
+    public function userHasPermission(string $userId, string $permission, ?int $clubId = null): bool {
         if ($this->groupManager->isAdmin($userId)) {
             return true;
         }
 
-        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
+        $userRoles = $clubId === null
+            ? $this->userRoleMapper->findByUserId($userId)
+            : $this->userRoleMapper->findByUserAndClub($userId, $clubId);
+
+        foreach ($userRoles as $userRole) {
             try {
                 $role = $this->roleMapper->find($userRole->getRoleId());
             } catch (DoesNotExistException $e) {
@@ -212,6 +220,81 @@ class RoleService {
         return false;
     }
 
+    /**
+     * The clubs in which the user holds the permission, or null if that is
+     * every club (Nextcloud admins).
+     *
+     * @return int[]|null
+     */
+    public function getClubIdsWithPermission(string $userId, string $permission): ?array {
+        if ($this->groupManager->isAdmin($userId)) {
+            return null;
+        }
+
+        $clubIds = [];
+        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
+            $clubId = (int)$userRole->getClubId();
+            if (isset($clubIds[$clubId])) {
+                continue;
+            }
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            if (in_array($permission, $role->getPermissionsArray(), true)) {
+                $clubIds[$clubId] = $clubId;
+            }
+        }
+
+        return array_values($clubIds);
+    }
+
+    /**
+     * Every club the user has any role in, or null for Nextcloud admins
+     * (all clubs).
+     *
+     * @return int[]|null
+     */
+    public function getAccessibleClubIds(string $userId): ?array {
+        if ($this->groupManager->isAdmin($userId)) {
+            return null;
+        }
+        $ids = [];
+        foreach ($this->userRoleMapper->findByUserId($userId) as $userRole) {
+            $ids[(int)$userRole->getClubId()] = (int)$userRole->getClubId();
+        }
+        return array_values($ids);
+    }
+
+    /**
+     * All permissions the user holds in one club (everything for Nextcloud
+     * admins) - lets the frontend hide what the user couldn't use anyway.
+     *
+     * @return string[]
+     */
+    public function getPermissionsForClub(string $userId, int $clubId): array {
+        if ($this->groupManager->isAdmin($userId)) {
+            return self::ENFORCED_PERMISSIONS;
+        }
+
+        $permissions = [];
+        foreach ($this->userRoleMapper->findByUserAndClub($userId, $clubId) as $userRole) {
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            foreach ($role->getPermissionsArray() as $permission) {
+                $permissions[$permission] = $permission;
+            }
+        }
+        return array_values($permissions);
+    }
+
+    public function isNextcloudAdmin(string $userId): bool {
+        return $this->groupManager->isAdmin($userId);
+    }
     /**
      * @return string[]
      */
@@ -302,9 +385,36 @@ class RoleService {
     }
 
     /**
+     * Everyone holding a role in the club, one entry per user with the
+     * names of their roles.
+     *
+     * @return array<int, array{userId: string, roles: string[]}>
+     */
+    public function getClubAssignments(int $clubId): array {
+        $byUser = [];
+        foreach ($this->userRoleMapper->findByClubId($clubId) as $userRole) {
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            $byUser[$userRole->getUserId()][] = $role->getName();
+        }
+
+        $result = [];
+        foreach ($byUser as $userId => $roles) {
+            $result[] = ['userId' => (string)$userId, 'roles' => $roles];
+        }
+        return $result;
+    }
+
+    /**
      * @throws ValidationException
      */
-    public function assignRole(string $userId, int $roleId, int $clubId = 0): UserRole {
+    public function assignRole(string $userId, int $roleId, int $clubId): UserRole {
+        if ($clubId <= 0) {
+            throw new ValidationException('Verein erforderlich');
+        }
         // Confirm the role actually exists before assigning it
         $this->roleMapper->find($roleId);
 
@@ -322,8 +432,8 @@ class RoleService {
         return $this->userRoleMapper->insert($userRole);
     }
 
-    public function removeUserRoles(string $userId, ?int $clubId = null): void {
-        $this->userRoleMapper->deleteByUserAndClub($userId, $clubId ?? 0);
+    public function removeUserRoles(string $userId, int $clubId): void {
+        $this->userRoleMapper->deleteByUserAndClub($userId, $clubId);
     }
     
     /**

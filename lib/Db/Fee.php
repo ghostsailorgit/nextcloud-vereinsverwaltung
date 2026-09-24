@@ -9,6 +9,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setId(int $id)
  * @method int getMemberId()
  * @method void setMemberId(int $memberId)
+ * @method int getClubId()
+ * @method void setClubId(int $clubId)
  * @method float getAmount()
  * @method void setAmount(float $amount)
  * @method string getStatus()
@@ -26,6 +28,7 @@ use OCP\AppFramework\Db\Entity;
  */
 class Fee extends Entity implements JsonSerializable {
     protected int $memberId = 0;
+    protected int $clubId = 0;
     protected float $amount = 0.0;
     protected string $status = 'open';
     protected string $dueDate = '';
@@ -38,6 +41,7 @@ class Fee extends Entity implements JsonSerializable {
         return [
             'id' => $this->id,
             'memberId' => $this->memberId,
+            'clubId' => $this->clubId,
             'amount' => $this->amount,
             'status' => $this->status,
             'dueDate' => $this->dueDate,

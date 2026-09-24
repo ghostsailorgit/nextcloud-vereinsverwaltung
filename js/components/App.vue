@@ -1,9 +1,23 @@
 <template>
   <NcContent app-name="verein">
     <NcAppNavigation id="app-navigation-vue">
+      <div v-if="clubs.length" class="verein-club-switcher">
+        <NcSelect
+          v-if="clubs.length > 1"
+          :model-value="currentClubId"
+          :options="clubs"
+          :reduce="c => c.id"
+          label="name"
+          input-label="Verein"
+          :clearable="false"
+          @update:model-value="onClubChange"
+        />
+        <div v-else class="verein-club-name">{{ clubs[0].name }}</div>
+      </div>
+
       <NcAppNavigationList>
         <NcAppNavigationItem
-          v-for="tab in tabs"
+          v-for="tab in visibleTabs"
           :key="tab.id"
           :name="tab.label"
           :active="!tab.href && activeTab === tab.id"
@@ -18,9 +32,16 @@
 
     <NcAppContent id="app-content-vue">
       <div class="verein-container">
+        <p v-if="!loaded">Lade Vereine…</p>
+        <p v-else-if="loadError" class="verein-error">{{ loadError }}</p>
+        <p v-else-if="!clubs.length && !isAdmin">
+          Du bist noch keinem Verein zugeordnet. Bitte wende dich an einen Administrator,
+          damit er dir in der Vereinsverwaltung eine Rolle zuweist.
+        </p>
         <component
           :is="currentComponent"
-          :key="activeTab"
+          v-else-if="currentComponent"
+          :key="activeTab + '-' + currentClubId"
           @navigate="(tab) => { activeTab = tab }"
         />
       </div>
@@ -29,20 +50,23 @@
 </template>
 
 <script>
-import { ref, reactive, computed, defineAsyncComponent, onMounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import NcContent from '@nextcloud/vue/components/NcContent'
 import NcAppNavigation from '@nextcloud/vue/components/NcAppNavigation'
 import NcAppNavigationList from '@nextcloud/vue/components/NcAppNavigationList'
 import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { absoluteUrl } from '../absoluteUrl'
-import { api } from '../api'
+import { extractErrorMessage } from '../errorMessage'
+import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
 // Lazy-load Statistics (includes Chart.js ~500KB) for better initial load
 const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
 import Roles from './Roles.vue'
 import SepaExport from './SepaExport.vue'
+import Clubs from './Clubs.vue'
 
 export default {
   name: 'App',
@@ -52,52 +76,74 @@ export default {
     NcAppNavigationList,
     NcAppNavigationItem,
     NcAppContent,
+    NcSelect,
     Members,
     Finance,
     Statistics,
     Roles,
-    SepaExport
+    SepaExport,
+    Clubs
   },
   setup() {
     const activeTab = ref('dashboard')
+    const loadError = ref('')
 
     // 'Dokumente'/'Termine' deliberately deep-link into the official Files/Calendar
     // apps instead of a custom in-app view (Files + Group folders + OCR handle
     // document management; Calendar app handles events) - see project decision.
-    const tabs = reactive([
-      { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
-      { id: 'members', label: 'Mitglieder', emoji: '👥' },
-      { id: 'finance', label: 'Finanzen', emoji: '💰' },
-      { id: 'roles', label: 'Rollen', emoji: '🛡️' },
-      { id: 'sepa', label: 'SEPA-Export', emoji: '🏦' },
-      { id: 'documents', label: 'Dokumente', emoji: '📄', href: absoluteUrl('/apps/files/files?dir=' + encodeURIComponent('/Verein')) },
-      { id: 'calendar', label: 'Termine', emoji: '📅', href: absoluteUrl('/apps/calendar/') }
+    // Each tab is only offered when the user holds the permission in the current club.
+    const allTabs = computed(() => [
+      { id: 'dashboard', label: 'Dashboard', emoji: '📊', show: can('verein.member.view') },
+      { id: 'members', label: 'Mitglieder', emoji: '👥', show: can('verein.member.view') },
+      { id: 'finance', label: 'Finanzen', emoji: '💰', show: can('verein.finance.read') },
+      { id: 'roles', label: 'Rollen', emoji: '🛡️', show: can('verein.role.manage') },
+      { id: 'sepa', label: 'SEPA-Export', emoji: '🏦', show: can('verein.sepa.export') },
+      { id: 'clubs', label: 'Verein', emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
+      {
+        id: 'documents',
+        label: 'Dokumente',
+        emoji: '📄',
+        show: !!currentClub.value,
+        href: absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(currentClub.value?.documentsPath || '/'))
+      },
+      { id: 'calendar', label: 'Termine', emoji: '📅', show: !!currentClub.value, href: absoluteUrl('/apps/calendar/') }
     ])
 
-    onMounted(async () => {
-      try {
-        const res = await api.getAppSettings()
-        const path = res.data?.data?.documents_path
-        if (path) {
-          const documentsTab = tabs.find(t => t.id === 'documents')
-          if (documentsTab) documentsTab.href = absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(path))
-        }
-      } catch (e) {
-        // keep the default documents href on error
-      }
-    })
+    const visibleTabs = computed(() => allTabs.value.filter(t => t.show))
 
     const componentMap = {
       dashboard: 'Statistics',
       members: 'Members',
       finance: 'Finance',
       roles: 'Roles',
-      sepa: 'SepaExport'
+      sepa: 'SepaExport',
+      clubs: 'Clubs'
+    }
+
+    // If the current tab isn't available (e.g. after switching to a club where
+    // the user has fewer permissions), fall back to the first one that is
+    const ensureVisibleTab = () => {
+      const stillVisible = visibleTabs.value.some(t => !t.href && t.id === activeTab.value)
+      if (!stillVisible) {
+        activeTab.value = visibleTabs.value.find(t => !t.href)?.id ?? 'dashboard'
+      }
     }
 
     const currentComponent = computed(() => {
-      return componentMap[activeTab.value]
+      return visibleTabs.value.some(t => t.id === activeTab.value) ? componentMap[activeTab.value] : null
     })
+
+    onMounted(async () => {
+      try {
+        await loadClubs()
+        ensureVisibleTab()
+      } catch (e) {
+        loadError.value = extractErrorMessage(e, 'Die Vereine konnten nicht geladen werden')
+        clubState.loaded = true
+      }
+    })
+
+    watch(() => clubState.currentId, ensureVisibleTab)
 
     const onTabClick = (tab) => {
       if (tab.href) {
@@ -109,9 +155,15 @@ export default {
 
     return {
       activeTab,
-      tabs,
+      loadError,
+      visibleTabs,
       currentComponent,
-      onTabClick
+      onTabClick,
+      onClubChange: setCurrentClub,
+      clubs: computed(() => clubState.clubs),
+      currentClubId: computed(() => clubState.currentId),
+      loaded: computed(() => clubState.loaded),
+      isAdmin: computed(() => clubState.isAdmin)
     }
   }
 }
@@ -121,6 +173,19 @@ export default {
 .verein-nav-icon {
   font-size: 18px;
   line-height: 1;
+}
+
+.verein-club-switcher {
+  padding: 8px 12px;
+}
+
+.verein-club-name {
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.verein-error {
+  color: var(--color-error);
 }
 
 .verein-container {

@@ -28,28 +28,17 @@ class SepaController extends ApiController {
     /**
      * @NoAdminRequired
      * 
-     * Generate SEPA-XML file for open fees
+     * Generate SEPA-XML file for the open fees of a club, collected on one
+     * of the club's bank accounts (default account if none given)
      * 
-     * @param string $creditorName Name of the creditor
-     * @param string $creditorIban IBAN of the creditor
-     * @param string $creditorBic BIC of the creditor
-     * @param string $creditorId Creditor ID for SEPA
+     * @param int $clubId Club to export
+     * @param int|null $accountId Club bank account (creditor data comes from it)
      * @return StreamResponse
      */
     #[RequirePermission('verein.sepa.export')]
-    public function export(
-        string $creditorName,
-        string $creditorIban,
-        string $creditorBic,
-        string $creditorId
-    ): Response {
+    public function export(int $clubId, ?int $accountId = null): Response {
         try {
-            $result = $this->service->generateSepaXml(
-                $creditorName,
-                $creditorIban,
-                $creditorBic,
-                $creditorId
-            );
+            $result = $this->service->generateSepaXml($clubId, $accountId);
         } catch (\Exception $e) {
             return new JSONResponse([
                 'status' => 'error',
@@ -66,7 +55,7 @@ class SepaController extends ApiController {
             'sepa_export_' . date('Y-m-d') . '.xml',
             'application/xml'
         );
-        // Fees left out because the member has no IBAN; the frontend warns
+        // Fees left out (no IBAN or no signed mandate); the frontend warns
         // about it (details are listed in the preview).
         $response->addHeader('X-Sepa-Skipped', (string)$result['skippedCount']);
         return $response;
@@ -78,19 +67,9 @@ class SepaController extends ApiController {
      * Preview SEPA export (without downloading)
      */
     #[RequirePermission('verein.sepa.export')]
-    public function preview(
-        string $creditorName,
-        string $creditorIban,
-        string $creditorBic,
-        string $creditorId
-    ): DataResponse {
+    public function preview(int $clubId, ?int $accountId = null): DataResponse {
         try {
-            $preview = $this->service->previewSepaExport(
-                $creditorName,
-                $creditorIban,
-                $creditorBic,
-                $creditorId
-            );
+            $preview = $this->service->previewSepaExport($clubId, $accountId);
         } catch (\Exception $e) {
             return new DataResponse([
                 'status' => 'error',

@@ -3,9 +3,12 @@
 namespace OCA\Verein\Middleware;
 
 use OCA\Verein\Attributes\RequirePermission;
+use OCA\Verein\Exception\PermissionDeniedException;
+use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Middleware;
+use OCP\IRequest;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
@@ -16,19 +19,29 @@ class AuthorizationMiddleware extends Middleware {
     private RoleService $roleService;
     private IUserSession $userSession;
     private LoggerInterface $logger;
+    private IRequest $request;
 
     public function __construct(
         RoleService $roleService,
         IUserSession $userSession,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        IRequest $request
     ) {
+        $this->request = $request;
         $this->roleService = $roleService;
         $this->userSession = $userSession;
         $this->logger = $logger;
     }
 
     /**
+     * Nextcloud ignores what beforeController() returns - the only way to stop
+     * a request here is to throw, which afterException() turns into the JSON
+     * error response. (Returning a response from here silently let every
+     * request through.)
+     *
      * @param object $controller
+     * @throws PermissionDeniedException
+     * @throws ValidationException
      */
     public function beforeController($controller, string $methodName) {
         $requirements = $this->collectPermissionAttributes($controller, $methodName);
@@ -39,15 +52,22 @@ class AuthorizationMiddleware extends Middleware {
         $user = $this->userSession->getUser();
         if ($user === null) {
             $this->logPermissionViolation('unauthenticated', 'N/A', $controller, $methodName);
-            return $this->forbiddenResponse('Authentication required');
+            throw new PermissionDeniedException('Authentication required');
         }
 
         $userId = $user->getUID();
         foreach ($requirements as $requirement) {
             $permission = $requirement->getPermission();
-            if (!$this->roleService->userHasPermission($userId, $permission)) {
+            $clubId = null;
+            if ($requirement->isClubScoped()) {
+                $clubId = (int)$this->request->getParam('clubId', 0);
+                if ($clubId <= 0) {
+                    throw new ValidationException('Verein (clubId) fehlt');
+                }
+            }
+            if (!$this->roleService->userHasPermission($userId, $permission, $clubId)) {
                 $this->logPermissionViolation($userId, $permission, $controller, $methodName);
-                return $this->forbiddenResponse(sprintf('Missing permission: %s', $permission));
+                throw new PermissionDeniedException(sprintf('Missing permission: %s', $permission));
             }
         }
 
@@ -88,11 +108,20 @@ class AuthorizationMiddleware extends Middleware {
         return $attributes;
     }
 
-    private function forbiddenResponse(string $message): JSONResponse {
-        return new JSONResponse([
-            'status' => 'error',
-            'message' => $message,
-        ], 403);
+    /**
+     * Turns the exceptions thrown by beforeController() into JSON error
+     * responses; anything else is left to Nextcloud.
+     *
+     * @param object $controller
+     */
+    public function afterException($controller, string $methodName, \Exception $exception) {
+        if ($exception instanceof PermissionDeniedException || $exception instanceof ValidationException) {
+            return new JSONResponse([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ], $exception->getStatusCode());
+        }
+        throw $exception;
     }
 
     private function logPermissionViolation(
