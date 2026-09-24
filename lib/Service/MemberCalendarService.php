@@ -306,7 +306,7 @@ class MemberCalendarService {
         return implode("\r\n", [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//Vereinsverwaltung//Vereinsverwaltung//DE',
+            'PRODID:-//Vereinsverwaltung//DE',
             'BEGIN:VEVENT',
             'UID:' . $uid,
             'DTSTAMP:' . gmdate('Ymd\THis\Z'),

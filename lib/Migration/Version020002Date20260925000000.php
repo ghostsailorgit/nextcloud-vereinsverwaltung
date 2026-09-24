@@ -116,13 +116,11 @@ class Version020002Date20260925000000 extends SimpleMigrationStep {
         $documentsPath = $this->config->getAppValue('verein', 'documents_path', '/Verein');
         $qb = $this->db->getQueryBuilder();
         $qb->insert('verein_clubs')->values([
-            'name' => $qb->createNamedParameter('Vereinsverwaltung'),
+            'name' => $qb->createNamedParameter('Mein Verein'),
             'documents_path' => $qb->createNamedParameter($documentsPath),
-            'calendar_groups' => $qb->createNamedParameter(json_encode([
-                'exec-board-read', 'exec-board-write',
-                'board-read', 'board-write',
-                'members-read', 'members-write',
-            ])),
+            // No calendar groups by default - an admin lists the Nextcloud groups
+            // that may see the club calendar under "Verein"
+            'calendar_groups' => $qb->createNamedParameter(json_encode([])),
             // The calendar that already exists from before multi-club support
             'calendar_uri' => $qb->createNamedParameter('vereinstermine'),
             'created_at' => $qb->createNamedParameter($now),

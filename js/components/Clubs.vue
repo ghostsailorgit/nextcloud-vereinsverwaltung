@@ -14,14 +14,14 @@
           :model-value="form.documentsPath"
           @update:model-value="form.documentsPath = $event"
           label="Team-Ordner in Nextcloud Files"
-          placeholder="/Vereinsverwaltung"
+          placeholder="/Mein-Verein"
           helper-text="Pfad des Vereinsordners; hier liegen Dokumente und die unterschriebenen SEPA-Mandate."
         />
         <NcTextField
           :model-value="form.calendarGroups"
           @update:model-value="form.calendarGroups = $event"
           label="Nextcloud-Gruppen für den Vereinskalender"
-          placeholder="board-read, members-read"
+          placeholder="vorstand, mitglieder"
           helper-text="Kommagetrennt. Diese Gruppen können den Kalender „Vereinstermine“ (Geburtstage, Jubiläen) sehen."
         />
         <div class="actions">

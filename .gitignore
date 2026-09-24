@@ -54,3 +54,7 @@ release/
 
 certificates/*.key
 certificates/*.crt
+
+# Local scratch/working files
+scratch/
+tmp/
