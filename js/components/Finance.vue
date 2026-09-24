@@ -6,7 +6,7 @@
       <form @submit.prevent="addFee" class="fee-form">
         <NcSelect
           v-model="formData.memberId"
-          :options="members"
+          :options="sortedMembers"
           :reduce="member => member.id"
           label="fullName"
           input-label="Mitglied"
@@ -298,6 +298,12 @@ export default {
       })
     }
 
+    const sortedMembers = computed(() => {
+      return [...members.value].sort((a, b) => {
+        return a.name.localeCompare(b.name, 'de') || (a.firstName || '').localeCompare(b.firstName || '', 'de')
+      })
+    })
+
     const totalOutstanding = computed(() => {
       return fees.value
         .filter(f => f.status !== 'paid')
@@ -315,6 +321,7 @@ export default {
     return {
       fees,
       members,
+      sortedMembers,
       loading,
       editingId,
       formData,
