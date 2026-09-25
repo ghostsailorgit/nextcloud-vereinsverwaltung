@@ -28,6 +28,7 @@ Datenschutz vervollständigt (Löschen/Anonymisieren, Admin-Export, Protokoll-Re
 
 ### 🔧 Technik
 - Migration `Version020008`: `verein_members.anonymized_at`.
+- Doku: Die getesteten Versionen sind korrigiert (Test-Instanz: PHP 8.5, MySQL 8.4 statt MariaDB; Unit-Tests in der CI mit PHP 8.3).
 
 ---
 

@@ -1,6 +1,6 @@
 # Installation und Betrieb
 
-Diese Anleitung geht davon aus, dass eine Nextcloud bereits läuft. Getestet ist die App mit Nextcloud 34, PHP 8.3 und MariaDB (siehe [README](../README.md#voraussetzungen)).
+Diese Anleitung geht davon aus, dass eine Nextcloud bereits läuft. Getestet ist die App mit Nextcloud 34, PHP 8.5 und MySQL 8.4 (siehe [README](../README.md#voraussetzungen)).
 
 ## 1. App installieren
 
@@ -68,7 +68,7 @@ sudo -u www-data php occ verein:backup:restore verein-backup-20260101-030000.jso
 sudo -u www-data php occ verein:backup:restore /pfad/zur/verein-backup-….json.gz
 ```
 
-Hinweise: Die Sicherung enthält personenbezogene Daten, sie ist wie die Datenbank zu schützen. Kalender und ihre Freigaben sind nicht enthalten; sie gleichen sich beim nächsten Speichern eines Mitglieds an. Die Sicherung ersetzt **nicht** die Sicherung der gesamten Nextcloud (Dateien, Datenbank, Konfiguration). Das Zurückspielen ist mit MariaDB/MySQL getestet, für PostgreSQL nicht.
+Hinweise: Die Sicherung enthält personenbezogene Daten, sie ist wie die Datenbank zu schützen. Kalender und ihre Freigaben sind nicht enthalten; sie gleichen sich beim nächsten Speichern eines Mitglieds an. Die Sicherung ersetzt **nicht** die Sicherung der gesamten Nextcloud (Dateien, Datenbank, Konfiguration). Das Zurückspielen ist mit MySQL 8.4 getestet, für MariaDB, PostgreSQL und SQLite nicht.
 
 ## 6. SEPA-Lastschriften
 
