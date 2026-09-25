@@ -63,7 +63,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the
    `email` migration) or make the property default `null` (see `FeeRate::$amount`: a 0.00 fee-free category
-   failed to insert until then; `tests/Unit/EntityInsertTest` pins it). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
+   failed to insert until then; same for `AuditLogEntry::`, bulk actions log id 0; `tests/Unit/EntityInsertTest` pins both). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
    "Incorrect integer value".
 8. **Annual fee run** (`FeeRunService`): one fee per active member by category, idempotent per member+year
    (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who

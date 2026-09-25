@@ -13,7 +13,7 @@ use OCP\AppFramework\Db\Entity;
  * @method void setClubId(?int $clubId)
  * @method string getEntityType()
  * @method void setEntityType(string $entityType)
- * @method int getEntityId()
+ * @method ?int getEntityId()
  * @method void setEntityId(int $entityId)
  * @method string getAction()
  * @method void setAction(string $action)
@@ -29,7 +29,9 @@ use OCP\AppFramework\Db\Entity;
 class AuditLogEntry extends Entity implements JsonSerializable {
     protected ?int $clubId = null;
     protected string $entityType = '';
-    protected int $entityId = 0;
+    // null, not 0: bulk actions (fee run, mark paid, flag overdue, revoke all roles) log entityId 0, and a
+    // setter call with the property's default value is not written on INSERT (entity_id is NOT NULL, no default)
+    protected ?int $entityId = null;
     protected string $action = '';
     protected ?string $actorUserId = null;
     protected ?string $actorDisplayName = null;

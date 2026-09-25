@@ -4,6 +4,18 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.15.1-beta] - 2026-09-25
+
+### 🐛 Behoben
+- **Sammelaktionen meldeten „Interner Fehler“, obwohl sie ausgeführt waren**, und landeten nicht im Änderungsprotokoll:
+  Beitragslauf, „als bezahlt markieren“ (nach dem SEPA-Export), „Überfällige markieren“ und das Entziehen aller Rollen
+  eines Kontos. Diese Aktionen protokollieren mit Datensatz-Nummer 0; weil 0 auch der Startwert des Feldes war, schrieb
+  Nextcloud die Spalte nicht mit, und MySQL lehnte den Protokolleintrag ab (`entity_id` hat keinen Standardwert). Die
+  Daten selbst waren zu dem Zeitpunkt schon gespeichert, nur die Antwort war ein Fehler. Seit 0.12.0 vorhanden, beim
+  Live-Test der anteiligen Beiträge gefunden. Ein Test (`EntityInsertTest`) hält es fest.
+
+---
+
 ## [0.15.0-beta] - 2026-09-25
 
 Anteilige Beiträge im Beitragslauf.
