@@ -34,5 +34,5 @@ Stand: Version 0.14.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 - Die SEPA-Datei ist als XML wohlgeformt, wurde aber weder gegen das offizielle Schema noch mit Bankensoftware geprüft; vor dem ersten Einzug bitte selbst prüfen.
 - Alle Einzüge werden als Folgelastschrift (RCUR) gekennzeichnet; Erst- und Einmallastschriften gibt es nicht.
-- Getestet ist die App mit Nextcloud 34, PHP 8.5 und MySQL 8.4 (Unit-Tests in der CI mit PHP 8.3); andere Kombinationen, insbesondere MariaDB, PostgreSQL und SQLite, sind ungetestet.
+- Getestet ist die App mit Nextcloud 34, PHP 8.5 und MySQL 8.4 (Unit-Tests in der CI mit PHP 8.3 und 8.5); andere Kombinationen, insbesondere MariaDB, PostgreSQL und SQLite, sind ungetestet.
 - Kalendertermine gehören einem technischen Nextcloud-Konto (dem ersten Administrator) und werden mit Gruppen geteilt.

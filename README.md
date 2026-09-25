@@ -20,7 +20,7 @@ Nicht enthalten: Buchhaltung, Mahnwesen, Online-Beitritt, Serienbriefe. Die Ober
 
 ## Voraussetzungen
 
-- Nextcloud 27 bis 34 (entwickelt und getestet mit **Nextcloud 34**, PHP 8.5 und MySQL 8.4; die Unit-Tests laufen in der CI mit PHP 8.3; ältere Versionen und andere Datenbanken sind ungetestet)
+- Nextcloud 27 bis 34 (entwickelt und getestet mit **Nextcloud 34**, PHP 8.5 und MySQL 8.4; die Unit-Tests laufen in der CI mit PHP 8.3 und 8.5; ältere Versionen und andere Datenbanken sind ungetestet)
 - PHP 8.1 oder neuer
 - Für den PDF-Export die Bibliothek TCPDF (kommt mit `composer install --no-dev`)
 - Ein funktionierender Nextcloud-Cron, damit Sicherung und Aufräumen laufen
@@ -70,4 +70,4 @@ Lizenz: [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-or-later).
 
 ## English summary
 
-A Nextcloud app for managing one or several clubs: members, membership fees and SEPA direct debit (pain.008.001.02). Multi-club by design (a person can belong to several clubs with separate join dates, roles and mandates), per-club permissions with optional rights derived from a member's club role, annual fee runs with preview, member self-service, a per-club birthday calendar, CSV/PDF export, daily backups with `occ` restore, and a change log. The UI is German. **Beta software** - verify the generated SEPA file with your bank's tooling before the first real collection. Tested with Nextcloud 34, PHP 8.5 and MySQL 8.4 (unit tests in CI on PHP 8.3). Installation: see [docs/INSTALLATION.md](docs/INSTALLATION.md) (`composer install --no-dev`, `npm ci && npm run build`, `occ app:enable verein`). Licensed under AGPL-3.0-or-later; forked from [Wacken2012/nextcloud-verein](https://github.com/Wacken2012/nextcloud-verein).
+A Nextcloud app for managing one or several clubs: members, membership fees and SEPA direct debit (pain.008.001.02). Multi-club by design (a person can belong to several clubs with separate join dates, roles and mandates), per-club permissions with optional rights derived from a member's club role, annual fee runs with preview, member self-service, a per-club birthday calendar, CSV/PDF export, daily backups with `occ` restore, and a change log. The UI is German. **Beta software** - verify the generated SEPA file with your bank's tooling before the first real collection. Tested with Nextcloud 34, PHP 8.5 and MySQL 8.4 (unit tests in CI on PHP 8.3 and 8.5). Installation: see [docs/INSTALLATION.md](docs/INSTALLATION.md) (`composer install --no-dev`, `npm ci && npm run build`, `occ app:enable verein`). Licensed under AGPL-3.0-or-later; forked from [Wacken2012/nextcloud-verein](https://github.com/Wacken2012/nextcloud-verein).

@@ -4,7 +4,7 @@ Nextcloud app for managing one or several clubs (Vereine): members, memberships,
 debit export, roles/permissions, calendar reminders and member self-service. Fork of
 `Wacken2012/nextcloud-verein` (remote `upstream`; our history is grafted onto upstream `64a9b8b`).
 **The repository is public**: everything committed is world-readable, forever.
-UI language is German, code and comments are English. Target: Nextcloud 34, PHP 8.1+ (test instance: PHP 8.5.10 and MySQL 8.4; CI: PHP 8.3), Vue 3.
+UI language is German, code and comments are English. Target: Nextcloud 34, PHP 8.1+ (test instance: PHP 8.5.10 and MySQL 8.4; CI: PHP 8.3 and 8.5), Vue 3.
 
 Read `docs/ARCHITEKTUR.md` for the data model and the decisions behind it. This file is what you
 must know to change code safely.
