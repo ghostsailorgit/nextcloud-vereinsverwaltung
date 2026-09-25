@@ -10,13 +10,19 @@ permissions:
 
 jobs:
   phpunit:
+    name: phpunit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.3: the version we develop on; 8.5: what the test instance runs
+        php: ['8.3', '8.5']
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: ${{ matrix.php }}
           extensions: mbstring, intl, bcmath, dom, xml, zip
           coverage: none
 
