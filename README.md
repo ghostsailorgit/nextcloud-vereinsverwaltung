@@ -14,7 +14,7 @@ Eine Nextcloud-App, mit der ein oder mehrere Vereine ihre **Mitglieder, Beiträg
 - **Meine Daten:** Jedes verknüpfte Mitglied sieht seine eigenen Daten und Beiträge und kann sie als JSON herunterladen (nur lesend).
 - **Kalender:** Pro Verein ein Kalender mit Geburtstagen und Vereinsjubiläen, nur intern mit ausgewählten Nextcloud-Gruppen geteilt, nie öffentlich.
 - **Export** als CSV und PDF, **Statistik** auf der Startseite.
-- **Sicherung und Änderungsprotokoll:** tägliche automatische Sicherung aller Vereinsdaten (30 Tage), Wiederherstellung per `occ`; ein Änderungsprotokoll erfasst, wer was geändert hat.
+- **Sicherung und Änderungsprotokoll:** tägliche automatische Sicherung aller Vereinsdaten (30 Tage), Wiederherstellung per `occ`; ein Änderungsprotokoll (Reiter „Protokoll“) erfasst, wer was geändert hat, ohne personenbezogene Inhalte im Klartext.
 
 Nicht enthalten: Buchhaltung, Mahnwesen, Online-Beitritt, Serienbriefe. Die Oberfläche ist auf Deutsch.
 

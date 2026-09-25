@@ -70,8 +70,12 @@ geändert hat (`{"redacted": true}` bzw. `true` bei „angelegt“). Umgesetzt a
 (`AuditLogService::SAFE_FIELDS`): für Mitglieder werden nur `id`, `role`, `joinDate`, `leaveDate`, `foundingMember`,
 `deactivated`, `deceased`, `clubId` im Klartext protokolliert, alles andere wird redigiert - auch abgeleitete Felder
 wie `fullName`, `mandateReference`, `mandateFile` (der Pfad enthält oft den Namen) oder `age`, die eine Sperrliste
-leicht übersieht. Einsehbar je Verein über die API (`GET /audit-log`, Recht „Änderungsprotokoll einsehen“); eine
-eigene Ansicht in der Oberfläche gibt es noch nicht.
+leicht übersieht. Einsehbar je Verein im Reiter „Protokoll“ bzw. über `GET /audit-log` (Recht „Änderungsprotokoll einsehen“), neueste
+zuerst, 100 Einträge je Seite (`beforeId` = älteste ID der vorigen Seite, `hasMore` sagt, ob es ältere gibt), filterbar nach
+Bereich. Die Antwort enthält die Erlaubnisliste (`safeFields`), damit die Oberfläche ein geschwärztes Feld von einem echten
+Ja/Nein-Feld unterscheiden kann, ohne eine eigene Kopie der Liste zu pflegen. Namen von Personen zeigt die Ansicht nur,
+wenn man auch Mitglieder ansehen darf (sonst „Person #id“). Einträge ohne Verein (Rollendefinitionen, Anonymisieren)
+erscheinen dort nicht.
 
 ## Anonymisieren
 Statt eine Person zu löschen (`POST /members/{id}/anonymize`, Recht „Rollen verwalten“, wie bei Deaktivieren; die
@@ -85,8 +89,10 @@ ihren Mitgliedschaften werden beim Anonymisieren nachträglich redigiert (`Audit
 künftige. Es gibt kein Zurück: `anonymized_at` bleibt gesetzt.
 **Nicht betroffen:** `mandateReference`/`mandateFile` an der Mitgliedschaft (kann den Namen enthalten) und die
 unterschriebene Mandatsdatei in Nextcloud Files selbst - Mandate haben eine eigene Aufbewahrungsfrist. Ebenso nicht
-betroffen: Freitext in Beitragsbeschreibungen. Für die künftige Oberfläche ist vor dem Auslösen eine ausdrückliche
-Rückfrage vorgesehen (siehe `ROADMAP.md`) - über die API gibt es sie bewusst nicht, das wäre nur Reibung ohne Nutzen.
+betroffen: Freitext in Beitragsbeschreibungen. In der Oberfläche (Knopf „Anonymisieren“ in der Mitgliederliste, nur bei Ehemaligen und nur mit
+„Rollen verwalten“) muss vor dem Auslösen der vollständige Name eingetippt werden - ein normaler Bestätigungsdialog wird
+zu leicht weggeklickt. Über die API gibt es die Rückfrage bewusst nicht, das wäre nur Reibung ohne Nutzen. Der Knopf
+„Datenauskunft“ daneben lädt `GET /members/{id}/export` als JSON-Datei (für alle, die Mitglieder ansehen dürfen).
 
 ## Selbstauskunft („Meine Daten“) und Admin-Export
 Wer mit einer Person verknüpft ist, sieht seine eigenen Daten, Mitgliedschaften und Beiträge und kann sie als

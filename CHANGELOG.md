@@ -4,6 +4,29 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.16.1-beta] - 2026-09-25
+
+Oberfläche für die Datenschutz-Funktionen.
+
+### ✨ Neu
+- **Reiter „Protokoll“** (Recht „Änderungsprotokoll einsehen“): wer hat wann was geändert, neueste zuerst, 100 Einträge je
+  Seite mit „Ältere Einträge laden“, Filter nach Bereich (Person, Mitgliedschaft, Beitrag, Beitragslauf …). Änderungen
+  werden lesbar dargestellt („Straße: geändert (Inhalt nicht protokolliert)“, „Status: offen → bezahlt“); personenbezogene
+  Inhalte stehen wie bisher nie im Klartext. Namen erscheinen nur, wenn man auch Mitglieder ansehen darf.
+- **Anonymisieren in der Mitgliederliste** (Recht „Rollen verwalten“, nur bei Ehemaligen): Der Dialog erklärt, was ersetzt
+  wird und was erhalten bleibt, und lässt sich erst bestätigen, wenn der vollständige Name eingetippt ist. Ist die Person
+  in einem anderen Verein noch aktiv, lehnt der Server ab und die Meldung wird angezeigt. Anonymisierte Personen tragen
+  das Kennzeichen „Anonymisiert“.
+- **Datenauskunft** in der Mitgliederliste: lädt alle gespeicherten Daten einer Person in diesem Verein als JSON-Datei
+  (Auskunft nach Art. 15 DSGVO) für Personen, die „Meine Daten“ nicht selbst nutzen können.
+
+### 🔧 Technik
+- `GET /audit-log`: Blättern über `beforeId`, Antwort mit `hasMore` und der Erlaubnisliste `safeFields`; einheitliche
+  Fehlerbehandlung wie bei den anderen Endpunkten (sie fehlte hier).
+- 0.16.0-beta war nur ein interner Testbuild (die Version musste für den Browser-Cache erneut erhöht werden).
+
+---
+
 ## [0.15.1-beta] - 2026-09-25
 
 ### 🐛 Behoben

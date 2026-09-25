@@ -83,7 +83,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     update, so a manual DI factory in `Application.php` must be updated too when you add the param (see
     `MemberService`, `FeeService`, `RoleService` there) - the ones without a manual factory (`ClubService`,
     `FeeRateService`, `FeeRunService`) are auto-wired and need no such change. Read back via
-    `GET /audit-log` (`verein.audit.view`, club-scoped); entries with `clubId = null` (role definitions) are
+    `GET /audit-log` (`verein.audit.view`, club-scoped, 100 per page via `beforeId`/`hasMore`, UI tab `AuditLog.vue`); entries with `clubId = null` (role definitions) are
     not exposed through it. Retention (`AuditLogCleanupJob`, daily): entity types in
     `AuditLogService::LONG_RETENTION_TYPES` (member, membership, fee, user_role) 10 years, all others 30 days.
     A new entity type is short-lived unless you add it there - decide deliberately.
@@ -133,5 +133,6 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 ## Planning
 The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data protection (anonymize/delete members,
 admin data export, masking sensitive values in the audit log) is done (see rule 15) - built by the colleague it was
-assigned to (`feature/anonymisieren`), coordinate before changing that area further.
+assigned to (`feature/anonymisieren`); its UI (log tab, anonymize with typed-name confirmation, data export button) was
+added in 0.16.1 on the user's decision without him.
 Real-world data entry (bank account, creditor ID, real IBANs and mandates) happens in the running instance, not in the repo.

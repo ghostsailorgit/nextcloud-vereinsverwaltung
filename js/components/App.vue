@@ -68,6 +68,7 @@ import Roles from './Roles.vue'
 import SepaExport from './SepaExport.vue'
 import Clubs from './Clubs.vue'
 import Me from './Me.vue'
+import AuditLog from './AuditLog.vue'
 
 export default {
   name: 'App',
@@ -84,7 +85,8 @@ export default {
     Roles,
     SepaExport,
     Clubs,
-    Me
+    Me,
+    AuditLog
   },
   setup() {
     const activeTab = ref('dashboard')
@@ -101,6 +103,7 @@ export default {
       { id: 'roles', label: 'Rollen', emoji: '🛡️', show: can('verein.role.manage') },
       { id: 'sepa', label: 'SEPA-Export', emoji: '🏦', show: can('verein.sepa.export') },
       { id: 'clubs', label: 'Verein', emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
+      { id: 'audit', label: 'Protokoll', emoji: '📜', show: can('verein.audit.view') },
       { id: 'me', label: 'Meine Daten', emoji: '👤', show: !!clubState.me?.linked },
       {
         id: 'documents',
@@ -121,6 +124,7 @@ export default {
       roles: 'Roles',
       sepa: 'SepaExport',
       clubs: 'Clubs',
+      audit: 'AuditLog',
       me: 'Me'
     }
 

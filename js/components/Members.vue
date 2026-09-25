@@ -225,7 +225,7 @@
               <th>Mitglied seit</th>
               <th>Rolle</th>
               <th>Status</th>
-              <th v-if="canManage">Aktionen</th>
+              <th>Aktionen</th>
             </tr>
           </thead>
           <tbody>
@@ -245,6 +245,7 @@
               </td>
               <td class="status-cell">
                 <span v-if="member.deceased" class="status-badge deceased">Verstorben</span>
+                <span v-if="member.anonymizedAt" class="status-badge anonymized" title="Personenbezogene Daten wurden unwiderruflich entfernt">Anonymisiert</span>
                 <span v-else-if="member.isFormer" class="status-badge former">Ehemalig</span>
                 <span
                   v-else-if="member.deactivated"
@@ -254,12 +255,12 @@
                 <span v-else class="status-badge active">Aktiv</span>
                 <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
               </td>
-              <td v-if="canManage" class="actions">
-                <NcButton @click="startEdit(member)" variant="secondary">
+              <td class="actions">
+                <NcButton v-if="canManage" @click="startEdit(member)" variant="secondary">
                   Bearbeiten
                 </NcButton>
                 <NcButton
-                  v-if="canManageRoles && member.deactivated"
+                  v-if="canManage && canManageRoles && member.deactivated"
                   @click="activateMember(member.id)"
                   variant="secondary"
                   :disabled="loading"
@@ -267,7 +268,7 @@
                   Aktivieren
                 </NcButton>
                 <NcButton
-                  v-else-if="canManageRoles"
+                  v-else-if="canManage && canManageRoles"
                   @click="deactivateMember(member.id)"
                   variant="secondary"
                   :disabled="loading"
@@ -275,11 +276,29 @@
                   Deaktivieren
                 </NcButton>
                 <NcButton
+                  v-if="canManage"
                   @click="deleteMember(member.id)"
                   variant="error"
                   :disabled="loading"
                 >
                   Aus Verein entfernen
+                </NcButton>
+                <NcButton
+                  variant="tertiary"
+                  :disabled="loading"
+                  title="Alle gespeicherten Daten dieser Person in diesem Verein als JSON-Datei (Auskunft nach Art. 15 DSGVO)"
+                  @click="exportMember(member)"
+                >
+                  Datenauskunft
+                </NcButton>
+                <NcButton
+                  v-if="canManageRoles && member.isFormer && !member.anonymizedAt"
+                  variant="error"
+                  :disabled="loading"
+                  title="Personenbezogene Daten unwiderruflich entfernen (nur wenn die Person überall ausgetreten oder verstorben ist)"
+                  @click="anonymizeTarget = member"
+                >
+                  Anonymisieren
                 </NcButton>
               </td>
             </tr>
@@ -288,6 +307,12 @@
       </div>
       <p v-if="filteredMembers.length === 0" class="empty-state">Keine Mitglieder in dieser Kategorie</p>
     </div>
+
+    <AnonymizeDialog
+      :member="anonymizeTarget"
+      @close="anonymizeTarget = null"
+      @done="anonymizeTarget = null; fetchMembers()"
+    />
   </div>
 </template>
 
@@ -304,6 +329,7 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import Alert from './Alert.vue'
 import ExportButtons from './ExportButtons.vue'
+import AnonymizeDialog from './AnonymizeDialog.vue'
 
 const emptyFormData = () => ({
   salutation: null,
@@ -336,7 +362,8 @@ export default {
     NcSelect,
     NcSelectUsers,
     Alert,
-    ExportButtons
+    ExportButtons,
+    AnonymizeDialog
   },
   setup() {
     const members = ref([])
@@ -618,6 +645,33 @@ export default {
       }
     }
 
+    // member row whose anonymize confirmation is open (null = closed)
+    const anonymizeTarget = ref(null)
+
+    // Art. 15 GDPR information for a person who cannot use "Meine Daten" themselves
+    const exportMember = async (member) => {
+      try {
+        const response = await api.get(`members/${member.id}/export`, { responseType: 'blob' })
+        const url = URL.createObjectURL(response.data)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `mitgliedsdaten-${member.id}.json`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      } catch (error) {
+        // the error body arrives as a Blob because of responseType
+        let message = 'Datenauskunft fehlgeschlagen'
+        try {
+          message = JSON.parse(await error.response.data.text()).message || message
+        } catch (e) {
+          // keep the generic message
+        }
+        showError(message)
+      }
+    }
+
     const roleLabel = (role) => {
       return roleOptions.find(r => r.id === role)?.label || role
     }
@@ -640,6 +694,9 @@ export default {
       deleteMember,
       deactivateMember,
       activateMember,
+      anonymizeTarget,
+      exportMember,
+      fetchMembers,
       canManage,
       canManageRoles,
       feeRateOptions,
@@ -948,6 +1005,12 @@ export default {
   &.deactivated {
     background: var(--color-background-darker);
     color: var(--color-text-maxcontrast);
+  }
+
+  &.anonymized {
+    background: var(--color-background-darker);
+    color: var(--color-text-maxcontrast);
+    font-style: italic;
   }
 
   &.founding {

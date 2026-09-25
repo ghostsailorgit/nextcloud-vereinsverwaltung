@@ -30,16 +30,21 @@ class AuditLogMapper extends QBMapper {
 
     /**
      * Entries for one club, newest first, optionally narrowed to one entity
-     * type and/or one entity id.
+     * type and/or one entity id. $beforeId pages backwards: only entries
+     * older than that id (the last id of the previous page).
      *
      * @return AuditLogEntry[]
      */
-    public function findByClub(int $clubId, ?string $entityType = null, ?int $entityId = null, int $limit = 200): array {
+    public function findByClub(int $clubId, ?string $entityType = null, ?int $entityId = null, int $limit = 200, ?int $beforeId = null): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from($this->getTableName())
             ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, IQueryBuilder::PARAM_INT)))
             ->orderBy('id', 'DESC')
             ->setMaxResults($limit);
+
+        if ($beforeId !== null) {
+            $qb->andWhere($qb->expr()->lt('id', $qb->createNamedParameter($beforeId, IQueryBuilder::PARAM_INT)));
+        }
 
         if ($entityType !== null) {
             $qb->andWhere($qb->expr()->eq('entity_type', $qb->createNamedParameter($entityType)));

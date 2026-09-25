@@ -40,6 +40,16 @@ class AuditLogService {
         'member' => ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'deactivated', 'deceased', 'clubId'],
     ];
 
+    /**
+     * The allow-list per entity type, for the log view: it tells a redacted "true" apart from a real
+     * boolean field, without the frontend keeping its own copy of the list.
+     *
+     * @return array<string, string[]>
+     */
+    public static function safeFields(): array {
+        return self::SAFE_FIELDS;
+    }
+
     public function __construct(
         private AuditLogMapper $mapper,
         private IUserSession $userSession
