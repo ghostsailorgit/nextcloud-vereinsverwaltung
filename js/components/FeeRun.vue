@@ -22,6 +22,14 @@
         label="Bemerkung (optional)"
         :placeholder="'Mitgliedsbeitrag ' + year"
       />
+      <NcCheckboxRadioSwitch
+        class="prorata"
+        type="checkbox"
+        :model-value="prorata"
+        @update:model-value="prorata = $event; plan = null"
+      >
+        Anteilig bei Eintritt im Beitragsjahr (ab Eintrittsmonat)
+      </NcCheckboxRadioSwitch>
       <div class="buttons">
         <NcButton type="submit" variant="secondary" :disabled="busy">Vorschau</NcButton>
         <NcButton
@@ -51,7 +59,14 @@
           <thead><tr><th>Mitglied</th><th>Kategorie</th><th class="num">Betrag</th></tr></thead>
           <tbody>
             <tr v-for="e in plan.included" :key="e.memberId">
-              <td>{{ e.name }}</td><td>{{ e.category }}</td><td class="num">{{ formatMoney(e.amount) }}</td>
+              <td>{{ e.name }}</td>
+              <td>
+                {{ e.category }}
+                <span v-if="e.months" class="prorata-note">
+                  · anteilig {{ e.months }}/12 von {{ formatMoney(e.fullAmount) }}
+                </span>
+              </td>
+              <td class="num">{{ formatMoney(e.amount) }}</td>
             </tr>
           </tbody>
         </table>
@@ -75,21 +90,28 @@ import { ref } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import { api } from '../api'
 import { extractErrorMessage } from '../errorMessage'
 
 export default {
   name: 'FeeRun',
-  components: { NcButton, NcTextField },
+  components: { NcButton, NcTextField, NcCheckboxRadioSwitch },
   emits: ['done'],
   setup(props, { emit }) {
     const year = ref(new Date().getFullYear())
     const dueDate = ref(`${new Date().getFullYear()}-03-31`)
     const description = ref('')
+    const prorata = ref(false)
     const plan = ref(null)
     const busy = ref(false)
 
-    const params = () => ({ year: year.value, dueDate: dueDate.value, description: description.value })
+    const params = () => ({
+      year: year.value,
+      dueDate: dueDate.value,
+      description: description.value,
+      prorata: prorata.value ? 1 : 0
+    })
 
     const call = async (action) => {
       busy.value = true
@@ -134,7 +156,7 @@ export default {
       return isNaN(d) ? v : d.toLocaleDateString('de-DE')
     }
 
-    return { year, dueDate, description, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
+    return { year, dueDate, description, prorata, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
   }
 }
 </script>
@@ -151,6 +173,8 @@ export default {
 .hint { color: var(--color-text-maxcontrast); }
 .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
+.prorata { grid-column: 1 / -1; }
+.prorata-note { color: var(--color-text-maxcontrast); font-size: 0.9em; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 .result { margin-top: 16px; }
 .summary { font-size: 15px; }

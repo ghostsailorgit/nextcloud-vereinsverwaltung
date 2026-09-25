@@ -4,6 +4,21 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.15.0-beta] - 2026-09-25
+
+Anteilige Beiträge im Beitragslauf.
+
+### ✨ Neu
+- **Anteilige Beiträge bei Eintritt im laufenden Jahr:** Der Beitragslauf hat die Option „Anteilig bei Eintritt im
+  Beitragsjahr“ (Parameter `prorata` bei `POST /fee-run/preview` und `POST /fee-run`). Ist sie gesetzt, zahlt, wer im
+  Beitragsjahr eingetreten ist, nur die Monate ab dem Eintrittsmonat (einschließlich) bis Dezember: Jahresbeitrag × Monate / 12,
+  auf Cent gerundet (Eintritt im Oktober bei 24 € = 3/12 = 6,00 €). Eintritt im Januar, in einem früheren Jahr oder ohne
+  Eintrittsdatum zählt als ganzes Jahr. Ergibt die Rechnung 0,00 €, wird die Person mit Grund übersprungen. Die Vorschau zeigt
+  bei anteiligen Beiträgen „anteilig n/12 von <Jahresbetrag>“. Ohne die Option ändert sich nichts (voller Jahresbeitrag).
+- Das Änderungsprotokoll des Beitragslaufs vermerkt, ob anteilig gerechnet wurde.
+
+---
+
 ## [0.14.0-beta] - 2026-10-01
 
 Datenschutz vervollständigt (Löschen/Anonymisieren, Admin-Export, Protokoll-Redaktion).

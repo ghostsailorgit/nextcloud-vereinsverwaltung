@@ -103,7 +103,10 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
 - **Beitragslauf** (Reiter „Finanzen“): Jahr und Fälligkeit wählen, Vorschau ansehen, erzeugen. Aktive Mitglieder bekommen ihren
   Jahresbeitrag; übersprungen werden Ausgetretene und Verstorbene, spätere Eintritte, Beitragsfreie, Mitglieder ohne Kategorie
   (und ohne Standard) sowie alle, die für das Jahr schon einen Beitrag haben. Ein Lauf lässt sich deshalb wiederholen.
-  Anteilige Beiträge bei unterjährigem Eintritt gibt es noch nicht.
+  Wahlweise **anteilig**: Wer im Beitragsjahr eingetreten ist, zahlt die Monate ab dem Eintrittsmonat (einschließlich) bis
+  Dezember (Jahresbeitrag × Monate / 12, auf Cent gerundet). Eintritt im Januar, früher oder ohne Datum = ganzes Jahr, damit
+  fehlende Daten nicht zu einem zu niedrigen Beitrag führen. Die Option gilt je Lauf, nicht je Verein (keine gespeicherte
+  Einstellung); ein Austritt im Beitragsjahr wird nicht anteilig gerechnet (Ausgetretene bekommen keinen Beitrag).
 - **Nach dem SEPA-Export** bietet die Seite an, genau die exportierten Beiträge als bezahlt zu markieren (erst nach dem Einreichen bei der Bank).
 - **Überfällige markieren** setzt offene Beiträge mit abgelaufener Fälligkeit auf „überfällig“. Mahnschreiben gibt es noch nicht.
 

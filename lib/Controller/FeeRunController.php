@@ -31,7 +31,8 @@ class FeeRunController extends Controller {
             (int)$this->request->getParam('clubId', 0),
             (int)$this->request->getParam('year', 0),
             (string)$this->request->getParam('dueDate', ''),
-            $this->request->getParam('description')
+            $this->request->getParam('description'),
+            $this->prorata()
         ));
     }
 
@@ -44,8 +45,13 @@ class FeeRunController extends Controller {
             (int)$this->request->getParam('clubId', 0),
             (int)$this->request->getParam('year', 0),
             (string)$this->request->getParam('dueDate', ''),
-            $this->request->getParam('description')
+            $this->request->getParam('description'),
+            $this->prorata()
         ));
+    }
+
+    private function prorata(): bool {
+        return filter_var($this->request->getParam('prorata', false), FILTER_VALIDATE_BOOLEAN);
     }
 
     private function respond(callable $action): JSONResponse {

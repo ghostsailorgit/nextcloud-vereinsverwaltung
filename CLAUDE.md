@@ -66,7 +66,8 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    failed to insert until then; `tests/Unit/EntityInsertTest` pins it). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
    "Incorrect integer value".
 8. **Annual fee run** (`FeeRunService`): one fee per active member by category, idempotent per member+year
-   (cancelled fees don't count), preview first, all-or-nothing in a transaction. Mass status changes
+   (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who
+   joined during the fee year pays months from the join month to December / 12 (missing/unreadable join date = full year). Mass status changes
    (`markPaidInClub`, `flagOverdueInClub`) are single SQL statements - row-by-row updates took minutes on the slow host.
    After a SEPA export the UI offers to mark exactly the exported fees (ids in `X-Sepa-Fee-Ids`) as paid.
 9. `IQueryBuilder::execute()` no longer exists: use `executeStatement()` / `executeQuery()`.

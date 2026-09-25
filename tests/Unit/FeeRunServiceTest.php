@@ -203,6 +203,69 @@ class FeeRunServiceTest extends TestCase {
         $this->service->run(self::CLUB, 2026, '2026-03-31');
     }
 
+    public function testWithoutProrataMidYearJoinersPayTheFullAmount(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-10-15');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(24.0, $plan['included'][0]['amount']);
+        $this->assertArrayNotHasKey('months', $plan['included'][0]);
+        $this->assertFalse($plan['prorata']);
+    }
+
+    public function testProrataChargesFromTheJoinMonthOfTheFeeYearOnly(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->rate(2, 'Jugend', 10.0);
+        $this->member(10, 'Alt', 'Mitglied', null, '2015-06-01');   // earlier year -> full
+        $this->member(11, 'Jan', 'Mitglied', null, '2026-01-20');   // January -> full, not marked
+        $this->member(12, 'Okt', 'Mitglied', null, '2026-10-15');   // Oct-Dec = 3 months
+        $this->member(13, 'Dez', 'Jugend', 2, '2026-12-31');        // 1 month of 10 € -> 0.83
+        $this->member(14, 'Ohne', 'Datum', null, null);             // unknown join -> full
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $byName = [];
+        foreach ($plan['included'] as $e) {
+            $byName[$e['name']] = $e;
+        }
+        $this->assertSame(24.0, $byName['Alt Mitglied']['amount']);
+        $this->assertSame(24.0, $byName['Jan Mitglied']['amount']);
+        $this->assertArrayNotHasKey('months', $byName['Jan Mitglied']);
+        $this->assertSame(6.0, $byName['Okt Mitglied']['amount']);
+        $this->assertSame(3, $byName['Okt Mitglied']['months']);
+        $this->assertSame(24.0, $byName['Okt Mitglied']['fullAmount']);
+        $this->assertSame(0.83, $byName['Dez Jugend']['amount']);
+        $this->assertSame(1, $byName['Dez Jugend']['months']);
+        $this->assertSame(24.0, $byName['Ohne Datum']['amount']);
+        $this->assertSame(78.83, $plan['total']);
+        $this->assertTrue($plan['prorata']);
+    }
+
+    public function testProrataAmountRoundingToZeroIsSkippedNotBilled(): void {
+        $this->rate(1, 'Symbolisch', 0.05, true);
+        $this->member(10, 'Dez', 'Mitglied', null, '2026-12-01');   // 0.05 / 12 -> 0.00
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $this->assertSame([], $plan['included']);
+        $this->assertStringContainsString('anteilig', $plan['skipped'][0]['reason']);
+    }
+
+    public function testRunWritesTheProrataAmount(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Okt', 'Mitglied', null, '2026-10-15');
+        $inserted = [];
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$inserted) {
+            $inserted[] = $f;
+            return $f;
+        });
+
+        $this->service->run(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $this->assertSame(6.0, $inserted[0]->getAmount());
+    }
+
     public function testInvalidYearOrDateIsRejected(): void {
         try {
             $this->service->plan(self::CLUB, 1999, '2026-03-31');

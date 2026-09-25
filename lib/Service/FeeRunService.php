@@ -17,6 +17,9 @@ use OCP\IDBConnection;
  * according to their fee category. Idempotent - a member who already has a
  * (non-cancelled) fee for that year is skipped - so a run can be repeated
  * after new members joined, and previewed before anything is written.
+ *
+ * With $prorata, a member who joined during the fee year pays only for the
+ * months from the join month (inclusive) to December, rounded to cents.
  */
 class FeeRunService {
     public function __construct(
@@ -32,10 +35,10 @@ class FeeRunService {
     /**
      * What a run would do, without writing anything.
      *
-     * @return array{year: int, dueDate: string, description: string, included: array, skipped: array, total: float}
+     * @return array{year: int, dueDate: string, description: string, prorata: bool, included: array, skipped: array, total: float}
      * @throws ValidationException
      */
-    public function plan(int $clubId, int $year, string $dueDate, ?string $description = null): array {
+    public function plan(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false): array {
         $this->clubs->find($clubId);
         if ($year < 2000 || $year > 2100) {
             throw new ValidationException('Jahr ist ungültig');
@@ -108,19 +111,33 @@ class FeeRunService {
                 continue;
             }
 
-            $included[] = [
+            $fullAmount = (float)$rate->getAmount();
+            $months = $prorata ? $this->monthsInYear($join, $year) : 12;
+            $amount = $months === 12 ? $fullAmount : round($fullAmount * $months / 12, 2);
+            if ($amount <= 0) {
+                $skip('anteiliger Beitrag 0,00 €');
+                continue;
+            }
+
+            $entry = [
                 'memberId' => $member->getId(),
                 'name' => $member->getFullName(),
                 'category' => $rate->getName(),
-                'amount' => (float)$rate->getAmount(),
+                'amount' => $amount,
             ];
-            $total += (float)$rate->getAmount();
+            if ($months !== 12) {
+                $entry['fullAmount'] = $fullAmount;
+                $entry['months'] = $months;
+            }
+            $included[] = $entry;
+            $total += $amount;
         }
 
         return [
             'year' => $year,
             'dueDate' => $dueDate,
             'description' => $description,
+            'prorata' => $prorata,
             'included' => $included,
             'skipped' => $skipped,
             'total' => round($total, 2),
@@ -133,8 +150,8 @@ class FeeRunService {
      * @return array the plan, plus 'created' (number of fees written)
      * @throws ValidationException
      */
-    public function run(int $clubId, int $year, string $dueDate, ?string $description = null): array {
-        $plan = $this->plan($clubId, $year, $dueDate, $description);
+    public function run(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false): array {
+        $plan = $this->plan($clubId, $year, $dueDate, $description, $prorata);
 
         $this->db->beginTransaction();
         try {
@@ -164,8 +181,27 @@ class FeeRunService {
             'dueDate' => $dueDate,
             'created' => $plan['created'],
             'total' => $plan['total'],
+            'prorata' => $prorata,
         ]);
         return $plan;
+    }
+
+    /**
+     * Months of $year the membership is billable for: 12, or - if it began during
+     * $year - the join month and every month after it. A missing or unreadable
+     * join date counts as a full year (the member is not charged less by accident
+     * of bad data, and the preview shows the full amount).
+     */
+    private function monthsInYear(?string $joinDate, int $year): int {
+        if (empty($joinDate) || !preg_match('/^(\d{4})-(\d{2})/', $joinDate, $m)) {
+            return 12;
+        }
+        $joinYear = (int)$m[1];
+        $joinMonth = (int)$m[2];
+        if ($joinYear !== $year || $joinMonth < 1 || $joinMonth > 12) {
+            return 12;
+        }
+        return 13 - $joinMonth;
     }
 
     /**
