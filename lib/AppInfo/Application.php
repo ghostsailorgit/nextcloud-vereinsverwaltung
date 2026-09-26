@@ -7,6 +7,7 @@
 
 namespace OCA\Verein\AppInfo;
 
+use OCA\Verein\Calendar\ClubCalendarProvider;
 use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Db\MemberMapper;
@@ -105,6 +106,8 @@ class Application extends App implements IBootstrap {
         });
 
         $context->registerMiddleware(AuthorizationMiddleware::class);
+        // birthday/anniversary calendar per club via the public calendar-provider API (see ClubCalendarProvider)
+        $context->registerCalendarProvider(ClubCalendarProvider::class);
     }
 
     public function boot(IBootContext $context): void {
