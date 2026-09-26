@@ -24,7 +24,7 @@
           v-if="closeable"
           class="alert-close"
           @click="close"
-          aria-label="Schließen"
+          :aria-label="t('verein', 'Close')"
         >
           ✕
         </button>
@@ -34,6 +34,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@nextcloud/l10n'
 import { ref, computed, watch } from 'vue'
 
 interface Props {
@@ -47,7 +48,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   type: 'info',
-  title: 'Nachricht',
+  title: () => t('verein', 'Message'),
   message: '',
   errors: () => [],
   duration: 5000,
@@ -61,13 +62,13 @@ const titleComputed = computed(() => {
   if (props.title) return props.title
   switch (props.type) {
     case 'error':
-      return 'Fehler'
+      return t('verein', 'Error')
     case 'success':
-      return 'Erfolg'
+      return t('verein', 'Success')
     case 'warning':
-      return 'Warnung'
+      return t('verein', 'Warning')
     default:
-      return 'Information'
+      return t('verein', 'Information')
   }
 })
 

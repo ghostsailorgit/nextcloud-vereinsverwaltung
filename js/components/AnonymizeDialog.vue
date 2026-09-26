@@ -5,38 +5,35 @@
 <template>
   <NcDialog
     :open="!!member"
-    name="Person unwiderruflich anonymisieren"
+    :name="t('verein', 'Anonymize person irreversibly')"
     size="normal"
     @update:open="(v) => { if (!v) close() }"
   >
     <div v-if="member" class="anonymize-dialog">
       <p class="warning">
-        <strong>{{ fullName }}</strong> wird unwiderruflich anonymisiert. In der App lässt sich das
-        <strong>nicht rückgängig</strong> machen; nur das Zurückspielen einer älteren Sicherung brächte die Daten
-        zurück, und damit gingen alle späteren Änderungen verloren.
+        <strong>{{ fullName }}</strong> {{ t('verein', 'will be anonymized irreversibly. This cannot be undone in the app; only restoring an older backup would bring the data back, and all later changes would be lost.') }}
       </p>
-      <p>Ersetzt bzw. entfernt werden:</p>
+      <p>{{ t('verein', 'Replaced or removed:') }}</p>
       <ul>
-        <li>Name, Anrede, Anschrift, E-Mail und Geburtsdatum</li>
-        <li>IBAN, BIC und die Verknüpfung mit einem Nextcloud-Konto</li>
-        <li>die personenbezogenen Angaben in älteren Einträgen des Änderungsprotokolls</li>
+        <li>{{ t('verein', 'Name, salutation, address, e-mail and date of birth') }}</li>
+        <li>{{ t('verein', 'IBAN, BIC and the link to a Nextcloud account') }}</li>
+        <li>{{ t('verein', 'the personal data in older entries of the change log') }}</li>
       </ul>
       <p>
-        Erhalten bleiben die Beiträge und die SEPA-Historie (Aufbewahrungspflicht der Buchhaltung) sowie Ein- und
-        Austrittsdaten. Das geht nur, wenn die Person in <strong>allen</strong> Vereinen ausgetreten oder verstorben ist.
+        {{ t('verein', 'Fees and the SEPA history are kept (bookkeeping retention), as well as join and leave dates. This is only possible once the person has left all clubs or is deceased.') }}
       </p>
       <NcTextField
         :model-value="typed"
-        label="Zum Bestätigen den vollständigen Namen eintippen"
+        :label="t('verein', 'Type the full name to confirm')"
         :placeholder="fullName"
         autocomplete="off"
         @update:model-value="typed = $event"
       />
     </div>
     <template #actions>
-      <NcButton variant="tertiary" :disabled="busy" @click="close">Abbrechen</NcButton>
+      <NcButton variant="tertiary" :disabled="busy" @click="close">{{ t('verein', 'Cancel') }}</NcButton>
       <NcButton variant="error" :disabled="!confirmed || busy" @click="anonymize">
-        Unwiderruflich anonymisieren
+        {{ t('verein', 'Anonymize irreversibly') }}
       </NcButton>
     </template>
   </NcDialog>
@@ -48,6 +45,7 @@ import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
+import { t } from '@nextcloud/l10n'
 import { api } from '../api'
 import { extractErrorMessage } from '../errorMessage'
 
@@ -78,16 +76,16 @@ export default {
       busy.value = true
       try {
         await api.post(`members/${props.member.id}/anonymize`, {})
-        showSuccess(`${fullName.value} wurde anonymisiert`)
+        showSuccess(t('verein', '{name} was anonymized', { name: fullName.value }))
         emit('done')
       } catch (error) {
-        showError(extractErrorMessage(error, 'Anonymisieren fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Anonymization failed')))
       } finally {
         busy.value = false
       }
     }
 
-    return { typed, busy, fullName, confirmed, close, anonymize }
+    return { t, typed, busy, fullName, confirmed, close, anonymize }
   }
 }
 </script>

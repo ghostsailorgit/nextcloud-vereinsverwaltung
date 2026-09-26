@@ -4,26 +4,24 @@
 -->
 <template>
   <div class="card backups">
-    <h3>Sicherungen (Administrator)</h3>
+    <h3>{{ t('verein', 'Backups (administrator)') }}</h3>
     <p class="hint">
-      Alle Vereinsdaten (alle Vereine, Mitglieder, Beiträge, Rollen) werden täglich automatisch gesichert.
-      Sicherungen älter als {{ retentionDays }} Tage werden automatisch gelöscht.
-      Sie liegen im App-Datenordner von Nextcloud, nicht in den Dateien.
+      {{ t('verein', 'All club data (all clubs, members, fees, roles) is backed up automatically every day. Backups older than {days} days are deleted automatically. They are stored in Nextcloud\'s app data folder, not in the files.', { days: retentionDays }) }}
     </p>
     <p>
-      <NcButton variant="primary" :disabled="busy" @click="create">Jetzt sichern</NcButton>
+      <NcButton variant="primary" :disabled="busy" @click="create">{{ t('verein', 'Back up now') }}</NcButton>
     </p>
-    <p v-if="loaded && !backups.length" class="hint">Noch keine Sicherung vorhanden.</p>
+    <p v-if="loaded && !backups.length" class="hint">{{ t('verein', 'No backup yet.') }}</p>
     <div v-if="backups.length" class="scroll">
     <table class="list">
       <thead>
-        <tr><th>Zeitpunkt</th><th>Größe</th><th /></tr>
+        <tr><th>{{ t('verein', 'Time') }}</th><th>{{ t('verein', 'Size') }}</th><th /></tr>
       </thead>
       <tbody>
         <tr v-for="b in backups" :key="b.name">
           <td>{{ formatTime(b.created) }}</td>
           <td>{{ formatSize(b.size) }}</td>
-          <td><a :href="downloadUrl(b.name)">Herunterladen</a></td>
+          <td><a :href="downloadUrl(b.name)">{{ t('verein', 'Download') }}</a></td>
         </tr>
       </tbody>
     </table>
@@ -34,6 +32,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
+import { t } from '@nextcloud/l10n'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { api } from '../api'
 import { absoluteUrl } from '../absoluteUrl'
@@ -54,7 +53,7 @@ export default {
         backups.value = response.data.backups || []
         retentionDays.value = response.data.retentionDays || 30
       } catch (error) {
-        showError(extractErrorMessage(error, 'Sicherungen konnten nicht geladen werden'))
+        showError(extractErrorMessage(error, t('verein', 'Backups could not be loaded')))
       } finally {
         loaded.value = true
       }
@@ -64,10 +63,10 @@ export default {
       busy.value = true
       try {
         await api.post('backups', {})
-        showSuccess('Sicherung erstellt')
+        showSuccess(t('verein', 'Backup created'))
         await load()
       } catch (error) {
-        showError(extractErrorMessage(error, 'Sicherung fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Backup failed')))
       } finally {
         busy.value = false
       }
@@ -80,7 +79,7 @@ export default {
     const downloadUrl = (name) => absoluteUrl('/apps/verein/backups/' + encodeURIComponent(name))
 
     onMounted(load)
-    return { backups, retentionDays, loaded, busy, create, formatTime, formatSize, downloadUrl }
+    return { t, backups, retentionDays, loaded, busy, create, formatTime, formatSize, downloadUrl }
   }
 }
 </script>

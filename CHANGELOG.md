@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.3-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: Hinweisfenster, Export-Knöpfe (jetzt ganze Sätze statt zusammengesetzter Teile), Sicherungen und der
+  Anonymisieren-Dialog. Im Anonymisieren-Dialog sind zwei Hervorhebungen innerhalb von Sätzen entfallen (sie lassen sich
+  nicht sicher übersetzen); der Wortlaut ist unverändert.
+
+---
+
 ## [0.18.2-beta] - 2026-09-26
 
 Beginn der Übersetzbarkeit.
