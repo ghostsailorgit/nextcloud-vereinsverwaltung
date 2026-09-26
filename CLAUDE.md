@@ -130,6 +130,12 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     person reads or that depends on the calendar day (due/overdue, letters, SEPA dates, export names) uses `Service\Clock`
     (ITimeFactory + the user's/instance's time zone, optional collaborator, `Clock::todayOf()`); DB timestamps stay UTC.
 
+21. **Translations (in progress):** new or touched UI text is English source via `t('verein', '...')` / `n('verein', ...)`
+    (`/l10n`) or `IL10N->t()` in PHP - plain string literals with placeholders (`{name}`, `%s`), no template
+    literals or concatenation inside `t()`. Add the German text to `l10n/de.json` (the only hand-edited file) and run
+    `php scripts/l10n.php build`; `L10nTest` fails on a missing translation or outdated generated files.
+    `l10n/` must be deployed and is part of the release archive.
+
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
   `ROADMAP.md`** (move items between done/next), and `docs/ARCHITEKTUR.md` when the data model or rules change, in the same

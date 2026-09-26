@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 import { showConfirmation } from '@nextcloud/dialogs'
+import { t } from '@nextcloud/l10n'
 
 /**
  * Asks with Nextcloud's own confirmation dialog (instead of the browser's confirm()) and resolves to true only
@@ -15,9 +16,9 @@ import { showConfirmation } from '@nextcloud/dialogs'
  * @param {'info'|'warning'|'error'} [options.severity] 'error' for destructive actions
  * @return {Promise<boolean>}
  */
-export async function confirmAction(name, text, { labelConfirm = 'Bestätigen', severity = 'warning' } = {}) {
+export async function confirmAction(name, text, { labelConfirm = t('verein', 'Confirm'), severity = 'warning' } = {}) {
   try {
-    return (await showConfirmation({ name, text, labelConfirm, labelReject: 'Abbrechen', severity })) === true
+    return (await showConfirmation({ name, text, labelConfirm, labelReject: t('verein', 'Cancel'), severity })) === true
   } catch (e) {
     return false
   }

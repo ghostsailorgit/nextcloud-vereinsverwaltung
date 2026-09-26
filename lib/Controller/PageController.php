@@ -34,6 +34,8 @@ class PageController extends Controller {
         Util::addStyle('theming', 'default');
         Util::addScript('core', 'common');
         Util::addScript('core', 'main');
+        // l10n/<language>.js of this app, so t('verein', ...) in the frontend finds its translations
+        Util::addTranslations('verein');
 
         return new TemplateResponse('verein', 'main', [
             'id-app-content' => '#app-content-vue',

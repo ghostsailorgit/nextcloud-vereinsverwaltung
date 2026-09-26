@@ -9,19 +9,19 @@
       :disabled="busyCsv"
       @click="handleCsv"
       variant="secondary"
-      :aria-label="`${labelBase} als CSV exportieren`"
-      :title="`${labelBase} als CSV herunterladen`"
+      :aria-label="t('verein', 'Export {what} as CSV', { what: labelBase })"
+      :title="t('verein', 'Download {what} as CSV', { what: labelBase })"
     >
-      {{ busyCsv ? 'Export läuft…' : '📊 CSV Export' }}
+      {{ busyCsv ? t('verein', 'Exporting…') : '📊 ' + t('verein', 'CSV export') }}
     </NcButton>
     <NcButton
       :disabled="busyPdf"
       @click="handlePdf"
       variant="secondary"
-      :aria-label="`${labelBase} als PDF exportieren`"
-      :title="`${labelBase} als PDF herunterladen`"
+      :aria-label="t('verein', 'Export {what} as PDF', { what: labelBase })"
+      :title="t('verein', 'Download {what} as PDF', { what: labelBase })"
     >
-      {{ busyPdf ? 'Export läuft…' : '📄 PDF Export' }}
+      {{ busyPdf ? t('verein', 'Exporting…') : '📄 ' + t('verein', 'PDF export') }}
     </NcButton>
   </div>
 </template>
@@ -31,6 +31,7 @@ import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import { t } from '@nextcloud/l10n'
 import { clubState } from '../store/club'
 
 export default {
@@ -48,10 +49,11 @@ export default {
   },
   computed: {
     labelBase() {
-      return this.resource === 'members' ? 'Mitglieder' : 'Beiträge'
+      return this.resource === 'members' ? t('verein', 'Members') : t('verein', 'Fees')
     }
   },
   methods: {
+    t,
     toastSuccess(msg) { showSuccess(msg); this.$emit('success', msg) },
     toastError(msg) { showError(msg); this.$emit('error', msg) },
     // Both requests use responseType:'blob', so an error body (JSON) also
@@ -78,13 +80,13 @@ export default {
         const ct = (response.headers && response.headers['content-type']) || response.data?.type || ''
         if (!ct.includes('text/csv') && !ct.includes('application/csv')) {
           const text = await new Response(response.data).text()
-          throw new Error(text || 'CSV-Export fehlgeschlagen')
+          throw new Error(text || t('verein', 'CSV export failed'))
         }
         this.downloadFile(response.data, `${this.resource}.csv`, 'text/csv')
-        this.toastSuccess(`${this.labelBase} als CSV exportiert`)
+        this.toastSuccess(t('verein', '{what} exported as CSV', { what: this.labelBase }))
       } catch (e) {
         console.error('CSV export failed', e)
-        this.toastError(await this.extractBlobErrorMessage(e, 'Fehler beim CSV-Export'))
+        this.toastError(await this.extractBlobErrorMessage(e, t('verein', 'Error during the CSV export')))
       } finally {
         this.busyCsv = false
       }
@@ -98,13 +100,13 @@ export default {
         const ct = (response.headers && response.headers['content-type']) || response.data?.type || ''
         if (!ct.includes('application/pdf')) {
           const text = await new Response(response.data).text()
-          throw new Error(text || 'PDF-Export fehlgeschlagen')
+          throw new Error(text || t('verein', 'PDF export failed'))
         }
         this.downloadFile(response.data, `${this.resource}.pdf`, 'application/pdf')
-        this.toastSuccess(`${this.labelBase} als PDF exportiert`)
+        this.toastSuccess(t('verein', '{what} exported as PDF', { what: this.labelBase }))
       } catch (e) {
         console.error('PDF export failed', e)
-        this.toastError(await this.extractBlobErrorMessage(e, 'Fehler beim PDF-Export'))
+        this.toastError(await this.extractBlobErrorMessage(e, t('verein', 'Error during the PDF export')))
       } finally {
         this.busyPdf = false
       }
