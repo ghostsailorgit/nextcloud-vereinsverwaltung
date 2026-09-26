@@ -4,62 +4,59 @@
 -->
 <template>
   <div class="dunning">
-    <h2>Mahnwesen</h2>
+    <h2>{{ t('verein', 'Dunning') }}</h2>
     <p class="hint">
-      Erstellt für offene Beiträge, deren Fälligkeit verstrichen ist, ein Schreiben je Person und erhöht die Mahnstufe:
-      Zahlungserinnerung → 1. Mahnung → 2. und letzte Mahnung. Wer vor kurzem schon ein Schreiben bekommen hat, wird
-      übersprungen, ein Lauf lässt sich also gefahrlos wiederholen. Die App verschickt nichts – die Schreiben kommen als
-      PDF zum Drucken oder Versenden.
+      {{ t('verein', 'For open fees whose due date has passed, this creates one letter per person and raises the dunning level: payment reminder → first dunning letter → second and final dunning letter. Anyone who received a letter recently is skipped, so a run can safely be repeated. The app sends nothing – the letters come as a PDF to print or send.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
       <label class="field">
-        <span>Fällig seit mindestens (Tage)</span>
+        <span>{{ t('verein', 'Due for at least (days)') }}</span>
         <input v-model.number="overdueDays" type="number" min="0" max="365" class="form-input" required @input="plan = null" />
       </label>
       <label class="field">
-        <span>Abstand zum letzten Schreiben (Tage)</span>
+        <span>{{ t('verein', 'Days since the last letter') }}</span>
         <input v-model.number="intervalDays" type="number" min="0" max="365" class="form-input" required @input="plan = null" />
       </label>
       <label class="field">
-        <span>Zahlungsfrist im Schreiben (Tage)</span>
+        <span>{{ t('verein', 'Payment deadline in the letter (days)') }}</span>
         <input v-model.number="deadlineDays" type="number" min="1" max="90" class="form-input" required />
       </label>
       <div class="buttons">
-        <NcButton type="submit" variant="secondary" :disabled="busy">Vorschau</NcButton>
+        <NcButton type="submit" variant="secondary" :disabled="busy">{{ t('verein', 'Preview') }}</NcButton>
         <NcButton
           type="button"
           variant="primary"
           :disabled="busy || !plan || !plan.included.length"
           @click="run"
         >
-          {{ plan && plan.included.length ? plan.included.length + ' Schreiben erstellen' : 'Schreiben erstellen' }}
+          {{ plan && plan.included.length ? n('verein', 'Create %n letter', 'Create %n letters', plan.included.length) : t('verein', 'Create letters') }}
         </NcButton>
         <NcButton v-if="lastFeeIds.length" type="button" variant="tertiary" :disabled="busy" @click="download(lastFeeIds)">
-          Letzte Schreiben erneut herunterladen
+          {{ t('verein', 'Download the last letters again') }}
         </NcButton>
       </div>
     </form>
 
     <div v-if="plan" class="result">
       <p class="summary">
-        <strong>{{ plan.included.length }}</strong> Schreiben über zusammen <strong>{{ money(plan.total) }}</strong>
-        <span v-if="plan.skipped.length"> · {{ plan.skipped.length }} übersprungen</span>
+        {{ n('verein', '%n letter, total {total}', '%n letters, total {total}', plan.included.length, { total: money(plan.total) }) }}
+        <span v-if="plan.skipped.length"> · {{ n('verein', '%n skipped', '%n skipped', plan.skipped.length) }}</span>
       </p>
       <p v-if="!plan.hasAccount" class="warning">
-        Für diesen Verein ist kein Bankkonto hinterlegt (Reiter „Verein“). Die Schreiben nennen dann keine Bankverbindung.
+        {{ t('verein', 'No bank account is set for this club (tab "Club"). The letters will then not name any bank details.') }}
       </p>
       <p v-if="withoutAddress" class="warning">
-        {{ withoutAddress }} Person(en) ohne vollständige Anschrift – deren Schreiben lassen sich nicht per Post versenden.
+        {{ n('verein', '%n person without a complete address – their letter cannot be sent by post.', '%n people without a complete address – their letters cannot be sent by post.', withoutAddress) }}
       </p>
 
       <details v-if="plan.included.length" open>
-        <summary>Wer ein Schreiben bekommt</summary>
+        <summary>{{ t('verein', 'Who gets a letter') }}</summary>
         <table>
-          <thead><tr><th>Mitglied</th><th>Schreiben</th><th>Beiträge</th><th class="num">Offen</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Open') }}</th></tr></thead>
           <tbody>
             <tr v-for="e in plan.included" :key="e.memberId">
-              <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> (ohne Anschrift)</span></td>
+              <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> ({{ t('verein', 'no address') }})</span></td>
               <td>{{ e.levelLabel }}</td>
               <td>{{ e.fees.map(f => f.period || f.description).join(', ') }}</td>
               <td class="num">{{ money(e.total) }}</td>
@@ -69,9 +66,9 @@
       </details>
 
       <details v-if="plan.skipped.length">
-        <summary>Übersprungen ({{ plan.skipped.length }})</summary>
+        <summary>{{ t('verein', 'Skipped ({count})', { count: plan.skipped.length }) }}</summary>
         <table>
-          <thead><tr><th>Mitglied</th><th>Grund</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
           <tbody>
             <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
           </tbody>
@@ -85,12 +82,17 @@
 import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import { t, n } from '@nextcloud/l10n'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 
 // same labels as DunningService::LEVELS
-export const DUNNING_LEVELS = { 1: 'Zahlungserinnerung', 2: '1. Mahnung', 3: '2. und letzte Mahnung' }
+export const DUNNING_LEVELS = {
+  1: t('verein', 'Payment reminder'),
+  2: t('verein', 'First dunning letter'),
+  3: t('verein', 'Second and final dunning letter'),
+}
 
 export default {
   name: 'Dunning',
@@ -112,7 +114,7 @@ export default {
       try {
         plan.value = (await api.post('dunning/preview', params())).data
       } catch (error) {
-        showError(extractErrorMessage(error, 'Vorschau fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Preview failed')))
       } finally {
         busy.value = false
       }
@@ -135,7 +137,7 @@ export default {
         link.remove()
         setTimeout(() => URL.revokeObjectURL(url), 1000)
       } catch (error) {
-        let message = 'Die Schreiben konnten nicht erzeugt werden'
+        let message = t('verein', 'The letters could not be created')
         try {
           message = JSON.parse(await error.response.data.text()).message || message
         } catch (e) {
@@ -149,19 +151,19 @@ export default {
 
     const run = async () => {
       if (!plan.value) return
-      const n = plan.value.included.length
-      if (!(await confirmAction('Mahnschreiben erstellen', `${n} Schreiben erstellen? Die Mahnstufe der betroffenen Beiträge wird erhöht; das lässt sich nicht automatisch zurücknehmen.`, { labelConfirm: 'Schreiben erstellen', severity: 'warning' }))) return
+      const count = plan.value.included.length
+      if (!(await confirmAction(t('verein', 'Create dunning letters'), n('verein', 'Create %n letter? The dunning level of the fees concerned is raised; this cannot be undone automatically.', 'Create %n letters? The dunning level of the fees concerned is raised; this cannot be undone automatically.', count), { labelConfirm: t('verein', 'Create letters'), severity: 'warning' }))) return
       busy.value = true
       let result = null
       try {
         result = (await api.post('dunning', params())).data
       } catch (error) {
-        showError(extractErrorMessage(error, 'Mahnlauf fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Dunning run failed')))
       } finally {
         busy.value = false
       }
       if (!result) return
-      showSuccess(`${result.dunned} Schreiben erstellt`)
+      showSuccess(n('verein', '%n letter created', '%n letters created', result.dunned))
       plan.value = null
       emit('done')
       if (result.feeIds && result.feeIds.length) {
@@ -172,7 +174,7 @@ export default {
 
     const money = (v) => Number(v).toFixed(2).replace('.', ',') + ' €'
 
-    return { overdueDays, intervalDays, deadlineDays, plan, busy, lastFeeIds, withoutAddress, preview, run, download, money }
+    return { t, n, overdueDays, intervalDays, deadlineDays, plan, busy, lastFeeIds, withoutAddress, preview, run, download, money }
   }
 }
 </script>

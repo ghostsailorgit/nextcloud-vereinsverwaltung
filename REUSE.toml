@@ -7,7 +7,7 @@ SPDX-PackageDownloadLocation = "https://github.com/ghostsailorgit/nextcloud-vere
 # carry one. Checked in CI with `reuse lint`.
 
 [[annotations]]
-path = ["**/*.md", "docs/**", ".github/**", ".gitignore", "composer.json", "package.json", "package-lock.json", "tsconfig.json"]
+path = ["**/*.md", "docs/**", ".github/**", ".gitignore", "composer.json", "package.json", "package-lock.json", "tsconfig.json", "l10n/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>"
 SPDX-License-Identifier = "AGPL-3.0-or-later"

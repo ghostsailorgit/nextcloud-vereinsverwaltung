@@ -33,6 +33,17 @@ Zum Ausprobieren die App in eine Nextcloud-Entwicklungsinstanz nach `custom_apps
 
 Die Testsuite läuft bei jedem Push und Pull Request in GitHub Actions.
 
+## Übersetzungen
+
+Texte der Oberfläche werden auf Englisch geschrieben und übersetzt (Nextcloud-Konvention); Deutsch liegt in
+`l10n/de.json`.
+
+- Vue/JS: `import { t, n } from '/l10n'`, dann `t('verein', 'Delete {name}?', { name })` bzw.
+  `n('verein', '%n letter', '%n letters', count)`. PHP: `$this->l->t('Delete %s?', [$name])` (`OCP\IL10N`).
+- Nur einfache Zeichenketten in `t()` - keine Template-Literale oder Verkettung, sonst findet das Werkzeug sie nicht.
+- Deutsche Übersetzung in `l10n/de.json` eintragen, dann `php scripts/l10n.php build` (erzeugt `de.js`, `de_DE.*`).
+  `php scripts/l10n.php check` zeigt fehlende Übersetzungen; die Tests schlagen fehl, solange eine fehlt.
+
 ## Lizenz
 
 Mit deinem Beitrag stimmst du zu, dass er unter der Lizenz der jeweiligen Datei veröffentlicht wird: AGPL-3.0-only in Dateien aus dem

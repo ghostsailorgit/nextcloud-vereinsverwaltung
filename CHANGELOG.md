@@ -4,6 +4,19 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.2-beta] - 2026-09-26
+
+Beginn der Übersetzbarkeit.
+
+### 🌐 Übersetzungen
+- Grundlage nach Nextcloud-Konvention: englische Quelltexte, die deutsche Oberfläche kommt als Übersetzung aus
+  `l10n/de.json` (für „Du“ und „Sie“). Für deutsche Nutzer ändert sich nichts.
+- Umgestellt: die Bestätigungsdialoge und das Mahnwesen. Die übrigen Bereiche folgen.
+- `scripts/l10n.php` findet alle übersetzbaren Texte, prüft, dass jeder eine deutsche Übersetzung hat, und erzeugt die
+  Dateien, die Nextcloud im Browser lädt; ein Test verhindert fehlende Übersetzungen. `l10n/` ist Teil des Release-Archivs.
+
+---
+
 ## [0.18.1-beta] - 2026-09-26
 
 Nextcloud-Dialoge und das richtige „heute“.
