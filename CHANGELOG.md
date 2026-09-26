@@ -15,7 +15,8 @@ Befunde aus dem Nachtest von SEPA-Export, Deaktivieren, Selbstauskunft und Siche
   immer `true`).
 - `occ verein:backup:restore`: die Übersicht vor dem Wiederherstellen ist jetzt wie der Rest des Befehls englisch.
 - Der Dateiname der Datenauskunft folgt der Sprache des Nutzers.
-- Beim Speichern der Vereinsdaten wurden unveränderte „Automatische Rechte“ als Änderung protokolliert.
+- Beim Speichern der Vereinsdaten oder der „Automatischen Rechte“ wurden unveränderte automatische Rechte als Änderung
+  protokolliert; jetzt nur echte Änderungen, mit altem und neuem Wert.
 - Der Reiter „Protokoll“ zeigte die Uhrzeit in UTC (zwei Stunden zu früh im Sommer); jetzt die Ortszeit.
 
 ---

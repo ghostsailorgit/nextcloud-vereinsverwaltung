@@ -156,10 +156,14 @@ class ClubService {
             $clean[$membershipRole] = (int)$roleId;
         }
 
+        $before = $club->getRoleMappingArray();
         $club->setRoleMapping($clean === [] ? null : json_encode($clean));
         $club->setUpdatedAt(date('Y-m-d H:i:s'));
         $club = $this->clubMapper->update($club);
-        $this->auditLog?->record($clubId, 'club', $clubId, 'update', ['roleMapping' => $clean]);
+        // saving the form unchanged is no change worth a log entry
+        if ($before != $clean) {
+            $this->auditLog?->record($clubId, 'club', $clubId, 'update', ['roleMapping' => ['old' => (object)$before, 'new' => (object)$clean]]);
+        }
         return $club;
     }
 
