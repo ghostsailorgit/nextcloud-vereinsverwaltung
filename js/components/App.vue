@@ -13,7 +13,7 @@
           :options="clubs"
           :reduce="c => c.id"
           label="name"
-          input-label="Verein"
+          :input-label="t('verein', 'Club')"
           :clearable="false"
           @update:model-value="onClubChange"
         />
@@ -37,11 +37,10 @@
 
     <NcAppContent id="app-content-vue">
       <div class="verein-container">
-        <p v-if="!loaded">Lade Vereine…</p>
+        <p v-if="!loaded">{{ t('verein', 'Loading clubs…') }}</p>
         <p v-else-if="loadError" class="verein-error">{{ loadError }}</p>
         <p v-else-if="!clubs.length && !isAdmin && !hasMe">
-          Du bist noch keinem Verein zugeordnet. Bitte wende dich an einen Administrator,
-          damit er dir in der Vereinsverwaltung eine Rolle zuweist.
+          {{ t('verein', 'You are not assigned to any club yet. Please ask an administrator to assign you a role in the club management.') }}
         </p>
         <component
           :is="currentComponent"
@@ -64,6 +63,7 @@ import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
+import { t } from '@nextcloud/l10n'
 import { clubState, currentClub, loadClubs, loadMe, setCurrentClub, can } from '../store/club'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
@@ -102,22 +102,22 @@ export default {
     // document management; Calendar app handles events) - see project decision.
     // Each tab is only offered when the user holds the permission in the current club.
     const allTabs = computed(() => [
-      { id: 'dashboard', label: 'Dashboard', emoji: '📊', show: can('verein.member.view') },
-      { id: 'members', label: 'Mitglieder', emoji: '👥', show: can('verein.member.view') },
-      { id: 'finance', label: 'Finanzen', emoji: '💰', show: can('verein.finance.read') },
-      { id: 'roles', label: 'Rollen', emoji: '🛡️', show: can('verein.role.manage') },
-      { id: 'sepa', label: 'SEPA-Export', emoji: '🏦', show: can('verein.sepa.export') },
-      { id: 'clubs', label: 'Verein', emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
-      { id: 'audit', label: 'Protokoll', emoji: '📜', show: can('verein.audit.view') },
-      { id: 'me', label: 'Meine Daten', emoji: '👤', show: !!clubState.me?.linked },
+      { id: 'dashboard', label: t('verein', 'Dashboard'), emoji: '📊', show: can('verein.member.view') },
+      { id: 'members', label: t('verein', 'Members'), emoji: '👥', show: can('verein.member.view') },
+      { id: 'finance', label: t('verein', 'Finance'), emoji: '💰', show: can('verein.finance.read') },
+      { id: 'roles', label: t('verein', 'Roles'), emoji: '🛡️', show: can('verein.role.manage') },
+      { id: 'sepa', label: t('verein', 'SEPA export'), emoji: '🏦', show: can('verein.sepa.export') },
+      { id: 'clubs', label: t('verein', 'Club'), emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
+      { id: 'audit', label: t('verein', 'Log'), emoji: '📜', show: can('verein.audit.view') },
+      { id: 'me', label: t('verein', 'My data'), emoji: '👤', show: !!clubState.me?.linked },
       {
         id: 'documents',
-        label: 'Dokumente',
+        label: t('verein', 'Documents'),
         emoji: '📄',
         show: !!currentClub.value,
         href: absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(currentClub.value?.documentsPath || '/'))
       },
-      { id: 'calendar', label: 'Termine', emoji: '📅', show: !!currentClub.value, href: absoluteUrl('/apps/calendar/') }
+      { id: 'calendar', label: t('verein', 'Events'), emoji: '📅', show: !!currentClub.value, href: absoluteUrl('/apps/calendar/') }
     ])
 
     const visibleTabs = computed(() => allTabs.value.filter(t => t.show))
@@ -151,7 +151,7 @@ export default {
         await Promise.all([loadClubs(), loadMe()])
         ensureVisibleTab()
       } catch (e) {
-        loadError.value = extractErrorMessage(e, 'Die Vereine konnten nicht geladen werden')
+        loadError.value = extractErrorMessage(e, t('verein', 'The clubs could not be loaded'))
         clubState.loaded = true
       }
     })
@@ -167,6 +167,7 @@ export default {
     }
 
     return {
+      t,
       activeTab,
       loadError,
       visibleTabs,

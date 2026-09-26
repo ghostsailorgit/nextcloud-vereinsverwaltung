@@ -6,15 +6,15 @@
 <template>
   <div class="statistics-container">
     <header class="section-header">
-      <h1>📊 Dashboard</h1>
-      <p class="section-subtitle">Übersicht und Statistiken der Vereinsverwaltung</p>
+      <h1>📊 {{ t('verein', 'Dashboard') }}</h1>
+      <p class="section-subtitle">{{ t('verein', 'Overview and statistics of the club management') }}</p>
     </header>
 
     <!-- Alert für Fehler -->
     <Alert
       ref="alertRef"
       type="error"
-      title="Fehler beim Laden"
+      :title="t('verein', 'Error while loading')"
       :message="errorMessage"
       :errors="errorList"
     />
@@ -22,7 +22,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
-      <p>Daten werden geladen...</p>
+      <p>{{ t('verein', 'Loading data...') }}</p>
     </div>
 
     <!-- Statistik-Widgets -->
@@ -30,51 +30,51 @@
       <!-- Widget: Mitglieder -->
       <div class="stat-widget" role="button" tabindex="0" @click="emit('navigate','members')" @keydown.enter="emit('navigate','members')">
         <div class="stat-header">
-          <h3 class="stat-title">👥 Mitglieder</h3>
+          <h3 class="stat-title">👥 {{ t('verein', 'Members') }}</h3>
           <span class="stat-icon primary">👥</span>
         </div>
         <p class="stat-value">{{ statistics.memberCount }}</p>
-        <p class="stat-label">Registrierte Mitglieder</p>
+        <p class="stat-label">{{ t('verein', 'Registered members') }}</p>
       </div>
 
       <!-- Widget: Offene Gebühren -->
       <div class="stat-widget warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">📋 Offene Gebühren</h3>
+          <h3 class="stat-title">📋 {{ t('verein', 'Open fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalOpen) }}</p>
-        <p class="stat-label">{{ statistics.openCount }} Einträge</p>
+        <p class="stat-label">{{ n('verein', '%n entry', '%n entries', statistics.openCount) }}</p>
       </div>
 
       <!-- Widget: Bezahlte Gebühren -->
       <div class="stat-widget success" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">✓ Bezahlte Gebühren</h3>
+          <h3 class="stat-title">✓ {{ t('verein', 'Paid fees') }}</h3>
           <span class="stat-icon success-icon">✓</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalPaid) }}</p>
-        <p class="stat-label">{{ statistics.paidCount }} Einträge</p>
+        <p class="stat-label">{{ n('verein', '%n entry', '%n entries', statistics.paidCount) }}</p>
       </div>
 
       <!-- Widget: Fällige Gebühren -->
       <div class="stat-widget warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">📋 Fällige Gebühren</h3>
+          <h3 class="stat-title">📋 {{ t('verein', 'Due fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalDue) }}</p>
-        <p class="stat-label">{{ statistics.dueCount }} Einträge</p>
+        <p class="stat-label">{{ n('verein', '%n entry', '%n entries', statistics.dueCount) }}</p>
       </div>
 
       <!-- Widget: Überfällige Gebühren -->
       <div class="stat-widget error" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">⚠️ Überfällige Gebühren</h3>
+          <h3 class="stat-title">⚠️ {{ t('verein', 'Overdue fees') }}</h3>
           <span class="stat-icon error-icon">⚠️</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalOverdue) }}</p>
-        <p class="stat-label">{{ statistics.overdueCount }} Einträge</p>
+        <p class="stat-label">{{ n('verein', '%n entry', '%n entries', statistics.overdueCount) }}</p>
       </div>
     </div>
 
@@ -82,7 +82,7 @@
     <div v-if="!loading" class="charts-grid">
       <!-- Balkendiagramm: Gebührenstatus -->
       <div class="chart-container">
-        <h3 class="chart-title">💰 Gebührenstatus</h3>
+        <h3 class="chart-title">💰 {{ t('verein', 'Fee status') }}</h3>
         <div class="chart-wrapper">
           <Bar
             :data="feeStatusChartData"
@@ -93,7 +93,7 @@
 
       <!-- Liniendiagramm: Mitgliederwachstum (aus echten Beitrittsdaten) -->
       <div class="chart-container">
-        <h3 class="chart-title">📈 Mitgliederwachstum (Letzte 6 Monate)</h3>
+        <h3 class="chart-title">📈 {{ t('verein', 'Member growth (last 6 months)') }}</h3>
         <div class="chart-wrapper">
           <Line
             :data="memberGrowthChartData"
@@ -104,38 +104,35 @@
 
       <!-- Nächste Geburtstage -->
       <div class="chart-container">
-        <h3 class="chart-title">🎂 Nächste Geburtstage</h3>
+        <h3 class="chart-title">🎂 {{ t('verein', 'Upcoming birthdays') }}</h3>
         <ul v-if="upcomingBirthdays.length" class="upcoming-list">
           <li v-for="entry in upcomingBirthdays" :key="entry.memberId" class="upcoming-item">
             <span class="upcoming-name">{{ entry.name }}</span>
-            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · wird {{ entry.turningAge }}</span>
+            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · {{ t('verein', 'turns {age}', { age: entry.turningAge }) }}</span>
           </li>
         </ul>
-        <p v-else class="upcoming-empty">Keine Geburtstage hinterlegt</p>
+        <p v-else class="upcoming-empty">{{ t('verein', 'No birthdays recorded') }}</p>
       </div>
 
       <!-- Nächste Jubiläen -->
       <div class="chart-container">
-        <h3 class="chart-title">🎉 Nächste Jubiläen</h3>
+        <h3 class="chart-title">🎉 {{ t('verein', 'Upcoming anniversaries') }}</h3>
         <ul v-if="upcomingAnniversaries.length" class="upcoming-list">
           <li v-for="entry in upcomingAnniversaries" :key="entry.memberId" class="upcoming-item">
             <span class="upcoming-name">{{ entry.name }}</span>
-            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · {{ entry.years }} {{ entry.years === 1 ? 'Jahr' : 'Jahre' }} dabei</span>
+            <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · {{ n('verein', '%n year a member', '%n years a member', entry.years) }}</span>
           </li>
         </ul>
-        <p v-else class="upcoming-empty">Keine Eintrittsdaten hinterlegt</p>
+        <p v-else class="upcoming-empty">{{ t('verein', 'No join dates recorded') }}</p>
       </div>
 
       <!-- Vereinskalender -->
       <div class="chart-container">
-        <h3 class="chart-title">📅 Vereinskalender</h3>
+        <h3 class="chart-title">📅 {{ t('verein', 'Club calendar') }}</h3>
         <p class="subscribe-hint">
-          Geburtstage und Jubiläen werden automatisch im Kalender
-          "Vereinstermine" gepflegt und intern für Vorstand und Mitglieder
-          freigegeben - kein öffentlicher Link. Nach Login unter
-          "Weitere Kalender" in der Nextcloud-Kalender-App aktivieren.
+          {{ t('verein', 'Birthdays and anniversaries appear automatically in the read-only calendar "Vereinstermine" in the Calendar app – for the Nextcloud groups entered under "Club". There is no public link.') }}
         </p>
-        <NcButton variant="secondary" @click="openCalendarApp">Zur Kalender-App</NcButton>
+        <NcButton variant="secondary" @click="openCalendarApp">{{ t('verein', 'Open the Calendar app') }}</NcButton>
       </div>
     </div>
   </div>
@@ -159,6 +156,7 @@ import {
 } from 'chart.js'
 import api from '../api'
 import Alert from './Alert.vue'
+import { t, n } from '@nextcloud/l10n'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { extractErrorMessage } from '../errorMessage'
 import { absoluteUrl } from '../absoluteUrl'
@@ -228,10 +226,10 @@ const upcomingAnniversaries = ref<UpcomingAnniversary[]>([])
 
 // Chart Daten und Optionen
 const feeStatusChartData = ref({
-  labels: ['Offen', 'Bezahlt', 'Überfällig'],
+  labels: [t('verein', 'Open'), t('verein', 'Paid'), t('verein', 'Overdue')],
   datasets: [
     {
-      label: 'Betrag (€)',
+      label: t('verein', 'Amount (€)'),
       data: [0, 0, 0],
       backgroundColor: ['#ffd54f', '#4caf50', '#f44336'],
       borderColor: ['#fbc02d', '#388e3c', '#d32f2f'],
@@ -244,7 +242,7 @@ const memberGrowthChartData = ref({
   labels: [],
   datasets: [
     {
-      label: 'Mitglieder',
+      label: t('verein', 'Members'),
       data: [],
       borderColor: '#1976d2',
       backgroundColor: 'rgba(25, 118, 210, 0.1)',
@@ -371,8 +369,8 @@ const loadStatistics = async () => {
     loading.value = false
   } catch (error) {
     loading.value = false
-    errorMessage.value = 'Fehler beim Laden der Statistiken'
-    errorList.value = [extractErrorMessage(error, 'Unbekannter Fehler')]
+    errorMessage.value = t('verein', 'Error loading the statistics')
+    errorList.value = [extractErrorMessage(error, t('verein', 'Unknown error'))]
     console.error('Statistics Error:', error)
   }
 }

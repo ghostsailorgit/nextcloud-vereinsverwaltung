@@ -4,11 +4,9 @@
 -->
 <template>
   <div class="audit-log">
-    <h2>Änderungsprotokoll</h2>
+    <h2>{{ t('verein', 'Change log') }}</h2>
     <p class="hint">
-      Wer hat wann was geändert. Personenbezogene Angaben (Name, Anschrift, E-Mail, IBAN, Geburtsdatum, Mandat …)
-      stehen hier nie im Klartext, sondern nur als „geändert“. Einträge zu Personen werden 10 Jahre aufbewahrt,
-      alles andere 30 Tage.
+      {{ t('verein', 'Who changed what and when. Personal data (name, address, e-mail, IBAN, birth date, mandate …) never appears here in plain text, only as "changed". Entries about people are kept for 10 years, everything else for 30 days.') }}
     </p>
 
     <div class="filters">
@@ -17,24 +15,24 @@
         :options="typeOptions"
         :reduce="o => o.id"
         label="label"
-        input-label="Bereich"
+        :input-label="t('verein', 'Area')"
         :clearable="false"
         @update:model-value="setType"
       />
     </div>
 
-    <p v-if="loading && !entries.length">Lade Protokoll…</p>
-    <p v-else-if="!entries.length" class="empty-state">Keine Einträge.</p>
+    <p v-if="loading && !entries.length">{{ t('verein', 'Loading log…') }}</p>
+    <p v-else-if="!entries.length" class="empty-state">{{ t('verein', 'No entries.') }}</p>
 
     <table v-else class="log-table">
       <thead>
-        <tr><th>Zeitpunkt</th><th>Wer</th><th>Was</th><th>Betrifft</th><th>Änderungen</th></tr>
+        <tr><th>{{ t('verein', 'Time') }}</th><th>{{ t('verein', 'Who') }}</th><th>{{ t('verein', 'What') }}</th><th>{{ t('verein', 'Concerns') }}</th><th>{{ t('verein', 'Changes') }}</th></tr>
       </thead>
       <tbody>
         <tr v-for="e in entries" :key="e.id">
           <td class="nowrap">{{ formatTime(e.createdAt) }}</td>
-          <td>{{ e.actorDisplayName || e.actorUserId || 'System' }}</td>
-          <td>{{ typeLabel(e.entityType) }} {{ actionLabel(e) }}</td>
+          <td>{{ e.actorDisplayName || e.actorUserId || t('verein', 'System') }}</td>
+          <td>{{ t('verein', '{area} {action}', { area: typeLabel(e.entityType), action: actionLabel(e) }) }}</td>
           <td>{{ subject(e) }}</td>
           <td>
             <ul v-if="changeLines(e).length" class="changes">
@@ -49,7 +47,7 @@
     </table>
 
     <div v-if="hasMore" class="more">
-      <NcButton variant="secondary" :disabled="loading" @click="load(true)">Ältere Einträge laden</NcButton>
+      <NcButton variant="secondary" :disabled="loading" @click="load(true)">{{ t('verein', 'Load older entries') }}</NcButton>
     </div>
   </div>
 </template>
@@ -59,49 +57,51 @@ import { ref, onMounted } from 'vue'
 import { showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
+import { t, n } from '@nextcloud/l10n'
 import { api } from '../api'
 import { can } from '../store/club'
 import { extractErrorMessage } from '../errorMessage'
 
 const TYPES = {
-  member: 'Person',
-  membership: 'Mitgliedschaft',
-  fee: 'Beitrag',
-  fee_run: 'Beitragslauf',
-  fee_rate: 'Beitragskategorie',
-  club: 'Verein',
-  club_account: 'Bankkonto',
-  user_role: 'Rollenzuweisung',
-  role: 'Rolle'
+  member: t('verein', 'Person'),
+  membership: t('verein', 'Membership'),
+  fee: t('verein', 'Fee'),
+  fee_run: t('verein', 'Fee run'),
+  fee_rate: t('verein', 'Fee rate'),
+  club: t('verein', 'Club'),
+  club_account: t('verein', 'Club bank account'),
+  user_role: t('verein', 'Role assignment'),
+  role: t('verein', 'Role')
 }
 
 const ACTIONS = {
-  create: 'angelegt',
-  update: 'geändert',
-  delete: 'gelöscht',
-  deactivate: 'deaktiviert',
-  activate: 'aktiviert',
-  anonymize: 'anonymisiert',
-  mark_paid: 'als bezahlt markiert',
-  flag_overdue: 'als überfällig markiert',
-  dunning: 'gemahnt'
+  create: t('verein', 'created'),
+  update: t('verein', 'changed'),
+  delete: t('verein', 'deleted'),
+  deactivate: t('verein', 'deactivated'),
+  activate: t('verein', 'activated'),
+  anonymize: t('verein', 'anonymized'),
+  mark_paid: t('verein', 'marked as paid'),
+  flag_overdue: t('verein', 'marked as overdue'),
+  dunning: t('verein', 'dunned')
 }
 
 const FIELDS = {
-  name: 'Name', firstName: 'Vorname', fullName: 'Name', salutation: 'Anrede', address: 'Adresse', street: 'Straße',
-  postalCode: 'PLZ', city: 'Ort', email: 'E-Mail', iban: 'IBAN', bic: 'BIC', birthDate: 'Geburtsdatum', age: 'Alter',
-  role: 'Funktion', joinDate: 'Eintritt', leaveDate: 'Austritt', foundingMember: 'Gründungsmitglied',
-  deactivated: 'Deaktiviert', deceased: 'Verstorben', userId: 'Nextcloud-Konto', feeRateId: 'Beitragskategorie',
-  mandateReference: 'Mandatsreferenz', mandateDate: 'Mandatsdatum', mandateFile: 'Mandatsdatei', amount: 'Betrag',
-  status: 'Status', dueDate: 'Fällig am', description: 'Bemerkung', period: 'Beitragsjahr', memberId: 'Person',
-  isDefault: 'Standard', label: 'Bezeichnung', creditorId: 'Gläubiger-ID', permissions: 'Berechtigungen',
-  roleId: 'Rolle', documentsPath: 'Team-Ordner', calendarGroups: 'Kalendergruppen', paidDate: 'Bezahlt am',
-  roleMapping: 'Automatische Rechte'
+  name: t('verein', 'Name'), firstName: t('verein', 'First name'), fullName: t('verein', 'Name'), salutation: t('verein', 'Salutation'),
+  address: t('verein', 'Address'), street: t('verein', 'Street'), postalCode: t('verein', 'Postal code'), city: t('verein', 'City'),
+  email: t('verein', 'E-mail'), iban: 'IBAN', bic: 'BIC', birthDate: t('verein', 'Birth date'), age: t('verein', 'Age'),
+  role: t('verein', 'Club role'), joinDate: t('verein', 'Join'), leaveDate: t('verein', 'Leave'), foundingMember: t('verein', 'Founding member'),
+  deactivated: t('verein', 'Deactivated'), deceased: t('verein', 'Deceased'), userId: t('verein', 'Nextcloud account'), feeRateId: t('verein', 'Fee rate'),
+  mandateReference: t('verein', 'Mandate reference'), mandateDate: t('verein', 'Mandate date'), mandateFile: t('verein', 'Mandate file'), amount: t('verein', 'Amount'),
+  status: t('verein', 'Status'), dueDate: t('verein', 'Due on'), description: t('verein', 'Remark'), period: t('verein', 'Fee year'), memberId: t('verein', 'Person'),
+  isDefault: t('verein', 'default'), label: t('verein', 'Label'), creditorId: t('verein', 'Creditor ID'), permissions: t('verein', 'Permissions'),
+  roleId: t('verein', 'Role'), documentsPath: t('verein', 'Team folder'), calendarGroups: t('verein', 'Calendar groups'), paidDate: t('verein', 'Paid on'),
+  roleMapping: t('verein', 'Automatic rights')
 }
 const DATE_FIELDS = ['joinDate', 'leaveDate', 'dueDate', 'paidDate', 'birthDate', 'mandateDate']
 
-const ROLES = { member: 'Mitglied', treasurer: 'Kassierer', admin: 'Vorstand' }
-const STATUS = { open: 'offen', paid: 'bezahlt', overdue: 'überfällig', cancelled: 'storniert' }
+const ROLES = { member: t('verein', 'Member'), treasurer: t('verein', 'Treasurer'), admin: t('verein', 'Board') }
+const STATUS = { open: t('verein', 'open'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'cancelled') }
 // technical fields that say nothing to a reader
 // (fullName and age are derived from name and birth date and would only repeat them)
 const HIDDEN = ['id', 'clubId', 'createdAt', 'updatedAt', 'grantedAt', 'grantedBy', 'membershipYears', 'isFormer',
@@ -119,7 +119,7 @@ export default {
     const names = ref({}) // member id -> name, only if the user may see members
 
     // role definitions are global (no club) and never appear in a club's log, so they are no filter option
-    const typeOptions = [{ id: '', label: 'Alle Bereiche' },
+    const typeOptions = [{ id: '', label: t('verein', 'All areas') },
       ...Object.entries(TYPES).filter(([id]) => id !== 'role').map(([id, label]) => ({ id, label }))]
 
     const load = async (older = false) => {
@@ -133,7 +133,7 @@ export default {
         hasMore.value = !!res.data.hasMore
         safeFields.value = res.data.safeFields || {}
       } catch (error) {
-        showError(extractErrorMessage(error, 'Protokoll konnte nicht geladen werden'))
+        showError(extractErrorMessage(error, t('verein', 'The log could not be loaded')))
       } finally {
         loading.value = false
       }
@@ -158,10 +158,10 @@ export default {
       load()
     }
 
-    const typeLabel = (t) => TYPES[t] || t
-    const actionLabel = (e) => (e.entityType === 'fee_run' && e.action === 'create') ? 'ausgeführt' : (ACTIONS[e.action] || e.action)
+    const typeLabel = (type) => TYPES[type] || type
+    const actionLabel = (e) => (e.entityType === 'fee_run' && e.action === 'create') ? t('verein', 'run') : (ACTIONS[e.action] || e.action)
 
-    const person = (id) => (id ? (names.value[id] || `Person #${id}`) : '')
+    const person = (id) => (id ? (names.value[id] || t('verein', 'Person #{id}', { id })) : '')
     const plain = (v) => (v && typeof v === 'object' && 'new' in v ? v.new : v)
 
     const subject = (e) => {
@@ -169,7 +169,7 @@ export default {
       switch (e.entityType) {
         case 'member': return person(e.entityId)
         case 'membership': return person(plain(c.memberId))
-        case 'fee': return e.entityId ? `${person(plain(c.memberId)) || 'Beitrag'} (#${e.entityId})` : ''
+        case 'fee': return e.entityId ? `${person(plain(c.memberId)) || t('verein', 'Fee')} (#${e.entityId})` : ''
         case 'user_role': return plain(c.userId) || ''
         case 'fee_rate':
         case 'role':
@@ -181,14 +181,14 @@ export default {
 
     const money = (v) => Number(v).toFixed(2).replace('.', ',') + ' €'
     const value = (field, v) => {
-      if (v === null || v === undefined || v === '') return 'leer'
-      if (typeof v === 'boolean') return v ? 'ja' : 'nein'
+      if (v === null || v === undefined || v === '') return t('verein', 'empty')
+      if (typeof v === 'boolean') return v ? t('verein', 'yes') : t('verein', 'no')
       if (field === 'role') return ROLES[v] || v
       if (field === 'status') return STATUS[v] || v
       if (field === 'amount' || field === 'total') return money(v)
       if (field === 'memberId') return person(v)
       if (DATE_FIELDS.includes(field)) return formatDate(v)
-      if (Array.isArray(v)) return v.length ? v.join(', ') : 'keine'
+      if (Array.isArray(v)) return v.length ? v.join(', ') : t('verein', 'none')
       if (typeof v === 'object') return JSON.stringify(v)
       return String(v)
     }
@@ -197,14 +197,14 @@ export default {
       const c = e.changes
       if (!c || typeof c !== 'object') return []
       if (e.entityType === 'fee_run') {
-        return [{ text: `${c.year}: ${c.created} Beiträge, zusammen ${money(c.total || 0)}, fällig ${formatDate(c.dueDate)}${c.prorata ? ', anteilig' : ''}` }]
+        return [{ text: n('verein', '{year}: %n fee, together {total}, due {date}', '{year}: %n fees, together {total}, due {date}', c.created, { year: c.year, total: money(c.total || 0), date: formatDate(c.dueDate) }) + (c.prorata ? ', ' + t('verein', 'pro rata') : '') }]
       }
       if (e.action === 'dunning') {
-        const levels = Object.entries(c.levels || {}).map(([label, n]) => `${n}× ${label}`).join(', ')
-        return [{ text: `${c.letters} Schreiben für ${c.count} Beiträge, zusammen ${money(c.total || 0)}${levels ? ' (' + levels + ')' : ''}` }]
+        const levels = Object.entries(c.levels || {}).map(([label, count]) => `${count}× ${label}`).join(', ')
+        return [{ text: n('verein', '%n letter', '%n letters', c.letters) + ' ' + n('verein', 'for %n fee, together {total}', 'for %n fees, together {total}', c.count, { total: money(c.total || 0) }) + (levels ? ' (' + levels + ')' : '') }]
       }
       if (e.action === 'mark_paid' || e.action === 'flag_overdue') {
-        return [{ text: `${c.count} Beiträge` }]
+        return [{ text: n('verein', '%n fee', '%n fees', c.count) }]
       }
       const safe = safeFields.value[e.entityType] // undefined = type is not redacted at all
       const lines = []
@@ -218,7 +218,7 @@ export default {
           // on create every personal field is replaced by "true", even the empty ones - listing them one by one
           // would suggest they were filled in, so they collapse into one line; on update each changed field is named
           if (e.action === 'update') {
-            lines.push({ field: label, text: 'geändert (Inhalt nicht protokolliert)', redacted: true })
+            lines.push({ field: label, text: t('verein', 'changed (content not logged)'), redacted: true })
           } else {
             redactedOnCreate = true
           }
@@ -229,7 +229,7 @@ export default {
         }
       }
       if (redactedOnCreate) {
-        lines.push({ field: 'Personenangaben', text: 'erfasst (Inhalt nicht protokolliert)', redacted: true })
+        lines.push({ field: t('verein', 'Personal details'), text: t('verein', 'recorded (content not logged)'), redacted: true })
       }
       return lines
     }
@@ -248,7 +248,7 @@ export default {
       load()
     })
 
-    return { entries, hasMore, loading, entityType, typeOptions, load, setType, typeLabel, actionLabel, subject, changeLines, formatTime }
+    return { t, entries, hasMore, loading, entityType, typeOptions, load, setType, typeLabel, actionLabel, subject, changeLines, formatTime }
   }
 }
 </script>
