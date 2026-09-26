@@ -4,6 +4,21 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.6-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: Navigation, Dashboard, Verein (Vereinsdaten, Bankkonten, Beitragskategorien, automatische Rechte),
+  Rollen, Meine Daten und Änderungsprotokoll. Damit ist die gesamte Oberfläche übersetzbar; offen sind noch die Texte
+  des Servers (Fehlermeldungen, PDF, Mahnschreiben).
+- Mengenangaben („1 Eintrag“, „1 Jahr dabei“) nutzen korrekte Einzahl/Mehrzahl. Im Rollen-Hinweis ist die Hervorhebung
+  des Vereinsnamens entfallen (lässt sich nicht sicher übersetzen).
+
+### 🐛 Korrigiert
+- Der Hinweis zum Vereinskalender im Dashboard beschrieb noch den alten, freigegebenen Kalender („unter Weitere
+  Kalender aktivieren“). Er beschreibt jetzt den schreibgeschützten App-Kalender für die unter „Verein“ eingetragenen Gruppen.
+
+---
+
 ## [0.18.5-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen

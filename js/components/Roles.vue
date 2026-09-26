@@ -5,25 +5,24 @@
 -->
 <template>
   <div class="roles-page">
-    <h2>Rollenverwaltung</h2>
+    <h2>{{ t('verein', 'Role management') }}</h2>
 
     <div v-if="isAdmin" class="controls">
-      <NcButton @click="openCreate" variant="primary">➕ Neue Rolle</NcButton>
+      <NcButton @click="openCreate" variant="primary">➕ {{ t('verein', 'New role') }}</NcButton>
     </div>
     <p v-else class="hint">
-      Die Rollen und ihre Berechtigungen gelten für alle Vereine und werden von Nextcloud-Administratoren gepflegt.
-      Hier kannst du sie Benutzern für <strong>{{ clubName }}</strong> zuweisen.
+      {{ t('verein', 'The roles and their permissions apply to all clubs and are maintained by Nextcloud administrators. Here you can assign them to users for {club}.', { club: clubName }) }}
     </p>
 
     <div v-if="showForm" class="modal-overlay">
       <div class="modal">
-      <h3>{{ editingRole ? 'Rolle bearbeiten' : 'Neue Rolle' }}</h3>
+      <h3>{{ editingRole ? t('verein', 'Edit role') : t('verein', 'New role') }}</h3>
       <form @submit.prevent="saveRole">
         <NcTextField
           id="name"
           :model-value="form.name"
           @update:model-value="form.name = $event"
-          label="Name"
+          :label="t('verein', 'Name')"
           required
         />
 
@@ -31,12 +30,12 @@
           id="description"
           :model-value="form.description"
           @update:model-value="form.description = $event"
-          label="Beschreibung"
+          :label="t('verein', 'Description')"
         />
 
-        <label class="permissions-label">Berechtigungen</label>
+        <label class="permissions-label">{{ t('verein', 'Permissions') }}</label>
         <div class="permissions-list">
-          <div v-if="permissionsList.length === 0">Lade Berechtigungen...</div>
+          <div v-if="permissionsList.length === 0">{{ t('verein', 'Loading permissions...') }}</div>
           <NcCheckboxRadioSwitch
             v-for="perm in permissionsList"
             :key="(perm.key || perm)"
@@ -49,8 +48,8 @@
         </div>
 
         <div class="form-actions">
-          <NcButton type="submit" variant="primary">Speichern</NcButton>
-          <NcButton type="button" variant="tertiary" @click="closeForm">Abbrechen</NcButton>
+          <NcButton type="submit" variant="primary">{{ t('verein', 'Save') }}</NcButton>
+          <NcButton type="button" variant="tertiary" @click="closeForm">{{ t('verein', 'Cancel') }}</NcButton>
         </div>
       </form>
     </div>
@@ -66,10 +65,10 @@
         </colgroup>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Beschreibung</th>
-            <th>Berechtigungen</th>
-            <th>Aktionen</th>
+            <th>{{ t('verein', 'Name') }}</th>
+            <th>{{ t('verein', 'Description') }}</th>
+            <th>{{ t('verein', 'Permissions') }}</th>
+            <th>{{ t('verein', 'Actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -79,8 +78,8 @@
             <td class="permissions"><small>{{ (role.permissions || []).join(', ') }}</small></td>
             <td class="actions">
               <template v-if="isAdmin">
-              <NcButton @click="editRole(role)" variant="secondary" aria-label="Rolle bearbeiten">✏️</NcButton>
-              <NcButton @click="deleteRole(role.id)" variant="error" aria-label="Rolle löschen">🗑️</NcButton>
+              <NcButton @click="editRole(role)" variant="secondary" :aria-label="t('verein', 'Edit role')">✏️</NcButton>
+              <NcButton @click="deleteRole(role.id)" variant="error" :aria-label="t('verein', 'Delete role')">🗑️</NcButton>
               </template>
             </td>
           </tr>
@@ -90,13 +89,13 @@
 
     <!-- Assign Role To User -->
     <div class="form-card">
-      <h3>Rolle einem Benutzer zuweisen – {{ clubName }}</h3>
+      <h3>{{ t('verein', 'Assign a role to a user – {club}', { club: clubName }) }}</h3>
       <div class="assign-row">
         <NcSelectUsers
           v-model="assign.selectedUser"
           :options="assign.searchResults"
-          input-label="Benutzer (Nextcloud-Konto)"
-          placeholder="Name oder Benutzername eingeben"
+          :input-label="t('verein', 'User (Nextcloud account)')"
+          :placeholder="t('verein', 'Enter name or user name')"
           @search="onAssignQueryInput"
         />
 
@@ -105,39 +104,39 @@
           :options="roles"
           :reduce="r => r.id"
           label="name"
-          input-label="Rolle"
-          placeholder="-- Rolle wählen --"
+          :input-label="t('verein', 'Role')"
+          :placeholder="t('verein', '-- choose role --')"
         />
 
         <div class="form-actions">
-          <NcButton variant="primary" @click="assignRoleToUser">Zuweisen</NcButton>
+          <NcButton variant="primary" @click="assignRoleToUser">{{ t('verein', 'Assign') }}</NcButton>
         </div>
       </div>
     </div>
 
     <!-- Who holds a role in this club -->
     <div class="table-card">
-      <h3>Zugewiesene Rollen – {{ clubName }}</h3>
+      <h3>{{ t('verein', 'Assigned roles – {club}', { club: clubName }) }}</h3>
       <table class="assignments">
         <thead>
-          <tr><th>Benutzer</th><th>Rollen</th><th>Aktionen</th></tr>
+          <tr><th>{{ t('verein', 'User') }}</th><th>{{ t('verein', 'Roles') }}</th><th>{{ t('verein', 'Actions') }}</th></tr>
         </thead>
         <tbody>
           <tr v-for="a in assignments" :key="a.userId">
             <td>{{ a.displayName }} <small>({{ a.userId }})</small></td>
             <td>
               {{ a.roles.join(', ') }}
-              <span v-if="a.automaticRoles && a.automaticRoles.length" class="auto" title="ergibt sich aus der Mitgliedschaft (Reiter Verein)">
-                <template v-if="a.roles.length"> · </template>{{ a.automaticRoles.join(', ') }} (automatisch)
+              <span v-if="a.automaticRoles && a.automaticRoles.length" class="auto" :title="t('verein', 'results from the membership (tab Club)')">
+                <template v-if="a.roles.length"> · </template>{{ a.automaticRoles.join(', ') }} ({{ t('verein', 'automatic') }})
               </span>
             </td>
             <td>
-              <NcButton v-if="a.roles.length" variant="error" @click="removeAssignments(a)">Zugewiesene Rollen entziehen</NcButton>
-              <small v-else>wird mit der Mitgliedschaft entzogen</small>
+              <NcButton v-if="a.roles.length" variant="error" @click="removeAssignments(a)">{{ t('verein', 'Revoke assigned roles') }}</NcButton>
+              <small v-else>{{ t('verein', 'is revoked with the membership') }}</small>
             </td>
           </tr>
           <tr v-if="assignments.length === 0">
-            <td colspan="3">In diesem Verein sind noch keine Rollen vergeben.</td>
+            <td colspan="3">{{ t('verein', 'No roles have been assigned in this club yet.') }}</td>
           </tr>
         </tbody>
       </table>
@@ -156,6 +155,7 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import { t } from '@nextcloud/l10n'
 import { clubState, currentClub } from '../store/club'
 
 export default {
@@ -195,13 +195,14 @@ export default {
     this.loadAssignments()
   },
   methods: {
+    t,
     async loadRoles() {
       try {
         const res = await axios.get(generateUrl('/apps/verein/roles'))
         this.roles = res.data || []
       } catch (e) {
         console.error('Error loading roles', e)
-        showError(extractErrorMessage(e, 'Fehler beim Laden der Rollen'))
+        showError(extractErrorMessage(e, t('verein', 'Error loading the roles')))
       }
     },
     async loadAssignments() {
@@ -214,14 +215,14 @@ export default {
       }
     },
     async removeAssignments(entry) {
-      if (!(await confirmAction('Rollen entziehen', 'Alle Rollen von ' + entry.displayName + ' in diesem Verein entziehen?', { labelConfirm: 'Entziehen', severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Revoke roles'), t('verein', 'Revoke all roles of {name} in this club?', { name: entry.displayName }), { labelConfirm: t('verein', 'Revoke'), severity: 'warning' }))) return
       try {
         await axios.delete(generateUrl('/apps/verein/roles/users'), { params: { userId: entry.userId, clubId: clubState.currentId } })
-        showSuccess('Rollen entzogen')
+        showSuccess(t('verein', 'Roles revoked'))
         this.loadAssignments()
       } catch (e) {
         console.error('Error removing roles', e)
-        showError(extractErrorMessage(e, 'Fehler beim Entziehen der Rollen'))
+        showError(extractErrorMessage(e, t('verein', 'Error revoking the roles')))
       }
     },
     async loadPermissions() {
@@ -232,7 +233,7 @@ export default {
         this.permissionsList = data.permissions || []
       } catch (e) {
         console.error('Error loading permissions', e)
-        showError(extractErrorMessage(e, 'Fehler beim Laden der Berechtigungen'))
+        showError(extractErrorMessage(e, t('verein', 'Error loading the permissions')))
       }
     },
     async searchUsers(query) {
@@ -246,7 +247,7 @@ export default {
       } catch (e) {
         console.error('Error searching users', e)
         this.assign.searchResults = []
-        showError(extractErrorMessage(e, 'Fehler bei der Benutzersuche'))
+        showError(extractErrorMessage(e, t('verein', 'Error searching users')))
       }
     },
     onAssignQueryInput(query) {
@@ -275,17 +276,17 @@ export default {
 
         if (this.editingRole) {
           await axios.put(generateUrl(`/apps/verein/roles/${this.editingRole.id}`), payload)
-          showSuccess('Rolle aktualisiert')
+          showSuccess(t('verein', 'Role updated'))
         } else {
           await axios.post(generateUrl('/apps/verein/roles'), payload)
-          showSuccess('Rolle angelegt')
+          showSuccess(t('verein', 'Role created'))
         }
 
         this.loadRoles()
         this.closeForm()
       } catch (e) {
         console.error('Error saving role', e)
-        showError(extractErrorMessage(e, 'Fehler beim Speichern der Rolle'))
+        showError(extractErrorMessage(e, t('verein', 'Error saving the role')))
       }
     },
     editRole(role) {
@@ -300,7 +301,7 @@ export default {
     async assignRoleToUser() {
       const userId = this.assign.selectedUser?.user
       if (!userId || !this.assign.roleId) {
-        showError('Benutzer und Rolle erforderlich')
+        showError(t('verein', 'User and role required'))
         return
       }
       try {
@@ -310,25 +311,25 @@ export default {
           clubId: clubState.currentId
         }
         await axios.post(generateUrl('/apps/verein/roles/users'), payload)
-        showSuccess('Rolle zugewiesen')
+        showSuccess(t('verein', 'Role assigned'))
         // clear selection but keep search results
         this.assign.selectedUser = null
         this.assign.roleId = null
         this.loadAssignments()
       } catch (e) {
         console.error('Error assigning role', e)
-        showError(extractErrorMessage(e, 'Fehler beim Zuweisen der Rolle'))
+        showError(extractErrorMessage(e, t('verein', 'Error assigning the role')))
       }
     },
     async deleteRole(id) {
-      if (!(await confirmAction('Rolle löschen', 'Rolle wirklich löschen?', { labelConfirm: 'Löschen', severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete role'), t('verein', 'Really delete the role?'), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
       try {
         await axios.delete(generateUrl(`/apps/verein/roles/${id}`))
-        showSuccess('Rolle gelöscht')
+        showSuccess(t('verein', 'Role deleted'))
         this.loadRoles()
       } catch (e) {
         console.error('Error deleting role', e)
-        showError(extractErrorMessage(e, 'Fehler beim Löschen der Rolle'))
+        showError(extractErrorMessage(e, t('verein', 'Error deleting the role')))
       }
     }
   }

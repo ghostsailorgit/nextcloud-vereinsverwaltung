@@ -20,7 +20,7 @@ Stand: Version 0.18.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 ## Als Nächstes
 
 - **Übersetzbarkeit** (läuft): englische Quelltexte mit `t('verein', …)` / `IL10N`, Deutsch als Übersetzung in
-  `l10n/de.json`. Fertig: Grundlage, Prüfwerkzeug, Bestätigungsdialoge, Mahnwesen, Hinweise, Export-Knöpfe, Sicherungen, Anonymisieren-Dialog, Mitglieder, CSV-Import, Finanzen, Beitragslauf, SEPA-Export. Offen: übrige Komponenten und die
+  `l10n/de.json`. Fertig: Grundlage, Prüfwerkzeug und die gesamte Oberfläche. Offen: die
   Texte des Servers (Fehlermeldungen, PDF, Mahnschreiben, `occ`). Danach Veröffentlichung im App Store.
 - Weitere Funktionen (SEPA-Export, Deaktivieren, Selbstauskunft, Sicherung) mit echten Läufen und einem Nicht-Admin-Konto
   nachtesten, wie bei den neuen Funktionen.
