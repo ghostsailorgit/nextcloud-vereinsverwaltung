@@ -34,8 +34,12 @@ jobs:
       - name: Unit tests
         run: vendor/bin/phpunit
 
-      - name: Syntax check
-        run: find lib appinfo scripts -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+      # also fails on compile-time deprecations of this PHP version (e.g. implicitly nullable parameters since 8.4,
+      # which Nextcloud logs as errors on every request that hits them)
+      - name: Syntax check, no deprecations
+        run: |
+          out=$(find lib appinfo scripts tests -name '*.php' -print0 | xargs -0 -n1 php -d error_reporting=-1 -d display_errors=stderr -l 2>&1 | grep -v '^No syntax errors detected' || true)
+          if [ -n "$out" ]; then echo "$out"; exit 1; fi
 
       - name: Known vulnerabilities in PHP dependencies
         run: composer audit --no-dev
