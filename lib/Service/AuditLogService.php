@@ -17,7 +17,7 @@ use OCP\IUserSession;
  * enforces who may read the log back - that is the audit log controller's
  * #[RequirePermission('verein.audit.view')].
  *
- * Injected as an optional collaborator (like MemberCalendarService): a
+ * Injected as an optional collaborator: a
  * service that has none simply logs nothing, so existing tests that
  * construct a service directly are unaffected.
  */

@@ -134,7 +134,7 @@ angelegt: gleicher Vor- und Nachname gilt als dieselbe Person, außer beide Gebu
 Gesucht wird nur im importierenden Verein und in der Datei - ob es die Person in einem anderen Verein gibt, verrät der Import
 nicht (dafür gibt es die Suche mit der Zwei-Vereins-Prüfung). Eine Funktion außer „Mitglied“ wird nur mit „Rollen verwalten“
 übernommen, eine Konto-Verknüpfung nie (sie steuert Rechte). Angelegt wird in Paketen zu höchstens 100 Zeilen (die
-Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protokoll und Kalender.
+Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protokoll.
 
 ## SEPA-Lastschrift
 - Pro Verein und Bankkonto wird eine pain.008.001.02-Datei erzeugt.
@@ -151,12 +151,26 @@ höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im R
 herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
 Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` (nur per Kommandozeile, bewusst nicht in der
 Weboberfläche). Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
-Kalender und ihre Freigaben sind nicht Teil der Sicherung; sie werden beim nächsten Speichern eines Mitglieds angeglichen.
+Der Kalender braucht keine Sicherung: Er wird aus den Mitgliederdaten erzeugt.
 Das Zurückspielen wird in der CI mit SQLite, MySQL, MariaDB und PostgreSQL geprüft (für PostgreSQL werden die ID-Zähler nachgezogen).
 
 ## Kalender
-Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Jubiläen aktiver
-Mitglieder. Er wird nur intern mit den je Verein festgelegten Nextcloud-Gruppen geteilt, nie öffentlich.
+Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Vereinsjubiläen (Eintrittstag)
+aktiver Mitglieder - nicht für Ausgetretene, Verstorbene, Deaktivierte oder Anonymisierte.
+
+Seit 0.18 ist er ein **App-Kalender** über Nextclouds öffentliche Schnittstelle `OCP\Calendar\ICalendarProvider`
+(`lib/Calendar/ClubCalendarProvider.php`, angemeldet in `Application::register()`): Nextcloud fragt die App bei jedem Abruf,
+welche Kalender ein Nutzer hat, und die App liefert die Termine live aus den Mitgliederdaten. Es werden keine Termine
+gespeichert, nichts muss synchron gehalten oder gelöscht werden, und die App braucht keine internen Klassen der
+Kalender-App mehr. Sichtbar ist er für Mitglieder der im Verein eingetragenen Nextcloud-Gruppen (Reiter „Verein“,
+„Kalendergruppen“) - die App prüft die Gruppenzugehörigkeit selbst; Nextcloud zeigt ihn nur lesend, in der Kalender-App und
+per CalDAV (Handys). `ClubEvent` passt die Termine daran an, wie Nextclouds Einbindung (`AppCalendar`) sie liest.
+
+Bis 0.17 lagen die Termine als Kopie in einem echten Kalender eines Admin-Kontos, der mit den Gruppen geteilt wurde; dafür
+brauchte die App interne Klassen (`CalDavBackend`, Sharing), und beim Löschen von Personen blieben gelegentlich Termine
+zurück. Der Reparaturschritt `RemoveLegacyCalendars` (in `info.xml` unter `repair-steps`) löscht diese alten Kalender beim
+Update einmalig samt Terminen und Freigaben; schlägt das fehl, bleibt der alte Kalender stehen und kann in der Kalender-App
+gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit ältere Sicherungen einspielbar bleiben.
 
 ## Technik
 - Backend: PHP, Nextcloud AppFramework (Controller → Service → Mapper/Entity), Migrationen in `lib/Migration`.

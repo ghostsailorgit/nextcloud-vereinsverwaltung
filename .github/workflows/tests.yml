@@ -153,6 +153,33 @@ jobs:
           req 403 $U GET "/finance?clubId=$OTHER"
           req 401 "nobody:wrong" GET "/clubs"
 
+      - name: Club calendar (public calendar-provider API) and removal of the old stored calendar
+        working-directory: server
+        run: |
+          php apps/verein/tests/Integration/smoke.php calendar
+          CLUB=$(php -r 'echo json_decode(file_get_contents("apps/verein/tests/Integration/smoke-state.json"), true)["clubId"];')
+          php -S 127.0.0.1:8081 > /tmp/php-server-cal.log 2>&1 &
+          sleep 3
+          PROPS='<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/></d:prop></d:propfind>'
+          curl -s -u ci-user:ci-user-password -X PROPFIND -H 'Depth: 1' --data "$PROPS" \
+            "http://127.0.0.1:8081/remote.php/dav/calendars/ci-user/" > /tmp/home.xml
+          grep -q "verein-club-$CLUB/" /tmp/home.xml || { echo "FAIL app calendar not in ci-user's calendar home"; head -c 1500 /tmp/home.xml; exit 1; }
+          HREF=$(grep -oE "/remote.php/dav/calendars/ci-user/[^<]*verein-club-$CLUB/" /tmp/home.xml | head -1)
+          N=$(curl -s -u ci-user:ci-user-password -X PROPFIND -H 'Depth: 1' --data "$PROPS" "http://127.0.0.1:8081$HREF" | grep -o '\.ics</d:href>' | wc -l)
+          test "$N" = "8" || { echo "FAIL expected 8 objects over CalDAV, got $N"; exit 1; }
+          echo "ok   CalDAV: $HREF with $N events"
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -u ci-user:ci-user-password -X PUT --data 'BEGIN:VCALENDAR' "http://127.0.0.1:8081${HREF}x.ics")
+          test "$CODE" = "403" && echo "ok   CalDAV write refused ($CODE)" || { echo "FAIL write answered $CODE"; exit 1; }
+          if curl -s -u admin:admin -X PROPFIND -H 'Depth: 1' --data "$PROPS" "http://127.0.0.1:8081/remote.php/dav/calendars/admin/" | grep -q "verein-club-$CLUB/"; then
+            echo "FAIL admin (not in the calendar group) sees the club calendar"; exit 1
+          fi
+          echo "ok   admin (not in the group) does not see it"
+          if grep -E '"level":[34]' data/nextcloud.log 2>/dev/null | grep -iE 'Undefined array key|AppCalendar|verein' ; then echo "FAIL warnings in nextcloud.log"; exit 1; fi
+          echo "ok   no calendar warnings in nextcloud.log"
+
+      - name: appinfo/info.xml matches Nextcloud's schema
+        run: xmllint --noout --schema server/resources/app-info.xsd server/apps/verein/appinfo/info.xml
+
       - name: Backup restore with occ
         working-directory: server
         run: |

@@ -12,7 +12,7 @@ Eine Nextcloud-App, mit der ein oder mehrere Vereine ihre **Mitglieder, Beiträg
 - **SEPA-Lastschrift** (pain.008.001.02) je Verein und Bankkonto, mit Mandatsverwaltung (Referenz, Unterschriftsdatum, unterschriebenes Mandat als Datei in Nextcloud). Beiträge, die sich nicht einziehen lassen (keine IBAN, kein Mandat), werden mit Grund gemeldet statt still übersprungen. Nach dem Einreichen bei der Bank lassen sich genau die exportierten Beiträge als bezahlt markieren.
 - **Rechte je Verein.** Wer im Vorstand des einen Vereins ist, sieht den anderen Verein nicht. Rechte lassen sich per Rolle vergeben oder **automatisch aus der Vereinsfunktion** ableiten (das Mitglied ist mit seinem Nextcloud-Konto verknüpft).
 - **Meine Daten:** Jedes verknüpfte Mitglied sieht seine eigenen Daten und Beiträge und kann sie als JSON herunterladen (nur lesend).
-- **Kalender:** Pro Verein ein Kalender mit Geburtstagen und Vereinsjubiläen, nur intern mit ausgewählten Nextcloud-Gruppen geteilt, nie öffentlich.
+- **Kalender:** Pro Verein ein Kalender „Vereinstermine“ mit Geburtstagen und Vereinsjubiläen, den die Mitglieder ausgewählter Nextcloud-Gruppen automatisch in ihrer Kalender-App und auf dem Handy sehen (nur lesend, nie öffentlich). Er wird bei jedem Abruf aus den Mitgliederdaten erzeugt – es gibt keine zweite Kopie der Geburtsdaten.
 - **Export** als CSV und PDF, **Statistik** auf der Startseite.
 - **Sicherung und Änderungsprotokoll:** tägliche automatische Sicherung aller Vereinsdaten (30 Tage), Wiederherstellung per `occ`; ein Änderungsprotokoll (Reiter „Protokoll“) erfasst, wer was geändert hat, ohne personenbezogene Inhalte im Klartext.
 

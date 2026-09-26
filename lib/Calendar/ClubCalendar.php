@@ -43,7 +43,7 @@ class ClubCalendar implements ICalendar {
     }
 
     public function getDisplayName(): ?string {
-        return 'Vereinstermine ' . $this->club->getName() . ' (App-Kalender)';
+        return 'Vereinstermine ' . $this->club->getName();
     }
 
     public function getDisplayColor(): ?string {
