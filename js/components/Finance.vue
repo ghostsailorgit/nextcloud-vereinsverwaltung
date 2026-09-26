@@ -10,26 +10,26 @@
 
     <!-- Form für neue Gebühr -->
     <div class="form-section">
-      <h2>Neue Gebühr hinzufügen</h2>
+      <h2>{{ t('verein', 'Add new fee') }}</h2>
       <form @submit.prevent="addFee" class="fee-form">
         <NcSelect
           v-model="formData.memberId"
           :options="sortedMembers"
           :reduce="member => member.id"
           label="fullName"
-          input-label="Mitglied"
-          placeholder="-- Mitglied wählen --"
+          :input-label="t('verein', 'Member')"
+          :placeholder="t('verein', '-- choose member --')"
         />
         <NcTextField
           :model-value="formData.amount"
           @update:model-value="formData.amount = Number($event)"
           type="number"
-          label="Betrag"
+          :label="t('verein', 'Amount')"
           placeholder="0.00"
           required
         />
         <label class="date-field">
-          <span>Fälligkeitsdatum</span>
+          <span>{{ t('verein', 'Due date') }}</span>
           <input
             v-model="formData.dueDate"
             type="datetime-local"
@@ -42,11 +42,11 @@
           :options="statusOptions"
           :reduce="option => option.id"
           label="label"
-          input-label="Status"
+          :input-label="t('verein', 'Status')"
           :clearable="false"
         />
         <NcButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? 'Wird gespeichert...' : 'Hinzufügen' }}
+          {{ loading ? t('verein', 'Saving...') : t('verein', 'Add') }}
         </NcButton>
       </form>
     </div>
@@ -54,15 +54,15 @@
     <!-- Statistics -->
     <div class="stats-section">
       <div class="stat-card">
-        <div class="stat-label">Gesamt ausstehend</div>
+        <div class="stat-label">{{ t('verein', 'Total outstanding') }}</div>
         <div class="stat-value">{{ totalOutstanding.toFixed(2) }} €</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Bezahlt</div>
+        <div class="stat-label">{{ t('verein', 'Paid') }}</div>
         <div class="stat-value">{{ totalPaid.toFixed(2) }} €</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Anzahl Gebühren</div>
+        <div class="stat-label">{{ t('verein', 'Number of fees') }}</div>
         <div class="stat-value">{{ fees.length }}</div>
       </div>
     </div>
@@ -70,7 +70,7 @@
     <!-- Fees Table -->
     <div class="table-section">
       <div class="section-header">
-        <h2>Gebührenliste</h2>
+        <h2>{{ t('verein', 'Fee list') }}</h2>
         <div class="export-buttons">
           <ExportButtons resource="fees" inline />
         </div>
@@ -79,12 +79,12 @@
         <table class="fees-table">
           <thead>
             <tr>
-              <th>Mitglied</th>
-              <th>Betrag</th>
-              <th>Status</th>
-              <th>Fällig am</th>
-              <th>Bezahlt am</th>
-              <th>Aktionen</th>
+              <th>{{ t('verein', 'Member') }}</th>
+              <th>{{ t('verein', 'Amount') }}</th>
+              <th>{{ t('verein', 'Status') }}</th>
+              <th>{{ t('verein', 'Due on') }}</th>
+              <th>{{ t('verein', 'Paid on') }}</th>
+              <th>{{ t('verein', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -93,7 +93,7 @@
 
               <td v-if="editingId !== fee.id">{{ fee.amount.toFixed(2) }} €</td>
               <td v-if="editingId === fee.id" class="cell-field">
-                <NcTextField :model-value="editData.amount" @update:model-value="editData.amount = Number($event)" type="number" label="Betrag" />
+                <NcTextField :model-value="editData.amount" @update:model-value="editData.amount = Number($event)" type="number" :label="t('verein', 'Amount')" />
               </td>
 
               <td v-if="editingId !== fee.id">
@@ -101,7 +101,7 @@
                 <span
                   v-if="fee.dunningLevel > 0"
                   class="dunning-badge"
-                  :title="fee.lastDunnedAt ? 'zuletzt gemahnt am ' + formatDay(fee.lastDunnedAt) : ''"
+                  :title="fee.lastDunnedAt ? t('verein', 'last dunned on {date}', { date: formatDay(fee.lastDunnedAt) }) : ''"
                 >{{ dunningLabel(fee.dunningLevel) }}</span>
               </td>
               <td v-if="editingId === fee.id" class="cell-field">
@@ -110,7 +110,7 @@
                   :options="statusOptions"
                   :reduce="option => option.id"
                   label="label"
-                  input-label="Status"
+                  :input-label="t('verein', 'Status')"
                   :clearable="false"
                 />
               </td>
@@ -118,7 +118,7 @@
               <td v-if="editingId !== fee.id">{{ formatDate(fee.dueDate) }}</td>
               <td v-if="editingId === fee.id" class="cell-field">
                 <label class="date-field">
-                  <span>Fälligkeitsdatum</span>
+                  <span>{{ t('verein', 'Due date') }}</span>
                   <input v-model="editData.dueDate" type="datetime-local" class="form-input-inline" />
                 </label>
               </td>
@@ -131,7 +131,7 @@
                   @click="startEdit(fee)"
                   variant="secondary"
                 >
-                  Bearbeiten
+                  {{ t('verein', 'Edit') }}
                 </NcButton>
                 <NcButton
                   v-else
@@ -139,28 +139,28 @@
                   variant="primary"
                   :disabled="loading"
                 >
-                  Speichern
+                  {{ t('verein', 'Save') }}
                 </NcButton>
                 <NcButton
                   v-if="editingId === fee.id"
                   @click="cancelEdit"
                   variant="tertiary"
                 >
-                  Abbrechen
+                  {{ t('verein', 'Cancel') }}
                 </NcButton>
                 <NcButton
                   @click="deleteFee(fee.id)"
                   variant="error"
                   :disabled="loading"
                 >
-                  Löschen
+                  {{ t('verein', 'Delete') }}
                 </NcButton>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-if="fees.length === 0" class="empty-state">Keine Gebühren vorhanden</p>
+      <p v-if="fees.length === 0" class="empty-state">{{ t('verein', 'No fees yet') }}</p>
     </div>
   </div>
 </template>
@@ -171,6 +171,7 @@ import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
+import { t } from '@nextcloud/l10n'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -193,10 +194,10 @@ export default {
 
     // backend (ValidationService::validateFeeStatus) only accepts these 4 values
     const statusOptions = [
-      { id: 'open', label: 'Offen' },
-      { id: 'paid', label: 'Bezahlt' },
-      { id: 'overdue', label: 'Überfällig' },
-      { id: 'cancelled', label: 'Storniert' }
+      { id: 'open', label: t('verein', 'Open') },
+      { id: 'paid', label: t('verein', 'Paid') },
+      { id: 'overdue', label: t('verein', 'Overdue') },
+      { id: 'cancelled', label: t('verein', 'Cancelled') }
     ]
 
     const formData = ref({
@@ -219,7 +220,7 @@ export default {
         members.value = response.data.members || []
       } catch (error) {
         console.error('Error fetching members:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Laden der Mitglieder'))
+        showError(extractErrorMessage(error, t('verein', 'Error loading the members')))
       }
     }
 
@@ -230,7 +231,7 @@ export default {
         fees.value = response.data.fees || []
       } catch (error) {
         console.error('Error fetching fees:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Laden der Gebühren'))
+        showError(extractErrorMessage(error, t('verein', 'Error loading the fees')))
       } finally {
         loading.value = false
       }
@@ -241,11 +242,11 @@ export default {
       try {
         await api.post('finance', formData.value)
         formData.value = { memberId: '', amount: '', status: 'open', dueDate: '' }
-        showSuccess('Gebühr hinzugefügt')
+        showSuccess(t('verein', 'Fee added'))
         await fetchFees()
       } catch (error) {
         console.error('Error adding fee:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Hinzufügen der Gebühr'))
+        showError(extractErrorMessage(error, t('verein', 'Error adding the fee')))
       } finally {
         loading.value = false
       }
@@ -261,11 +262,11 @@ export default {
       try {
         await api.put(`finance/${id}`, editData.value)
         editingId.value = null
-        showSuccess('Gebühr aktualisiert')
+        showSuccess(t('verein', 'Fee updated'))
         await fetchFees()
       } catch (error) {
         console.error('Error updating fee:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Aktualisieren der Gebühr'))
+        showError(extractErrorMessage(error, t('verein', 'Error updating the fee')))
       } finally {
         loading.value = false
       }
@@ -277,16 +278,16 @@ export default {
     }
 
     const deleteFee = async (id) => {
-      if (!(await confirmAction('Beitrag löschen', 'Soll diese Gebühr wirklich gelöscht werden?', { labelConfirm: 'Löschen', severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete fee'), t('verein', 'Really delete this fee?'), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
 
       loading.value = true
       try {
         await api.delete(`finance/${id}`)
-        showSuccess('Gebühr gelöscht')
+        showSuccess(t('verein', 'Fee deleted'))
         await fetchFees()
       } catch (error) {
         console.error('Error deleting fee:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Löschen der Gebühr'))
+        showError(extractErrorMessage(error, t('verein', 'Error deleting the fee')))
       } finally {
         loading.value = false
       }
@@ -294,20 +295,14 @@ export default {
 
     const getMemberName = (memberId) => {
       const member = members.value.find(m => m.id === memberId)
-      return member ? member.fullName : `Mitglied #${memberId}`
+      return member ? member.fullName : t('verein', 'Member #{id}', { id: memberId })
     }
 
     const getStatusLabel = (status) => {
-      const labels = {
-        open: 'Offen',
-        paid: 'Bezahlt',
-        overdue: 'Überfällig',
-        cancelled: 'Storniert'
-      }
-      return labels[status] || status
+      return statusOptions.find(o => o.id === status)?.label || status
     }
 
-    const dunningLabel = (level) => DUNNING_LEVELS[level] || `Mahnstufe ${level}`
+    const dunningLabel = (level) => DUNNING_LEVELS[level] || t('verein', 'Dunning level {level}', { level })
     const formatDay = (v) => {
       const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || '')
       return m ? `${m[3]}.${m[2]}.${m[1]}` : v
@@ -343,6 +338,7 @@ export default {
     // Export is handled by <ExportButtons /> now
 
     return {
+      t,
       canWriteFinance,
       fetchFees,
       fees,

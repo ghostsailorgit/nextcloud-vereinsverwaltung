@@ -5,17 +5,16 @@
 -->
 <template>
   <div class="sepa-export">
-    <h2>SEPA-Export – {{ clubName }}</h2>
+    <h2>{{ t('verein', 'SEPA export – {club}', { club: clubName }) }}</h2>
 
     <div v-if="accounts.length === 0" class="form-container">
       <p>
-        Für diesen Verein ist noch kein Bankkonto hinterlegt. Konto, BIC und Gläubiger-ID
-        werden im Reiter „Vereine“ gepflegt.
+        {{ t('verein', 'No bank account is set for this club yet. Account, BIC and creditor ID are maintained in the "Clubs" tab.') }}
       </p>
     </div>
 
     <div v-else class="form-container">
-      <h3>SEPA-Lastschrift</h3>
+      <h3>{{ t('verein', 'SEPA direct debit') }}</h3>
       <form @submit.prevent="generateSepa">
         <div class="form-group">
           <NcSelect
@@ -23,25 +22,25 @@
             :options="accounts"
             :reduce="a => a.id"
             :get-option-label="accountLabel"
-            input-label="Konto für den Einzug"
+            :input-label="t('verein', 'Account for the collection')"
             :clearable="false"
           />
         </div>
 
         <div v-if="selectedAccount" class="creditor-info">
-          <p><strong>Gläubiger:</strong> {{ clubName }}</p>
+          <p><strong>{{ t('verein', 'Creditor:') }}</strong> {{ clubName }}</p>
           <p><strong>IBAN:</strong> {{ selectedAccount.iban }}</p>
           <p><strong>BIC:</strong> {{ selectedAccount.bic || '–' }}</p>
           <p>
-            <strong>Gläubiger-ID:</strong>
+            <strong>{{ t('verein', 'Creditor ID:') }}</strong>
             <span v-if="selectedAccount.creditorId">{{ selectedAccount.creditorId }}</span>
-            <span v-else class="missing">fehlt – im Reiter „Vereine“ eintragen</span>
+            <span v-else class="missing">{{ t('verein', 'missing – enter it in the "Clubs" tab') }}</span>
           </p>
         </div>
 
         <div class="form-buttons">
-          <NcButton type="button" variant="secondary" @click="preview">Vorschau</NcButton>
-          <NcButton type="submit" variant="primary">SEPA-XML herunterladen</NcButton>
+          <NcButton type="button" variant="secondary" @click="preview">{{ t('verein', 'Preview') }}</NcButton>
+          <NcButton type="submit" variant="primary">{{ t('verein', 'Download SEPA XML') }}</NcButton>
         </div>
       </form>
     </div>
@@ -49,44 +48,43 @@
     <!-- After a download: mark exactly the exported fees as paid -->
     <div v-if="exportedFeeIds.length" class="skipped-warning mark-paid">
       <p>
-        Die Datei enthält <strong>{{ exportedFeeIds.length }}</strong> Beiträge. Sobald du sie bei der Bank eingereicht hast,
-        kannst du genau diese Beiträge als bezahlt markieren.
+        {{ n('verein', 'The file contains %n fee. Once you have submitted it to the bank, you can mark exactly this fee as paid.', 'The file contains %n fees. Once you have submitted it to the bank, you can mark exactly these fees as paid.', exportedFeeIds.length) }}
       </p>
       <NcButton variant="primary" :disabled="marking" @click="markExportedPaid">
-        {{ exportedFeeIds.length }} Beiträge als bezahlt markieren
+        {{ n('verein', 'Mark %n fee as paid', 'Mark %n fees as paid', exportedFeeIds.length) }}
       </NcButton>
-      <NcButton variant="tertiary" @click="exportedFeeIds = []">Später</NcButton>
+      <NcButton variant="tertiary" @click="exportedFeeIds = []">{{ t('verein', 'Later') }}</NcButton>
     </div>
 
     <!-- Preview Section -->
     <div v-if="previewData" class="preview-container">
-      <h3>Vorschau SEPA-Export</h3>
+      <h3>{{ t('verein', 'SEPA export preview') }}</h3>
       <div class="preview-summary">
-        <p><strong>Gläubiger:</strong> {{ previewData.creditorName }}</p>
+        <p><strong>{{ t('verein', 'Creditor:') }}</strong> {{ previewData.creditorName }}</p>
         <p><strong>IBAN:</strong> {{ previewData.creditorIban }}</p>
-        <p><strong>Anzahl Transaktionen:</strong> {{ previewData.transactionCount }}</p>
-        <p><strong>Gesamtbetrag:</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
+        <p><strong>{{ t('verein', 'Number of transactions:') }}</strong> {{ previewData.transactionCount }}</p>
+        <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
       </div>
 
       <div v-if="previewData.skipped && previewData.skipped.length" class="skipped-warning">
-        <strong>Nicht im Export enthalten:</strong>
+        <strong>{{ t('verein', 'Not included in the export:') }}</strong>
         <ul>
           <li v-for="(s, idx) in previewData.skipped" :key="idx">
-            {{ s.memberName }} – {{ s.amount.toFixed(2) }} €, fällig {{ s.dueDate }}
+            {{ s.memberName }} – {{ s.amount.toFixed(2) }} €, {{ t('verein', 'due {date}', { date: s.dueDate }) }}
             <em>({{ s.reason }})</em>
           </li>
         </ul>
       </div>
 
-      <h4>Transaktionen:</h4>
+      <h4>{{ t('verein', 'Transactions:') }}</h4>
       <table>
         <thead>
           <tr>
-            <th>Mitglied</th>
+            <th>{{ t('verein', 'Member') }}</th>
             <th>IBAN</th>
-            <th>Mandat</th>
-            <th>Betrag</th>
-            <th>Fälligkeitsdatum</th>
+            <th>{{ t('verein', 'Mandate') }}</th>
+            <th>{{ t('verein', 'Amount') }}</th>
+            <th>{{ t('verein', 'Due date') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -112,6 +110,7 @@ import { api } from '../api'
 import { confirmAction } from '../confirm'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
+import { t, n } from '@nextcloud/l10n'
 import { clubState, currentClub } from '../store/club'
 
 export default {
@@ -141,6 +140,8 @@ export default {
     this.accountId = this.accounts[0]?.id ?? null
   },
   methods: {
+    t,
+    n,
     accountLabel(account) {
       return (account.label ? account.label + ' – ' : '') + account.iban
     },
@@ -157,19 +158,19 @@ export default {
       } catch (error) {
         console.error('Error loading preview:', error)
         this.previewData = null
-        showError(extractErrorMessage(error, 'Fehler beim Laden der Vorschau'))
+        showError(extractErrorMessage(error, t('verein', 'Error loading the preview')))
       }
     },
     async markExportedPaid() {
-      if (!(await confirmAction('Als bezahlt markieren', this.exportedFeeIds.length + ' Beiträge als bezahlt markieren? Das sollte erst nach dem Einreichen bei der Bank geschehen.', { labelConfirm: 'Als bezahlt markieren', severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Mark as paid'), n('verein', 'Mark %n fee as paid? This should only happen after submitting to the bank.', 'Mark %n fees as paid? This should only happen after submitting to the bank.', this.exportedFeeIds.length), { labelConfirm: t('verein', 'Mark as paid'), severity: 'warning' }))) return
       this.marking = true
       try {
         const res = await api.post('finance/mark-paid', { feeIds: this.exportedFeeIds.join(',') })
-        showSuccess(res.data.marked + ' Beiträge als bezahlt markiert')
+        showSuccess(n('verein', '%n fee marked as paid', '%n fees marked as paid', res.data.marked))
         this.exportedFeeIds = []
         this.previewData = null
       } catch (error) {
-        showError(extractErrorMessage(error, 'Markieren fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Marking failed')))
       } finally {
         this.marking = false
       }
@@ -190,15 +191,15 @@ export default {
         a.download = `sepa_export_${new Date().toISOString().split('T')[0]}.xml`
         a.click()
         window.URL.revokeObjectURL(url)
-        showSuccess('SEPA-XML heruntergeladen')
+        showSuccess(t('verein', 'SEPA XML downloaded'))
         this.exportedFeeIds = (response.headers['x-sepa-fee-ids'] || '').split(',').filter(Boolean).map(Number)
         const skipped = parseInt(response.headers['x-sepa-skipped'] || '0', 10)
         if (skipped > 0) {
-          showError(`Achtung: ${skipped} offene Zahlung(en) fehlen im Export (keine IBAN oder kein Mandat). Details in der Vorschau.`)
+          showError(n('verein', 'Attention: %n open payment is missing from the export (no IBAN or no mandate). Details in the preview.', 'Attention: %n open payments are missing from the export (no IBAN or no mandate). Details in the preview.', skipped))
         }
       } catch (error) {
         console.error('Error generating SEPA:', error)
-        let message = 'Fehler beim Generieren der SEPA-Datei'
+        let message = t('verein', 'Error generating the SEPA file')
         if (error.response?.data instanceof Blob) {
           try {
             const parsed = JSON.parse(await error.response.data.text())
