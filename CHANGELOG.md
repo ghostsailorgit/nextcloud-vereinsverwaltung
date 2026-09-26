@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.4-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: Mitgliederverwaltung (Formular, Liste, Übernahme aus anderem Verein, Bestätigungen) und der CSV-Import.
+  Anreden werden weiterhin als „Herr/Frau/Divers/Firma“ gespeichert (sie stehen so in Briefen); übersetzt wird nur die Anzeige
+  in der Auswahl. Mengenangaben („1 Mitglied importiert“) nutzen jetzt korrekte Einzahl/Mehrzahl.
+
+---
+
 ## [0.18.3-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen

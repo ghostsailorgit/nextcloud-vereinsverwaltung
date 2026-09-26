@@ -4,40 +4,37 @@
 -->
 <template>
   <div class="member-import">
-    <h2>Mitglieder aus CSV importieren</h2>
+    <h2>{{ t('verein', 'Import members from CSV') }}</h2>
     <p class="hint">
-      Erste Zeile = Spaltenüberschriften. Erkannt werden u. a. Anrede, Vorname, Name (oder Nachname), Straße, PLZ, Ort,
-      E-Mail, IBAN, BIC, Geburtsdatum, Eintritt, Austritt, Funktion, Beitragskategorie, Mandatsreferenz, Mandatsdatum,
-      Gründungsmitglied, Verstorben – also auch der eigene Mitglieder-Export. Trennzeichen Semikolon, Komma oder Tab;
-      Datum als TT.MM.JJJJ oder JJJJ-MM-TT. Zuerst wird nur geprüft, nichts gespeichert.
+      {{ t('verein', 'First line = column headings. Recognised are among others Salutation, First name, Name (or Last name), Street, Postal code, City, E-mail, IBAN, BIC, Birth date, Join date, Leave date, Role, Fee rate, Mandate reference, Mandate date, Founding member, Deceased - so the app\'s own member export as well. Separator semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. First everything is only checked, nothing is saved.') }}
     </p>
 
     <div class="pick">
       <input ref="fileInput" type="file" accept=".csv,text/csv,text/plain" @change="onFile" />
-      <NcButton variant="secondary" :disabled="busy || !csv" @click="preview">Erneut prüfen</NcButton>
+      <NcButton variant="secondary" :disabled="busy || !csv" @click="preview">{{ t('verein', 'Check again') }}</NcButton>
     </div>
 
     <div v-if="plan" class="result">
       <p class="summary">
-        <strong>{{ plan.counts.ok }}</strong> können importiert werden
-        <span v-if="plan.counts.duplicate"> · {{ plan.counts.duplicate }} schon vorhanden</span>
-        <span v-if="plan.counts.error"> · {{ plan.counts.error }} fehlerhaft</span>
+        <strong>{{ plan.counts.ok }}</strong> {{ n('verein', 'can be imported', 'can be imported', plan.counts.ok) }}
+        <span v-if="plan.counts.duplicate"> · {{ n('verein', '%n already exists', '%n already exist', plan.counts.duplicate) }}</span>
+        <span v-if="plan.counts.error"> · {{ n('verein', '%n with errors', '%n with errors', plan.counts.error) }}</span>
       </p>
       <p class="hint">
-        Erkannte Spalten: {{ Object.keys(plan.columns).join(', ') }}
-        <span v-if="plan.ignoredColumns.length"><br>Nicht übernommen: {{ plan.ignoredColumns.join(', ') }}</span>
+        {{ t('verein', 'Recognised columns: {list}', { list: Object.keys(plan.columns).join(', ') }) }}
+        <span v-if="plan.ignoredColumns.length"><br>{{ t('verein', 'Not imported: {list}', { list: plan.ignoredColumns.join(', ') }) }}</span>
       </p>
 
       <div class="buttons">
         <NcButton variant="primary" :disabled="busy || !importable.length" @click="runImport">
-          {{ importable.length }} Mitglieder importieren
+          {{ n('verein', 'Import %n member', 'Import %n members', importable.length) }}
         </NcButton>
-        <NcButton variant="tertiary" :disabled="busy" @click="reset">Abbrechen</NcButton>
+        <NcButton variant="tertiary" :disabled="busy" @click="reset">{{ t('verein', 'Cancel') }}</NcButton>
         <span v-if="progress" class="progress">{{ progress }}</span>
       </div>
 
       <table class="rows">
-        <thead><tr><th>Zeile</th><th>Name</th><th>Ergebnis</th><th>Hinweise</th></tr></thead>
+        <thead><tr><th>{{ t('verein', 'Line') }}</th><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'Result') }}</th><th>{{ t('verein', 'Notes') }}</th></tr></thead>
         <tbody>
           <tr v-for="r in plan.rows" :key="r.line" :class="r.status">
             <td>{{ r.line }}</td>
@@ -58,6 +55,7 @@
 import { ref, computed } from 'vue'
 import { showSuccess, showError, showWarning } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import { t, n } from '@nextcloud/l10n'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
@@ -92,7 +90,7 @@ export default {
       const file = event.target.files && event.target.files[0]
       if (!file) return
       if (file.size > 2 * 1024 * 1024) {
-        showError('Die Datei ist zu groß (höchstens 2 MB)')
+        showError(t('verein', 'The file is too large (at most 2 MB)'))
         return
       }
       csv.value = decode(await file.arrayBuffer())
@@ -106,7 +104,7 @@ export default {
         plan.value = (await api.post('members/import/preview', { csv: csv.value })).data
       } catch (error) {
         plan.value = null
-        showError(extractErrorMessage(error, 'Die Datei konnte nicht geprüft werden'))
+        showError(extractErrorMessage(error, t('verein', 'The file could not be checked')))
       } finally {
         busy.value = false
       }
@@ -114,13 +112,13 @@ export default {
 
     const runImport = async () => {
       const lines = importable.value
-      if (!lines.length || !(await confirmAction('Mitglieder importieren', `${lines.length} Mitglieder anlegen?`, { labelConfirm: 'Importieren', severity: 'warning' }))) return
+      if (!lines.length || !(await confirmAction(t('verein', 'Import members'), n('verein', 'Create %n member?', 'Create %n members?', lines.length), { labelConfirm: t('verein', 'Import'), severity: 'warning' }))) return
       busy.value = true
       let created = 0
       let problems = 0
       try {
         for (let i = 0; i < lines.length; i += CHUNK) {
-          progress.value = `${Math.min(i + CHUNK, lines.length)} von ${lines.length} …`
+          progress.value = t('verein', '{done} of {total} …', { done: Math.min(i + CHUNK, lines.length), total: lines.length })
           const res = (await api.post('members/import', { csv: csv.value, lines: lines.slice(i, i + CHUNK).join(',') })).data
           const next = { ...outcome.value }
           res.created.forEach(r => { next[r.line] = 'created' })
@@ -131,21 +129,21 @@ export default {
           problems += res.failed.length + res.skipped.length
         }
       } catch (error) {
-        showError(extractErrorMessage(error, 'Import abgebrochen'))
+        showError(extractErrorMessage(error, t('verein', 'Import aborted')))
       } finally {
         busy.value = false
         progress.value = ''
       }
-      if (created) showSuccess(`${created} Mitglieder importiert`)
-      if (problems) showWarning(`${problems} Zeilen nicht importiert – siehe Liste`)
+      if (created) showSuccess(n('verein', '%n member imported', '%n members imported', created))
+      if (problems) showWarning(n('verein', '%n line not imported - see the list', '%n lines not imported - see the list', problems))
       if (created) emit('done')
     }
 
     const statusLabel = (r) => {
       const o = outcome.value[r.line]
-      if (o === 'created') return '✓ importiert'
-      if (o) return '✗ ' + o.replace(/^failed: /, 'Fehler: ').replace(/^skipped: /, 'übersprungen: ')
-      return { ok: 'bereit', error: 'fehlerhaft', duplicate: 'schon vorhanden' }[r.status] || r.status
+      if (o === 'created') return '✓ ' + t('verein', 'imported')
+      if (o) return '✗ ' + o.replace(/^failed: /, t('verein', 'Error: ')).replace(/^skipped: /, t('verein', 'skipped: '))
+      return { ok: t('verein', 'ready'), error: t('verein', 'faulty'), duplicate: t('verein', 'already exists') }[r.status] || r.status
     }
 
     const reset = () => {
@@ -155,7 +153,7 @@ export default {
       if (fileInput.value) fileInput.value.value = ''
     }
 
-    return { fileInput, csv, plan, busy, progress, importable, onFile, preview, runImport, statusLabel, reset }
+    return { t, n, fileInput, csv, plan, busy, progress, importable, onFile, preview, runImport, statusLabel, reset }
   }
 }
 </script>
