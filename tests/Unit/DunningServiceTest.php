@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\DocumentL10n;
 use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccount;
@@ -20,6 +21,8 @@ use OCA\Verein\Service\AuditLogService;
 use OCA\Verein\Service\DunningService;
 use OCA\Verein\Service\Export\PdfExporter;
 use OCP\IDBConnection;
+use OCP\IConfig;
+use OCP\L10N\IFactory;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -31,6 +34,8 @@ class DunningServiceTest extends TestCase {
     private IDBConnection&MockObject $db;
     private AuditLogService&MockObject $audit;
     private DunningService $service;
+    /** constructor arguments before the optional ones */
+    private array $deps;
 
     /** @var Fee[] */
     private array $feeList = [];
@@ -55,7 +60,8 @@ class DunningServiceTest extends TestCase {
         $accounts->method('findByClub')->willReturnCallback(fn () => $this->accountList);
         $this->db = $this->createMock(IDBConnection::class);
         $this->audit = $this->createMock(AuditLogService::class);
-        $this->service = new DunningService($this->fees, $members, $clubs, $accounts, $this->db, $this->audit, l10n: SourceL10n::fromAppLanguage('de'));
+        $this->deps = [$this->fees, $members, $clubs, $accounts, $this->db, $this->audit];
+        $this->service = new DunningService(...$this->deps, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function member(int $id, string $first, string $name, bool $deactivated = false, ?string $salutation = null): Member {
@@ -256,6 +262,28 @@ class DunningServiceTest extends TestCase {
         $this->assertSame('Beitrag 2025, 2026, Mitglied 10', $letters[10]['reference']);
         // sorted by last name for putting them into envelopes: Muster before Mustermann
         $this->assertSame([11, 10], array_column($data['letters'], 'memberId'));
+    }
+
+    public function testThePreviewSpeaksTheUsersLanguageTheLetterTheInstanceDefault(): void {
+        // an English-speaking treasurer on a German instance: the screen is English, the letter German
+        $factory = $this->createMock(IFactory::class);
+        $factory->method('findGenericLanguage')->with('verein')->willReturn('de');
+        $factory->method('get')->with('verein', 'de')->willReturn(SourceL10n::fromAppLanguage('de'));
+        $config = $this->createMock(IConfig::class);
+        $config->method('getSystemValue')->willReturnMap([['force_language', false, false], ['default_language', false, 'de']]);
+        $english = new SourceL10n();
+        $service = new DunningService(...$this->deps, l10n: $english, documentL10n: new DocumentL10n($factory, $config, $english));
+        $this->member(10, 'Erika', 'Mustermann', false, 'Frau');
+        $this->fee(1, 10, 24, '2025-03-31', 'overdue', 1, '2026-01-01');
+
+        $plan = $service->plan(self::CLUB, 14, 14, self::TODAY);
+        $this->assertSame('First dunning letter', $plan['included'][0]['levelLabel']);
+
+        $letter = $service->letters(self::CLUB, [1], 14, self::TODAY)['letters'][0];
+        $this->assertSame('Zahlungserinnerung', $letter['title']);
+        $this->assertSame('Sehr geehrte Frau Mustermann,', $letter['greeting']);
+        $this->assertSame('Frau', $letter['address'][0]);
+        $this->assertSame('Beitrag 2025, Mitglied 10', $letter['reference']);
     }
 
     public function testLettersRejectAnEmptySelectionAndAnOddDeadline(): void {

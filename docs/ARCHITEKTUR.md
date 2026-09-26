@@ -182,6 +182,9 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
 - Übersetzungen: englische Quelltexte, Deutsch in `l10n/de.json` (einzige von Hand gepflegte Datei, `php scripts/l10n.php build`
   erzeugt den Rest; `L10nTest` meldet Fehlendes). Oberfläche und Meldungen kommen in der Sprache des Nutzers; PHP-Klassen
   bekommen `IL10N` als optionales letztes Argument (sonst englisch über `L10n\SourceL10n`). `occ` bleibt englisch.
+  Dokumente (PDF, Mahnschreiben, SEPA-Verwendungszweck, der gespeicherte Standardtext eines Beitrags) kommen in der
+  Sprache der Instanz, wenn in der config.php `default_language` oder `force_language` gesetzt ist, sonst in der Sprache
+  dessen, der sie erstellt (`L10n\DocumentL10n`) - so sehen die Briefe gleich aus, egal wer sie druckt.
 - API-Übersicht: `docs/API.md` wird aus den Routen erzeugt (`php scripts/ApiDocs.php`), ein Test hält sie aktuell.
 
 ## Fehlerbehandlung

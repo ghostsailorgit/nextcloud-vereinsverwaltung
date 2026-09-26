@@ -17,6 +17,7 @@ use OCA\Verein\Exception\ValidationException;
 use OCP\IDBConnection;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
+use OCA\Verein\L10n\DocumentL10n;
 
 /**
  * Dunning (Mahnwesen): finds fees that are overdue, groups them into one letter per person and raises
@@ -28,12 +29,8 @@ use OCP\IL10N;
  */
 class DunningService {
     private IL10N $l;
+    private IL10N $doc;
 
-    public const LEVELS = [
-        1 => 'Zahlungserinnerung',
-        2 => '1. Mahnung',
-        3 => '2. und letzte Mahnung',
-    ];
     public const MAX_LEVEL = 3;
 
     public function __construct(
@@ -44,9 +41,11 @@ class DunningService {
         private IDBConnection $db,
         private ?AuditLogService $auditLog = null,
         private ?Clock $clock = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        ?DocumentL10n $documentL10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
+        $this->doc = $documentL10n?->get() ?? $this->l;
     }
 
     /**
@@ -143,7 +142,7 @@ class DunningService {
                 'memberId' => $memberId,
                 'name' => $name,
                 'level' => $level,
-                'levelLabel' => self::LEVELS[$level],
+                'levelLabel' => self::levelLabel($level, $this->l),
                 'fees' => $feeRows,
                 'total' => round($sum, 2),
                 'hasAddress' => $this->hasPostalAddress($member),
@@ -259,7 +258,7 @@ class DunningService {
             foreach ($fees as $fee) {
                 $sum += (float)$fee->getAmount();
                 $rows[] = [
-                    'text' => $fee->getDescription() ?: ('Beitrag ' . ($fee->getPeriod() ?? '')),
+                    'text' => $fee->getDescription() ?: $this->doc->t('Fee %s', [$fee->getPeriod() ?? '']),
                     'dueDate' => $this->formatDate(substr((string)$fee->getDueDate(), 0, 10)),
                     'amount' => (float)$fee->getAmount(),
                 ];
@@ -267,7 +266,7 @@ class DunningService {
             $letters[] = [
                 'memberId' => $memberId,
                 'level' => $level,
-                'title' => self::LEVELS[$level],
+                'title' => self::levelLabel($level, $this->doc),
                 'address' => $this->addressLines($member),
                 'greeting' => $this->greeting($member),
                 'fees' => $rows,
@@ -311,7 +310,7 @@ class DunningService {
     private function reference(int $memberId, array $fees): string {
         $periods = array_values(array_unique(array_filter(array_map(fn (Fee $f) => $f->getPeriod(), $fees))));
         sort($periods);
-        return ($periods !== [] ? 'Beitrag ' . implode(', ', $periods) . ', ' : '') . 'Mitglied ' . $memberId;
+        return ($periods !== [] ? $this->doc->t('Fee %s', [implode(', ', $periods)]) . ', ' : '') . $this->doc->t('Member %s', [$memberId]);
     }
 
     private function hasPostalAddress(Member $member): bool {
@@ -322,8 +321,10 @@ class DunningService {
     private function addressLines(Member $member): array {
         $lines = [];
         $salutation = $member->getSalutation();
-        if (in_array($salutation, ['Herr', 'Frau'], true)) {
-            $lines[] = $salutation;
+        if ($salutation === 'Herr') {
+            $lines[] = $this->doc->t('Mr');
+        } elseif ($salutation === 'Frau') {
+            $lines[] = $this->doc->t('Ms');
         }
         $lines[] = trim(($member->getFirstName() ?? '') . ' ' . $member->getName());
         if (trim((string)$member->getStreet()) !== '') {
@@ -338,9 +339,18 @@ class DunningService {
 
     private function greeting(Member $member): string {
         return match ($member->getSalutation()) {
-            'Herr' => 'Sehr geehrter Herr ' . $member->getName() . ',',
-            'Frau' => 'Sehr geehrte Frau ' . $member->getName() . ',',
-            default => 'Guten Tag ' . trim(($member->getFirstName() ?? '') . ' ' . $member->getName()) . ',',
+            'Herr' => $this->doc->t('Dear Mr %s,', [$member->getName()]),
+            'Frau' => $this->doc->t('Dear Ms %s,', [$member->getName()]),
+            default => $this->doc->t('Hello %s,', [trim(($member->getFirstName() ?? '') . ' ' . $member->getName())]),
+        };
+    }
+
+    /** name of a dunning level, in the language of the given l10n (the preview: the user's, the letter: the document's) */
+    public static function levelLabel(int $level, IL10N $l): string {
+        return match ($level) {
+            1 => $l->t('Payment reminder'),
+            2 => $l->t('First dunning letter'),
+            default => $l->t('Second and final dunning letter'),
         };
     }
 

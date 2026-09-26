@@ -7,6 +7,10 @@
 
 namespace OCA\Verein\Service\Export;
 
+use OCA\Verein\L10n\DocumentL10n;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
+
 // Require TCPDF if available (lib/Service/Export -> 3 levels up to app root)
 $tcpdf_file = __DIR__ . '/../../../vendor/tecnickcom/tcpdf/tcpdf.php';
 if (file_exists($tcpdf_file)) {
@@ -14,12 +18,20 @@ if (file_exists($tcpdf_file)) {
 }
 
 /**
- * PDF Exporter using TCPDF
+ * PDF Exporter using TCPDF. The documents are written in the instance's default language (DocumentL10n), messages
+ * to the person clicking (TCPDF missing) in theirs.
  */
 class PdfExporter {
+    private IL10N $l;
+    private IL10N $doc;
+
     public function __construct(
-        private ?\OCA\Verein\Service\Clock $clock = null
+        private ?\OCA\Verein\Service\Clock $clock = null,
+        ?IL10N $l10n = null,
+        ?DocumentL10n $documentL10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
+        $this->doc = $documentL10n?->get() ?? $this->l;
     }
 
     /**
@@ -32,8 +44,8 @@ class PdfExporter {
         $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
         // Set document properties
-        $pdf->SetCreator('Vereins-App');
-        $pdf->SetAuthor('Vereins-App');
+        $pdf->SetCreator($this->doc->t('Club management'));
+        $pdf->SetAuthor($this->doc->t('Club management'));
 
         // Set margins
         $pdf->SetMargins(15, 25, 15);
@@ -60,10 +72,10 @@ class PdfExporter {
 
         // Header
         $pdf->SetFont('helvetica', 'B', 16);
-        $pdf->Cell(0, 10, 'Mitgliederliste', 0, 1, 'C');
+        $pdf->Cell(0, 10, $this->doc->t('Member list'), 0, 1, 'C');
 
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 5, 'Exportiert am: ' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s'), 0, 1, 'R');
+        $pdf->Cell(0, 5, $this->doc->t('Exported on: %s', [\OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s')]), 0, 1, 'R');
         $pdf->Ln(5);
 
         // Table header
@@ -71,7 +83,7 @@ class PdfExporter {
         $pdf->SetFillColor(200, 220, 255);
 
         $w = [10, 40, 25, 25, 20, 15, 20, 20];
-        $headers = ['ID', 'Name', 'Vorname', 'Ort', 'Rolle', 'Alter', 'Mitgl.-Jahre', 'Status'];
+        $headers = ['ID', $this->doc->t('Name'), $this->doc->t('First name'), $this->doc->t('City'), $this->doc->t('Role'), $this->doc->t('Age'), $this->doc->t('Memb. yrs'), $this->doc->t('Status')];
 
         foreach ($headers as $i => $header) {
             $pdf->Cell($w[$i], 7, $header, 1, 0, 'C', true);
@@ -82,17 +94,18 @@ class PdfExporter {
         $pdf->SetFont('helvetica', '', 9);
         $pdf->SetFillColor(240, 245, 255);
 
+        $roles = ['member' => $this->doc->t('Member'), 'treasurer' => $this->doc->t('Treasurer'), 'admin' => $this->doc->t('Board')];
         $fill = false;
         foreach ($members as $member) {
             $m = is_array($member) ? $member : $member->jsonSerialize();
 
-            $status = !empty($m['deceased']) ? 'Verstorben' : (!empty($m['isFormer']) ? 'Ehemalig' : 'Aktiv');
+            $status = !empty($m['deceased']) ? $this->doc->t('Deceased') : (!empty($m['isFormer']) ? $this->doc->t('Former') : $this->doc->t('Active'));
 
             $pdf->Cell($w[0], 6, (string)($m['id'] ?? ''), 1, 0, 'C', $fill);
             $pdf->Cell($w[1], 6, substr((string)($m['name'] ?? ''), 0, 24), 1, 0, 'L', $fill);
             $pdf->Cell($w[2], 6, substr((string)($m['firstName'] ?? ''), 0, 16), 1, 0, 'L', $fill);
             $pdf->Cell($w[3], 6, substr((string)($m['city'] ?? ''), 0, 16), 1, 0, 'L', $fill);
-            $pdf->Cell($w[4], 6, substr((string)($m['role'] ?? ''), 0, 12), 1, 0, 'C', $fill);
+            $pdf->Cell($w[4], 6, substr($roles[$m['role'] ?? ''] ?? (string)($m['role'] ?? ''), 0, 12), 1, 0, 'C', $fill);
             $pdf->Cell($w[5], 6, (string)($m['age'] ?? '-'), 1, 0, 'C', $fill);
             $pdf->Cell($w[6], 6, (string)($m['membershipYears'] ?? '-'), 1, 0, 'C', $fill);
             $pdf->Cell($w[7], 6, $status, 1, 0, 'C', $fill);
@@ -105,7 +118,7 @@ class PdfExporter {
         $pdf->SetFont('helvetica', '', 8);
         $pageCount = $pdf->getAliasNbPages();
         $currentPage = $pdf->getAliasNumPage();
-        $pdf->Cell(0, 10, 'Seite ' . $currentPage . ' von ' . $pageCount, 0, 0, 'R');
+        $pdf->Cell(0, 10, $this->doc->t('Page %1$s of %2$s', [$currentPage, $pageCount]), 0, 0, 'R');
 
         $content = $pdf->Output('', 'S');
 
@@ -128,10 +141,10 @@ class PdfExporter {
 
         // Header
         $pdf->SetFont('helvetica', 'B', 16);
-        $pdf->Cell(0, 10, 'Gebührenliste', 0, 1, 'C');
+        $pdf->Cell(0, 10, $this->doc->t('Fee list'), 0, 1, 'C');
 
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 5, 'Exportiert am: ' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s'), 0, 1, 'R');
+        $pdf->Cell(0, 5, $this->doc->t('Exported on: %s', [\OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s')]), 0, 1, 'R');
         $pdf->Ln(5);
 
         // Table header
@@ -139,7 +152,7 @@ class PdfExporter {
         $pdf->SetFillColor(200, 220, 255);
 
         $w = [15, 25, 30, 50, 25, 30];
-        $headers = ['ID', 'Mit-ID', 'Betrag', 'Beschreibung', 'Status', 'Fällig am'];
+        $headers = ['ID', $this->doc->t('Memb. ID'), $this->doc->t('Amount'), $this->doc->t('Description'), $this->doc->t('Status'), $this->doc->t('Due on')];
 
         foreach ($headers as $i => $header) {
             $pdf->Cell($w[$i], 7, $header, 1, 0, 'C', true);
@@ -181,7 +194,7 @@ class PdfExporter {
             }
 
             // Translate status
-            $statusLabels = ['open' => 'Offen', 'paid' => 'Bezahlt', 'overdue' => 'Überfällig'];
+            $statusLabels = ['open' => $this->doc->t('Open'), 'paid' => $this->doc->t('Paid'), 'overdue' => $this->doc->t('Overdue'), 'cancelled' => $this->doc->t('Cancelled')];
             $statusLabel = $statusLabels[$status] ?? $status;
 
             $pdf->Cell($w[0], 6, (string)$id, 1, 0, 'C', $fill);
@@ -199,7 +212,7 @@ class PdfExporter {
         $pdf->SetFont('helvetica', '', 8);
         $pageCount = $pdf->getAliasNbPages();
         $currentPage = $pdf->getAliasNumPage();
-        $pdf->Cell(0, 10, 'Seite ' . $currentPage . ' von ' . $pageCount, 0, 0, 'R');
+        $pdf->Cell(0, 10, $this->doc->t('Page %1$s of %2$s', [$currentPage, $pageCount]), 0, 0, 'R');
 
         $content = $pdf->Output('', 'S');
 
@@ -220,9 +233,9 @@ class PdfExporter {
     public function exportDunningLetters(array $data): array {
         $this->requireTcpdf();
         $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator('Vereins-App');
+        $pdf->SetCreator($this->doc->t('Club management'));
         $pdf->SetAuthor($data['club']['name']);
-        $pdf->SetTitle('Mahnschreiben');
+        $pdf->SetTitle($this->doc->t('Dunning letters'));
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
         $pdf->SetMargins(25, 20, 20);
@@ -257,9 +270,9 @@ class PdfExporter {
             $pdf->Ln(3);
 
             $pdf->SetFont('helvetica', 'B', 10);
-            $pdf->Cell(95, 6, 'Beitrag', 'B', 0);
-            $pdf->Cell(35, 6, 'fällig seit', 'B', 0);
-            $pdf->Cell(0, 6, 'Betrag', 'B', 1, 'R');
+            $pdf->Cell(95, 6, $this->doc->t('Fee'), 'B', 0);
+            $pdf->Cell(35, 6, $this->doc->t('due since'), 'B', 0);
+            $pdf->Cell(0, 6, $this->doc->t('Amount'), 'B', 1, 'R');
             $pdf->SetFont('helvetica', '', 10);
             foreach ($letter['fees'] as $fee) {
                 $pdf->Cell(95, 6, (string)$fee['text'], 0, 0);
@@ -267,49 +280,48 @@ class PdfExporter {
                 $pdf->Cell(0, 6, $money((float)$fee['amount']), 0, 1, 'R');
             }
             $pdf->SetFont('helvetica', 'B', 10);
-            $pdf->Cell(130, 7, 'Offener Betrag', 'T', 0);
+            $pdf->Cell(130, 7, $this->doc->t('Amount outstanding'), 'T', 0);
             $pdf->Cell(0, 7, $money((float)$letter['total']), 'T', 1, 'R');
             $pdf->Ln(4);
 
             $pdf->SetFont('helvetica', '', 10);
             if ($data['account'] !== null) {
-                $pay = "Bitte überweisen Sie den Betrag bis zum {$data['deadline']} auf das Konto des Vereins:\n"
-                    . 'Kontoinhaber: ' . $data['club']['name'] . "\n"
+                $pay = $this->doc->t('Please transfer the amount by %s to the club\'s account:', [$data['deadline']]) . "\n"
+                    . $this->doc->t('Account holder: %s', [$data['club']['name']]) . "\n"
                     . 'IBAN: ' . trim(chunk_split((string)$data['account']['iban'], 4, ' ')) . "\n"
                     . ($data['account']['bic'] !== '' ? 'BIC: ' . $data['account']['bic'] . "\n" : '')
-                    . 'Verwendungszweck: ' . $letter['reference'];
+                    . $this->doc->t('Payment reference: %s', [$letter['reference']]);
             } else {
-                $pay = "Bitte begleichen Sie den Betrag bis zum {$data['deadline']}. Die Bankverbindung erfahren Sie beim Vorstand.";
+                $pay = $this->doc->t('Please pay the amount by %s. The board will tell you the bank details.', [$data['deadline']]);
             }
             $pdf->MultiCell(0, 5, $pay, 0, 'L', false, 1);
             $pdf->Ln(3);
-            $pdf->MultiCell(0, 5, 'Sollten Sie den Betrag inzwischen überwiesen haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Bei Fragen wenden Sie sich gern an den Vorstand.', 0, 'L', false, 1);
+            $pdf->MultiCell(0, 5, $this->doc->t('If you have transferred the amount in the meantime, please disregard this letter. If you have any questions, please contact the board.'), 0, 'L', false, 1);
             $pdf->Ln(6);
-            $pdf->MultiCell(0, 5, "Mit freundlichen Grüßen\n\nDer Vorstand\n" . $data['club']['name'], 0, 'L', false, 1);
+            $pdf->MultiCell(0, 5, $this->doc->t('Kind regards
+
+The board
+%s', [$data['club']['name']]), 0, 'L', false, 1);
         }
 
         return [
             'content' => $pdf->Output('', 'S'),
-            'filename' => 'mahnschreiben_' . \OCA\Verein\Service\Clock::todayOf($this->clock) . '.pdf',
+            'filename' => $this->doc->t('dunning-letters_%s.pdf', [\OCA\Verein\Service\Clock::todayOf($this->clock)]),
             'mimeType' => 'application/pdf',
         ];
     }
 
     private function dunningText(int $level, string $deadline): string {
         return match ($level) {
-            1 => 'sicher ist es Ihrer Aufmerksamkeit entgangen: Für die folgenden Mitgliedsbeiträge konnten wir noch keinen '
-                . 'Zahlungseingang feststellen. Wir bitten Sie, den offenen Betrag bis zum ' . $deadline . ' zu begleichen.',
-            2 => 'leider konnten wir trotz unserer Zahlungserinnerung bisher keinen Zahlungseingang für die folgenden '
-                . 'Mitgliedsbeiträge feststellen. Bitte begleichen Sie den offenen Betrag bis spätestens ' . $deadline . '.',
-            default => 'trotz Zahlungserinnerung und Mahnung sind die folgenden Mitgliedsbeiträge weiterhin offen. Wir bitten '
-                . 'Sie letztmalig, den Betrag bis spätestens ' . $deadline . ' zu begleichen. Andernfalls behält sich der '
-                . 'Vorstand weitere Schritte nach der Satzung vor.',
+            1 => $this->doc->t('It has surely escaped your attention: we have not yet received payment for the following membership fees. Please pay the outstanding amount by %s.', [$deadline]),
+            2 => $this->doc->t('Unfortunately, despite our payment reminder, we have not yet received payment for the following membership fees. Please pay the outstanding amount by %s at the latest.', [$deadline]),
+            default => $this->doc->t('Despite a payment reminder and a dunning letter, the following membership fees are still outstanding. We ask you for the last time to pay the amount by %s at the latest. Otherwise the board reserves the right to take further steps under the statutes.', [$deadline]),
         };
     }
 
     private function requireTcpdf(): void {
         if (!class_exists('TCPDF')) {
-            throw new \OCA\Verein\Exception\DependencyMissingException('PDF-Export nicht verfügbar: Die Bibliothek TCPDF fehlt auf dem Server. Der Administrator muss im App-Verzeichnis "composer install --no-dev" ausführen.');
+            throw new \OCA\Verein\Exception\DependencyMissingException($this->l->t('PDF export not available: the TCPDF library is missing on the server. The administrator has to run %s in the app directory.', ['"composer install --no-dev"']));
         }
     }
 }

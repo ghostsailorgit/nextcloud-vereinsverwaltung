@@ -137,8 +137,10 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     generated files. PHP classes take `?IL10N $l10n = null` as their last constructor argument and fall back to
     `L10n\SourceL10n` (English); a manual DI factory in `Application.php` must pass `IL10N::class`, and unit tests pass
     `l10n: SourceL10n::fromAppLanguage('de')` so they keep asserting the German texts. Messages go out in the requesting
-    user's language; `occ` output stays English. Still German: PDF exports, dunning letters and the SEPA remittance text
-    (next step: the instance's default language). `l10n/` must be deployed and is part of the release archive.
+    user's language; `occ` output stays English. Documents (PDF exports, dunning letters, the SEPA remittance text, a stored
+    default fee description) use `L10n\DocumentL10n`: the instance language if `default_language`/`force_language` is set,
+    otherwise the creating user's - never Nextcloud's bare English fallback. `l10n/` must be deployed and is part of the
+    release archive.
 
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
