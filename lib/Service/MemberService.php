@@ -285,7 +285,11 @@ class MemberService {
         $member->setUpdatedAt(date('Y-m-d H:i:s'));
         $member = $this->mapper->update($member);
 
-        $this->auditLog?->record(null, 'member', $id, 'anonymize');
+        // one entry per club, so it shows up in each club's "Protokoll" tab (null would be visible nowhere)
+        $clubIds = array_values(array_unique(array_map(fn ($m) => $m->getClubId(), $memberships)));
+        foreach ($clubIds ?: [null] as $clubId) {
+            $this->auditLog?->record($clubId, 'member', $id, 'anonymize');
+        }
         $this->auditLog?->scrubEntity('member', $id);
         foreach ($memberships as $membership) {
             $this->auditLog?->scrubEntity('membership', $membership->getId());

@@ -44,7 +44,7 @@ class RestoreBackup extends Command {
 
         $current = $this->backups->currentCounts();
         $output->writeln('Backup of ' . $backup['created'] . ' (app version ' . $backup['appVersion'] . ')');
-        $output->writeln(sprintf('%-24s %10s %10s', 'Tabelle', 'jetzt', 'Sicherung'));
+        $output->writeln(sprintf('%-24s %10s %10s', 'Table', 'now', 'backup'));
         foreach (BackupService::TABLES as $table) {
             $inBackup = isset($backup['tables'][$table]) ? (string)count($backup['tables'][$table]) : '- (bleibt)';
             $output->writeln(sprintf('%-24s %10d %10s', $table, $current[$table], $inBackup));

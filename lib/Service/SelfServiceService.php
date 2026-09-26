@@ -118,7 +118,7 @@ class SelfServiceService {
         usort($fees, fn (array $a, array $b) => strcmp((string)$b['dueDate'], (string)$a['dueDate']));
 
         return [
-            'linked' => true,
+            'linked' => $userId !== null && $userId !== '',
             'nextcloudAccount' => $userId,
             'person' => [
                 'salutation' => $person->getSalutation(),

@@ -4,6 +4,23 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.10-beta] - 2026-09-26
+
+Befunde aus dem Nachtest von SEPA-Export, Deaktivieren, Selbstauskunft und Sicherung.
+
+### 🐛 Korrigiert
+- Das Anonymisieren einer Person erscheint jetzt im Reiter „Protokoll“ jedes Vereins, in dem sie Mitglied war (bisher
+  wurde es ohne Verein gespeichert und war nirgends sichtbar).
+- Die Datenauskunft einer Person meldet `"linked": false`, wenn sie mit keinem Nextcloud-Konto verknüpft ist (bisher
+  immer `true`).
+- `occ verein:backup:restore`: die Übersicht vor dem Wiederherstellen ist jetzt wie der Rest des Befehls englisch.
+- Der Dateiname der Datenauskunft folgt der Sprache des Nutzers.
+- Beim Speichern der Vereinsdaten oder der „Automatischen Rechte“ wurden unveränderte automatische Rechte als Änderung
+  protokolliert; jetzt nur echte Änderungen, mit altem und neuem Wert.
+- Der Reiter „Protokoll“ zeigte die Uhrzeit in UTC (zwei Stunden zu früh im Sommer); jetzt die Ortszeit.
+
+---
+
 ## [0.18.8-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen

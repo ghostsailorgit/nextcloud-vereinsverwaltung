@@ -163,6 +163,7 @@ class SelfServiceServiceTest extends TestCase {
         $data = $this->service->forMemberId(5);
 
         $this->assertNull($data['nextcloudAccount']);
+        $this->assertFalse($data['linked']);
     }
 
     public function testForMemberIdOfAMissingPersonThrows(): void {

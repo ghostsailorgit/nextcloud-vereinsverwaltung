@@ -86,7 +86,8 @@ Beiträge und SEPA-Historie weiter der (jetzt anonymen) Person zuzuordnen sind -
 Aufbewahrungspflicht der Buchhaltung verletzen. Geht erst, wenn die Person in jedem Verein ausgetreten (oder
 verstorben) ist - eine noch aktive Mitgliedschaft braucht die Daten. Ältere Protokolleinträge zu der Person und all
 ihren Mitgliedschaften werden beim Anonymisieren nachträglich redigiert (`AuditLogService::scrubEntity()`), nicht nur
-künftige. Es gibt kein Zurück: `anonymized_at` bleibt gesetzt.
+künftige. Der Vorgang selbst wird für jeden Verein der Person protokolliert, damit er in jedem Reiter „Protokoll“
+erscheint. Es gibt kein Zurück: `anonymized_at` bleibt gesetzt.
 **Nicht betroffen:** `mandateReference`/`mandateFile` an der Mitgliedschaft (kann den Namen enthalten) und die
 unterschriebene Mandatsdatei in Nextcloud Files selbst - Mandate haben eine eigene Aufbewahrungsfrist. Ebenso nicht
 betroffen: Freitext in Beitragsbeschreibungen. In der Oberfläche (Knopf „Anonymisieren“ in der Mitgliederliste, nur bei Ehemaligen und nur mit
