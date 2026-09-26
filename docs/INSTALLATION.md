@@ -1,6 +1,6 @@
 # Installation und Betrieb
 
-Diese Anleitung geht davon aus, dass eine Nextcloud bereits läuft. Getestet ist die App mit Nextcloud 34, PHP 8.5 und MySQL 8.4 (siehe [README](../README.md#voraussetzungen)).
+Diese Anleitung geht davon aus, dass eine Nextcloud bereits läuft. Unterstützt werden Nextcloud 33 bis 35 mit PHP 8.2 bis 8.5 und allen von Nextcloud unterstützten Datenbanken (siehe [README](../README.md#voraussetzungen)).
 
 ## 1. App installieren
 
