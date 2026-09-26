@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.18.8-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.18.10-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -21,8 +21,6 @@ Stand: Version 0.18.8-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 ## Als Nächstes
 
 - **Veröffentlichung im App Store:** App signieren, englische Beschreibung und Bildschirmfotos, Eintrag im App Store.
-- Weitere Funktionen (SEPA-Export, Deaktivieren, Selbstauskunft, Sicherung) mit echten Läufen und einem Nicht-Admin-Konto
-  nachtesten, wie bei den neuen Funktionen.
 - Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).
 
 ## Ideen ohne Termin

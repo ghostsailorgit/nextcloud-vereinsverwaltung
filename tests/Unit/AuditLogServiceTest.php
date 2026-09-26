@@ -45,6 +45,13 @@ class AuditLogServiceTest extends TestCase {
         $this->assertSame([], $this->service->diff(['a' => 1], ['a' => 1]));
     }
 
+    public function testEqualObjectsAndArraysAreNoChange(): void {
+        // Club::jsonSerialize() casts roleMapping to an object - a fresh instance on every call
+        $this->assertSame([], $this->service->diff(['m' => (object)['admin' => 2], 'g' => ['a']], ['m' => (object)['admin' => 2], 'g' => ['a']]));
+        $changes = $this->service->diff(['m' => (object)['admin' => 2]], ['m' => (object)['admin' => 3]]);
+        $this->assertSame(['m'], array_keys($changes));
+    }
+
     public function testRecordStoresActionEntityAndActor(): void {
         $user = $this->createMock(IUser::class);
         $user->method('getUID')->willReturn('max');

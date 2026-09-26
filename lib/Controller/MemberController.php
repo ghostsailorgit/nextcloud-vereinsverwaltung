@@ -415,7 +415,7 @@ class MemberController extends Controller {
             $data['exportedAt'] = date('c');
             return new DataDownloadResponse(
                 json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                'mitgliedsdaten-' . (int)$id . '.json',
+                $this->l->t('member-data-%s.json', [(int)$id]),
                 'application/json'
             );
         } catch (\Throwable $e) {

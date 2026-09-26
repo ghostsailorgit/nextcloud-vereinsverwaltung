@@ -168,7 +168,11 @@ class AuditLogService {
         foreach (array_unique(array_merge(array_keys($before), array_keys($after))) as $key) {
             $old = $before[$key] ?? null;
             $new = $after[$key] ?? null;
-            if ($old !== $new) {
+            // objects and arrays by content: two equal (object) casts are never identical (club roleMapping)
+            $same = (is_object($old) || is_array($old) || is_object($new) || is_array($new))
+                ? json_encode($old) === json_encode($new)
+                : $old === $new;
+            if (!$same) {
                 $changes[$key] = ['old' => $old, 'new' => $new];
             }
         }

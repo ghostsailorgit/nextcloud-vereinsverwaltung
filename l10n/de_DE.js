@@ -667,6 +667,7 @@ OC.L10N.register(
         "marked as paid": "als bezahlt markiert",
         "max@example.com (optional)": "max@example.com (optional)",
         "member deactivated": "Mitglied deaktiviert",
+        "member-data-%s.json": "mitgliedsdaten-%s.json",
         "member-data-{id}.json": "mitgliedsdaten-{id}.json",
         "memberId is required": "memberId erforderlich",
         "missing – enter it in the \"Clubs\" tab": "fehlt – im Reiter „Vereine“ eintragen",

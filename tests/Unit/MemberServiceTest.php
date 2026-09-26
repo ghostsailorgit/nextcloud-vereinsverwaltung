@@ -405,7 +405,12 @@ class MemberServiceTest extends TestCase {
         // membership(8, 1) -> id 801, membership(8, 2) -> id 802 (memberId * 100 + clubId)
         $seen = [];
         $auditLog = $this->createMock(\OCA\Verein\Service\AuditLogService::class);
-        $auditLog->expects($this->once())->method('record')->with(null, 'member', 8, 'anonymize');
+        $logged = [];
+        $auditLog->expects($this->exactly(2))->method('record')->willReturnCallback(
+            function (?int $clubId, string $type, int $id, string $action) use (&$logged) {
+                $logged[] = [$clubId, $type, $id, $action];
+            }
+        );
         $auditLog->expects($this->exactly(3))->method('scrubEntity')->willReturnCallback(
             function (string $type, int $id) use (&$seen) {
                 $seen[] = [$type, $id];
@@ -416,5 +421,7 @@ class MemberServiceTest extends TestCase {
         $service->anonymize(8);
 
         $this->assertSame([['member', 8], ['membership', 801], ['membership', 802]], $seen);
+        // visible in the log of both clubs
+        $this->assertSame([[1, 'member', 8, 'anonymize'], [2, 'member', 8, 'anonymize']], $logged);
     }
 }
