@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Service\ValidationService;
 use PHPUnit\Framework\TestCase;
 
@@ -12,7 +13,7 @@ class ValidationServiceTest extends TestCase {
     private ValidationService $service;
 
     protected function setUp(): void {
-        $this->service = new ValidationService();
+        $this->service = new ValidationService(l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     public function testEmailIsOptional(): void {

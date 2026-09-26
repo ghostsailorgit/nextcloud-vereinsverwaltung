@@ -5,13 +5,14 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Service\Export\CsvExporter;
 use PHPUnit\Framework\TestCase;
 
 class CsvExporterTest extends TestCase {
     private function escapeLine(array $fields): string {
         $m = new \ReflectionMethod(CsvExporter::class, 'escapeLine');
-        return $m->invoke(new CsvExporter(), $fields);
+        return $m->invoke(new CsvExporter(l10n: SourceL10n::fromAppLanguage('de')), $fields);
     }
 
     public function testFormulaLikeTextIsDefused(): void {

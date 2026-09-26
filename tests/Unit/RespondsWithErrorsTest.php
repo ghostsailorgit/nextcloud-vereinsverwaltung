@@ -37,7 +37,8 @@ class RespondsWithErrorsTest extends TestCase {
         [$status, $body] = $this->respond(new DoesNotExistException('Did expect one result but found none when executing query: SELECT * FROM oc_verein_members'));
 
         $this->assertSame(404, $status);
-        $this->assertSame('Nicht gefunden', $body['message']);
+        // English here: without a running Nextcloud the trait falls back to the source text
+        $this->assertSame('Not found', $body['message']);
     }
 
     public function testUnexpectedErrorsAreAGenericServerErrorThatLeaksNothing(): void {

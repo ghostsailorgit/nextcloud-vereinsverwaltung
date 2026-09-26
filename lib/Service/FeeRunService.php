@@ -15,6 +15,8 @@ use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCP\IDBConnection;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * The annual fee run: creates one membership fee per active member of a club
@@ -26,14 +28,18 @@ use OCP\IDBConnection;
  * months from the join month (inclusive) to December, rounded to cents.
  */
 class FeeRunService {
+    private IL10N $l;
+
     public function __construct(
         private FeeRateMapper $rates,
         private MemberMapper $members,
         private FeeMapper $fees,
         private ClubMapper $clubs,
         private IDBConnection $db,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -45,18 +51,18 @@ class FeeRunService {
     public function plan(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false): array {
         $this->clubs->find($clubId);
         if ($year < 2000 || $year > 2100) {
-            throw new ValidationException('Jahr ist ungültig');
+            throw new ValidationException($this->l->t('Year is invalid'));
         }
         $due = \DateTime::createFromFormat('Y-m-d', $dueDate);
         if ($due === false || $due->format('Y-m-d') !== $dueDate) {
-            throw new ValidationException('Fälligkeitsdatum ist ungültig');
+            throw new ValidationException($this->l->t('Due date is invalid'));
         }
         $description = trim((string)$description);
         if ($description === '') {
-            $description = 'Mitgliedsbeitrag ' . $year;
+            $description = $this->l->t('Membership fee %s', [$year]);
         }
         if (mb_strlen($description) > 500) {
-            throw new ValidationException('Bemerkung ist zu lang');
+            throw new ValidationException($this->l->t('Remark is too long'));
         }
 
         $ratesById = [];
@@ -88,30 +94,30 @@ class FeeRunService {
             };
 
             if ($member->isFormer()) {
-                $skip('ausgetreten oder verstorben');
+                $skip($this->l->t('left or deceased'));
                 continue;
             }
             if ($member->getDeactivated()) {
-                $skip('deaktiviert');
+                $skip($this->l->t('deactivated'));
                 continue;
             }
             $join = $member->getJoinDate();
             if (!empty($join) && (int)substr($join, 0, 4) > $year) {
-                $skip('Eintritt erst nach ' . $year);
+                $skip($this->l->t('joins only after %s', [$year]));
                 continue;
             }
             if (isset($alreadyBilled[$member->getId()])) {
-                $skip('Beitrag ' . $year . ' schon vorhanden');
+                $skip($this->l->t('fee %s already exists', [$year]));
                 continue;
             }
 
             $rate = $this->rateFor($member->getMembership()?->getFeeRateId(), $ratesById, $default);
             if ($rate === null) {
-                $skip('keine Beitragskategorie');
+                $skip($this->l->t('no fee rate'));
                 continue;
             }
             if ((float)$rate->getAmount() <= 0) {
-                $skip('beitragsfrei (' . $rate->getName() . ')');
+                $skip($this->l->t('fee-free (%s)', [$rate->getName()]));
                 continue;
             }
 
@@ -119,7 +125,7 @@ class FeeRunService {
             $months = $prorata ? $this->monthsInYear($join, $year) : 12;
             $amount = $months === 12 ? $fullAmount : round($fullAmount * $months / 12, 2);
             if ($amount <= 0) {
-                $skip('anteiliger Beitrag 0,00 €');
+                $skip($this->l->t('pro-rata fee 0.00 €'));
                 continue;
             }
 

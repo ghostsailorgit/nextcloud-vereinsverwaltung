@@ -34,8 +34,12 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\IGroupManager;
 use OCP\IUserSession;
 use Psr\Log\LoggerInterface;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 class RoleService {
+    private IL10N $l;
+
             
     /**
      * The permissions actually enforced by #[RequirePermission] across the app's
@@ -88,8 +92,10 @@ class RoleService {
         MemberMapper $memberMapper,
         MembershipMapper $membershipMapper,
         ClubMapper $clubMapper,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         $this->memberMapper = $memberMapper;
         $this->membershipMapper = $membershipMapper;
         $this->clubMapper = $clubMapper;
@@ -301,7 +307,7 @@ class RoleService {
      */
     public function createRole(string $name, string $clubType, ?string $description, array $permissions): Role {
         if (trim($name) === '') {
-            throw new ValidationException('Name erforderlich');
+            throw new ValidationException($this->l->t('Name is required'));
         }
 
         $role = new Role();
@@ -422,13 +428,13 @@ class RoleService {
      */
     public function assignRole(string $userId, int $roleId, int $clubId): UserRole {
         if ($clubId <= 0) {
-            throw new ValidationException('Verein erforderlich');
+            throw new ValidationException($this->l->t('Club is required'));
         }
         // Confirm the role actually exists before assigning it
         $this->roleMapper->find($roleId);
 
         if ($this->userRoleMapper->existsForUserAndRole($userId, $roleId, $clubId)) {
-            throw new ValidationException('Rolle ist diesem Benutzer bereits zugewiesen');
+            throw new ValidationException($this->l->t('The role is already assigned to this user'));
         }
 
         $userRole = new UserRole();

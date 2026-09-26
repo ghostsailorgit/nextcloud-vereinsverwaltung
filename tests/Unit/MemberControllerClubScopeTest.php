@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Controller\MemberController;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Member;
@@ -53,12 +54,13 @@ class MemberControllerClubScopeTest extends TestCase {
             'verein',
             $this->request,
             $this->memberService,
-            new ValidationService(),
+            new ValidationService(l10n: SourceL10n::fromAppLanguage('de')),
             $roleService,
             $this->createMock(ClubMapper::class),
             $session,
             $this->createMock(IUserManager::class),
-            $this->selfService
+            $this->selfService,
+            l10n: SourceL10n::fromAppLanguage('de')
         );
     }
 

@@ -15,6 +15,8 @@ use OCP\Calendar\ICalendar;
 use OCP\Constants;
 use Sabre\VObject\Component\VCalendar;
 use Sabre\VObject\Component\VEvent;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * One club's calendar, computed from the member data on every request (read-only): a yearly birthday event and
@@ -25,13 +27,17 @@ use Sabre\VObject\Component\VEvent;
  * (OCA\DAV\CalDAV\AppCalendar) builds its calendar objects from. Sabre VObject ships with Nextcloud.
  */
 class ClubCalendar implements ICalendar {
+    private IL10N $l;
+
     /** @var ClubEvent[]|null built once per request (the CalDAV layer calls search() once per object) */
     private ?array $events = null;
 
     public function __construct(
         private Club $club,
-        private MemberMapper $members
+        private MemberMapper $members,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     public function getKey(): string {
@@ -43,7 +49,7 @@ class ClubCalendar implements ICalendar {
     }
 
     public function getDisplayName(): ?string {
-        return 'Vereinstermine ' . $this->club->getName();
+        return $this->l->t('Club events %s', [$this->club->getName()]);
     }
 
     public function getDisplayColor(): ?string {
@@ -111,8 +117,8 @@ class ClubCalendar implements ICalendar {
             if ($member->isFormer() || $member->getDeactivated() || $member->getAnonymizedAt() !== null) {
                 continue;
             }
-            $this->addEvent($member, 'birthday', $member->getBirthDate(), '🎂 Geburtstag: ' . $member->getFullName());
-            $this->addEvent($member, 'anniversary', $member->getJoinDate(), '🎉 Vereinsjubiläum: ' . $member->getFullName());
+            $this->addEvent($member, 'birthday', $member->getBirthDate(), '🎂 ' . $this->l->t('Birthday: %s', [$member->getFullName()]));
+            $this->addEvent($member, 'anniversary', $member->getJoinDate(), '🎉 ' . $this->l->t('Club anniversary: %s', [$member->getFullName()]));
         }
         return $this->events;
     }

@@ -13,6 +13,7 @@ use OCA\Verein\Db\MemberMapper;
 use OCP\Calendar\ICalendarProvider;
 use OCP\IGroupManager;
 use OCP\IUserManager;
+use OCP\IL10N;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -33,7 +34,8 @@ class ClubCalendarProvider implements ICalendarProvider {
         private MemberMapper $members,
         private IUserManager $userManager,
         private IGroupManager $groupManager,
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
+        private ?IL10N $l10n = null
     ) {
     }
 
@@ -60,7 +62,7 @@ class ClubCalendarProvider implements ICalendarProvider {
                 if ($calendarUris !== [] && !in_array($uri, $calendarUris, true)) {
                     continue;
                 }
-                $calendars[] = new ClubCalendar($club, $this->members);
+                $calendars[] = new ClubCalendar($club, $this->members, $this->l10n);
             }
             return $calendars;
         } catch (Throwable $e) {

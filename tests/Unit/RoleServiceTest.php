@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Member;
@@ -81,7 +82,8 @@ class RoleServiceTest extends TestCase {
             $this->createMock(LoggerInterface::class),
             $this->memberMapper,
             $this->membershipMapper,
-            $this->clubMapper
+            $this->clubMapper,
+            l10n: SourceL10n::fromAppLanguage('de')
         );
     }
 

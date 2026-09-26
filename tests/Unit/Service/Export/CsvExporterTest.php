@@ -7,6 +7,7 @@
 
 namespace OCA\Verein\Tests\Unit\Service\Export;
 
+use OCA\Verein\L10n\SourceL10n;
 use PHPUnit\Framework\TestCase;
 use OCA\Verein\Service\Export\CsvExporter;
 
@@ -15,7 +16,7 @@ class CsvExporterTest extends TestCase {
 
     protected function setUp(): void {
         parent::setUp();
-        $this->csvExporter = new CsvExporter();
+        $this->csvExporter = new CsvExporter(l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     /**

@@ -17,6 +17,8 @@ use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\IUserManager;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Members are plain persons (MemberMapper); what ties one to a club -
@@ -25,6 +27,8 @@ use OCP\IUserManager;
  * visible/editable through a club they belong to.
  */
 class MemberService {
+    private IL10N $l;
+
     public function __construct(
         private MemberMapper $mapper,
         private MembershipMapper $membershipMapper,
@@ -32,8 +36,10 @@ class MemberService {
         private ClubMapper $clubMapper,
         private IUserManager $userManager,
         private FeeRateMapper $feeRates,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /** @return Member[] members of the club, each with their membership */
@@ -59,7 +65,7 @@ class MemberService {
         try {
             return $this->mapper->findInClub($id, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new NotFoundException('Mitglied nicht gefunden');
+            throw new NotFoundException($this->l->t('Member not found'));
         }
     }
 
@@ -139,7 +145,7 @@ class MemberService {
 
         try {
             $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
-            throw new ValidationException('Die Person ist bereits Mitglied in diesem Verein');
+            throw new ValidationException($this->l->t('The person is already a member of this club'));
         } catch (DoesNotExistException $e) {
             // expected
         }
@@ -250,14 +256,14 @@ class MemberService {
     public function anonymize(int $id): Member {
         $member = $this->mapper->find($id);
         if ($member->getAnonymizedAt() !== null) {
-            throw new ValidationException('Die Person ist bereits anonymisiert');
+            throw new ValidationException($this->l->t('The person is already anonymized'));
         }
         $memberships = $this->membershipMapper->findByMember($id);
         if (!$member->getDeceased()) {
             foreach ($memberships as $membership) {
                 if (empty($membership->getLeaveDate())) {
                     throw new ValidationException(
-                        'Die Person ist noch aktives Mitglied in mindestens einem Verein und kann nicht anonymisiert werden'
+                        $this->l->t('The person is still an active member of at least one club and cannot be anonymized')
                     );
                 }
             }
@@ -319,11 +325,11 @@ class MemberService {
             return;
         }
         if (!$this->userManager->userExists($userId)) {
-            throw new ValidationException('Das Nextcloud-Konto existiert nicht');
+            throw new ValidationException($this->l->t('The Nextcloud account does not exist'));
         }
         $other = $this->mapper->findByUserId($userId);
         if ($other !== null && $other->getId() !== $member->getId()) {
-            throw new ValidationException('Das Nextcloud-Konto ist bereits mit ' . $other->getFullName() . ' verknüpft');
+            throw new ValidationException($this->l->t('The Nextcloud account is already linked to %s', [$other->getFullName()]));
         }
         $member->setUserId($userId);
     }
@@ -373,10 +379,10 @@ class MemberService {
         try {
             $rate = $this->feeRates->find((int)$raw);
         } catch (DoesNotExistException $e) {
-            throw new ValidationException('Die Beitragskategorie existiert nicht');
+            throw new ValidationException($this->l->t('The fee rate does not exist'));
         }
         if ($rate->getClubId() !== $membership->getClubId()) {
-            throw new ValidationException('Die Beitragskategorie gehört zu einem anderen Verein');
+            throw new ValidationException($this->l->t('The fee rate belongs to another club'));
         }
         $membership->setFeeRateId($rate->getId());
     }

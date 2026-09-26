@@ -8,7 +8,16 @@ declare(strict_types=1);
 
 namespace OCA\Verein\Service;
 
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
+
 class ValidationService {
+    private IL10N $l;
+
+    public function __construct(?IL10N $l10n = null) {
+        $this->l = $l10n ?? new SourceL10n();
+    }
+
     /**
      * Anrede-Optionen, die im Formular angeboten werden.
      */
@@ -36,45 +45,45 @@ class ValidationService {
 
         // Name validieren
         if (empty(trim($name))) {
-            $errors[] = 'Name ist erforderlich';
+            $errors[] = $this->l->t('Name is required');
         } elseif (strlen($name) < 2) {
-            $errors[] = 'Name muss mindestens 2 Zeichen lang sein';
+            $errors[] = $this->l->t('Name must be at least 2 characters long');
         } elseif (strlen($name) > 255) {
-            $errors[] = 'Name darf maximal 255 Zeichen lang sein';
+            $errors[] = $this->l->t('Name must not be longer than 255 characters');
         }
 
         // E-Mail ist optional (nicht jedes Mitglied hat eine), aber wenn angegeben, muss sie gültig sein
         if (trim($email) !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'E-Mail ist ungültig';
+            $errors[] = $this->l->t('E-mail is invalid');
         }
 
         // IBAN validieren (wenn angegeben)
         if (!empty($iban) && !$this->validateIBAN($iban)) {
-            $errors[] = 'IBAN ist ungültig (z.B. DE89370400440532013000)';
+            $errors[] = $this->l->t('IBAN is invalid (e.g. DE89370400440532013000)');
         }
 
         if (!empty($salutation) && !in_array($salutation, self::SALUTATIONS, true)) {
-            $errors[] = 'Anrede ist ungültig';
+            $errors[] = $this->l->t('Salutation is invalid');
         }
 
         if (!empty($postalCode) && strlen((string)$postalCode) > 10) {
-            $errors[] = 'Postleitzahl darf maximal 10 Zeichen lang sein';
+            $errors[] = $this->l->t('Postal code must not be longer than 10 characters');
         }
 
-        $birthDateObj = $this->validateOptionalDate($birthDate, 'Geburtsdatum', $errors);
+        $birthDateObj = $this->validateOptionalDate($birthDate, $this->l->t('Birth date'), $errors);
         if ($birthDateObj !== null && $birthDateObj > new \DateTime()) {
-            $errors[] = 'Geburtsdatum darf nicht in der Zukunft liegen';
+            $errors[] = $this->l->t('Birth date must not be in the future');
         }
 
-        $joinDateObj = $this->validateOptionalDate($joinDate, 'Eintrittsdatum', $errors);
-        $leaveDateObj = $this->validateOptionalDate($leaveDate, 'Austrittsdatum', $errors);
-        $this->validateOptionalDate($data['mandateDate'] ?? null, 'Unterschriftsdatum des Mandats', $errors);
+        $joinDateObj = $this->validateOptionalDate($joinDate, $this->l->t('Join date'), $errors);
+        $leaveDateObj = $this->validateOptionalDate($leaveDate, $this->l->t('Leave date'), $errors);
+        $this->validateOptionalDate($data['mandateDate'] ?? null, $this->l->t('Signature date of the mandate'), $errors);
         $mandateRef = (string)($data['mandateReference'] ?? '');
         if ($mandateRef !== '' && !preg_match('/^[A-Za-z0-9+?\/\-:().,\' ]{1,35}$/', $mandateRef)) {
-            $errors[] = 'Mandatsreferenz darf nur Buchstaben, Ziffern und einfache Sonderzeichen enthalten (max. 35 Zeichen)';
+            $errors[] = $this->l->t('Mandate reference may only contain letters, digits and simple special characters (max. 35 characters)');
         }
         if ($joinDateObj !== null && $leaveDateObj !== null && $leaveDateObj < $joinDateObj) {
-            $errors[] = 'Austrittsdatum darf nicht vor dem Eintrittsdatum liegen';
+            $errors[] = $this->l->t('Leave date must not be before the join date');
         }
 
         return [
@@ -94,7 +103,7 @@ class ValidationService {
         try {
             return new \DateTime((string)$value);
         } catch (\Exception $e) {
-            $errors[] = $label . ' ist ungültig';
+            $errors[] = $this->l->t('%s is invalid', [$label]);
             return null;
         }
     }
@@ -111,31 +120,31 @@ class ValidationService {
         $errors = [];
 
         if ($memberId <= 0) {
-            $errors[] = 'Gültige Mitglieds-ID erforderlich';
+            $errors[] = $this->l->t('A valid member ID is required');
         }
 
         if ($amount <= 0) {
-            $errors[] = 'Betrag muss größer als 0 sein';
+            $errors[] = $this->l->t('Amount must be greater than 0');
         } elseif ($amount > 100000) {
-            $errors[] = 'Betrag ist zu hoch (max. 100.000)';
+            $errors[] = $this->l->t('Amount is too high (max. 100,000)');
         }
 
         if (empty(trim($dueDate))) {
-            $errors[] = 'Fälligkeitsdatum ist erforderlich';
+            $errors[] = $this->l->t('Due date is required');
         } else {
             try {
                 new \DateTime($dueDate);
             } catch (\Exception $e) {
-                $errors[] = 'Fälligkeitsdatum ist ungültig';
+                $errors[] = $this->l->t('Due date is invalid');
             }
         }
 
         if ($description !== null && trim($description) !== '') {
             $length = strlen(trim($description));
             if ($length < 2) {
-                $errors[] = 'Beschreibung muss mindestens 2 Zeichen lang sein';
+                $errors[] = $this->l->t('Description must be at least 2 characters long');
             } elseif ($length > 500) {
-                $errors[] = 'Beschreibung darf maximal 500 Zeichen lang sein';
+                $errors[] = $this->l->t('Description must not be longer than 500 characters');
             }
         }
 

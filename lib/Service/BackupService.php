@@ -14,6 +14,8 @@ use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use Psr\Log\LoggerInterface;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Backups of the club tables.
@@ -24,6 +26,8 @@ use Psr\Log\LoggerInterface;
  * Nextcloud Files or the web.
  */
 class BackupService {
+    private IL10N $l;
+
     /** Every table of the app. BackupServiceTest checks this against the migrations. */
     public const TABLES = [
         'verein_clubs',
@@ -58,7 +62,9 @@ class BackupService {
         private IAppManager $appManager,
         private ITimeFactory $time,
         private LoggerInterface $logger,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         // by app id: the injected IAppData depends on the current request's app, which a cron job does not have
         $this->appData = $appDataFactory->get('verein');
     }
@@ -132,7 +138,7 @@ class BackupService {
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR);
         $data = gzencode($payload, 9);
         if ($data === false) {
-            throw new \RuntimeException('Sicherung konnte nicht komprimiert werden');
+            throw new \RuntimeException('The backup could not be compressed');
         }
 
         $name = 'verein-backup-' . gmdate('Ymd-His', $now) . '.json.gz';
@@ -189,11 +195,11 @@ class BackupService {
      */
     public function getContent(string $name): string {
         if (!self::isValidName($name)) {
-            throw new NotFoundException('Sicherung nicht gefunden');
+            throw new NotFoundException($this->l->t('Backup not found'));
         }
         $folder = $this->folder();
         if (!$folder->fileExists($name)) {
-            throw new NotFoundException('Sicherung nicht gefunden');
+            throw new NotFoundException($this->l->t('Backup not found'));
         }
         return $folder->getFile($name)->getContent();
     }
@@ -214,7 +220,7 @@ class BackupService {
                 return $data;
             }
         }
-        throw new NotFoundException('Sicherung nicht gefunden: ' . $nameOrPath);
+        throw new NotFoundException($this->l->t('Backup not found: %s', [$nameOrPath]));
     }
 
     /**
@@ -228,26 +234,26 @@ class BackupService {
     public static function parse(string $gzipped): array {
         $json = @gzdecode($gzipped);
         if ($json === false) {
-            throw new \InvalidArgumentException('Die Datei ist keine gültige (gzip-komprimierte) Sicherung');
+            throw new \InvalidArgumentException('The file is not a valid (gzip-compressed) backup');
         }
         $data = json_decode($json, true);
         if (!is_array($data) || ($data['app'] ?? null) !== 'verein' || !is_array($data['tables'] ?? null)) {
-            throw new \InvalidArgumentException('Die Datei ist keine Sicherung der Vereinsverwaltung');
+            throw new \InvalidArgumentException('The file is not a backup of the club management app');
         }
         foreach (self::TABLES as $table) {
             if (!isset($data['tables'][$table]) && in_array($table, self::OPTIONAL_TABLES, true)) {
                 continue;
             }
             if (!isset($data['tables'][$table]) || !is_array($data['tables'][$table])) {
-                throw new \InvalidArgumentException('In der Sicherung fehlt die Tabelle ' . $table);
+                throw new \InvalidArgumentException('The backup lacks the table ' . $table);
             }
             foreach ($data['tables'][$table] as $row) {
                 if (!is_array($row) || $row === []) {
-                    throw new \InvalidArgumentException('Ungültige Zeile in Tabelle ' . $table);
+                    throw new \InvalidArgumentException('Invalid row in table ' . $table);
                 }
                 foreach ($row as $column => $value) {
                     if (!is_string($column) || preg_match('/^[a-z][a-z0-9_]*$/', $column) !== 1 || is_array($value) || is_object($value)) {
-                        throw new \InvalidArgumentException('Ungültige Spalte in Tabelle ' . $table);
+                        throw new \InvalidArgumentException('Invalid column in table ' . $table);
                     }
                 }
             }

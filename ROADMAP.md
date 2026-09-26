@@ -20,8 +20,8 @@ Stand: Version 0.18.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 ## Als Nächstes
 
 - **Übersetzbarkeit** (läuft): englische Quelltexte mit `t('verein', …)` / `IL10N`, Deutsch als Übersetzung in
-  `l10n/de.json`. Fertig: Grundlage, Prüfwerkzeug und die gesamte Oberfläche. Offen: die
-  Texte des Servers (Fehlermeldungen, PDF, Mahnschreiben, `occ`). Danach Veröffentlichung im App Store.
+  `l10n/de.json`. Fertig: Grundlage, Prüfwerkzeug, die gesamte Oberfläche und die Meldungen des Servers. Offen: PDF-Exporte,
+  Mahnschreiben und SEPA-Verwendungszweck in der Standardsprache der Nextcloud. Danach Veröffentlichung im App Store.
 - Weitere Funktionen (SEPA-Export, Deaktivieren, Selbstauskunft, Sicherung) mit echten Läufen und einem Nicht-Admin-Konto
   nachtesten, wie bei den neuen Funktionen.
 - Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).

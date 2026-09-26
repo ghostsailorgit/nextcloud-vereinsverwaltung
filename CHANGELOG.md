@@ -4,6 +4,20 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.7-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: alle Meldungen des Servers – Fehlermeldungen und Prüfhinweise, Gründe im Beitragslauf, Mahnwesen,
+  SEPA-Export und Import, die Spaltenköpfe des CSV-Exports, die Monatsnamen im Dashboard sowie Name und Termine des
+  Vereinskalenders. Sie kommen in der Sprache des Nutzers.
+- Der CSV-Export schreibt bei englischer Sprache englische Spaltenköpfe; der Import erkennt beide.
+- Die Spaltenköpfe des Beitrags-Exports waren englisch („Member ID“, „Amount“ …) und sind jetzt deutsch.
+- Die `occ`-Befehle für Sicherungen antworten jetzt englisch, wie die Befehle von Nextcloud selbst.
+- Noch deutsch: PDF-Exporte, Mahnschreiben und der Verwendungszweck im SEPA-Export – sie folgen als Nächstes, in der
+  Standardsprache der Nextcloud.
+
+---
+
 ## [0.18.6-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen

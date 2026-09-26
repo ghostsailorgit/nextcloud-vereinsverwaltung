@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Calendar\ClubCalendar;
 use OCA\Verein\Calendar\ClubCalendarProvider;
 use OCA\Verein\Db\Club;
@@ -58,7 +59,7 @@ class ClubCalendarTest extends TestCase {
     }
 
     private function calendar(): ClubCalendar {
-        return new ClubCalendar($this->club(7, 'Musterverein', ['vorstand']), $this->members);
+        return new ClubCalendar($this->club(7, 'Musterverein', ['vorstand']), $this->members, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     public function testOnlyActiveMembersWithDatesGetEvents(): void {

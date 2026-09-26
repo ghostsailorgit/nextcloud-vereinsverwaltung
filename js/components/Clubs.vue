@@ -26,7 +26,7 @@
           @update:model-value="form.calendarGroups = $event"
           :label="t('verein', 'Nextcloud groups for the club calendar')"
           placeholder="vorstand, mitglieder"
-          :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Vereinstermine” with birthdays and club anniversaries in their calendar app and on their phone (read-only). Birthdays are personal data – only enter groups that should see them.')"
+          :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and club anniversaries in their calendar app and on their phone (read-only). Birthdays are personal data – only enter groups that should see them.')"
         />
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>

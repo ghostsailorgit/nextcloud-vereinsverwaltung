@@ -14,6 +14,8 @@ use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Exception\NotFoundException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Selbstauskunft: what the club register holds about one person. forUser() is self-service
@@ -24,12 +26,16 @@ use OCP\AppFramework\Db\DoesNotExistException;
  * confirm club membership first - see the club-scoping note on forMemberId()).
  */
 class SelfServiceService {
+    private IL10N $l;
+
     public function __construct(
         private MemberMapper $members,
         private MembershipMapper $memberships,
         private ClubMapper $clubs,
-        private FeeMapper $fees
+        private FeeMapper $fees,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -53,7 +59,7 @@ class SelfServiceService {
         try {
             $person = $this->members->find($memberId);
         } catch (DoesNotExistException $e) {
-            throw new NotFoundException('Mitglied nicht gefunden');
+            throw new NotFoundException($this->l->t('Member not found'));
         }
         return $this->buildExport($person, $person->getUserId(), $onlyClubId);
     }

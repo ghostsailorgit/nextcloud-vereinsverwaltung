@@ -13,6 +13,8 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\IRequest;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Dunning (Mahnwesen): preview, run (raises the dunning level) and the letters as PDF.
@@ -21,12 +23,16 @@ use OCP\IRequest;
 class DunningController extends Controller {
     use RespondsWithErrors;
 
+    private IL10N $l;
+
     public function __construct(
         $AppName,
         IRequest $request,
         private DunningService $dunning,
-        private PdfExporter $pdf
+        private PdfExporter $pdf,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
     }
 
@@ -65,7 +71,7 @@ class DunningController extends Controller {
             $deadline = (int)$this->request->getParam('deadlineDays', 14);
             $data = $this->dunning->letters($this->clubId(), $ids, $deadline);
             if ($data['letters'] === []) {
-                return new JSONResponse(['status' => 'error', 'message' => 'Für diese Beiträge gibt es keine Mahnschreiben (bezahlt, storniert oder noch nicht gemahnt)'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('There are no dunning letters for these fees (paid, cancelled or not dunned yet)')], 400);
             }
             $file = $this->pdf->exportDunningLetters($data);
             return new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);

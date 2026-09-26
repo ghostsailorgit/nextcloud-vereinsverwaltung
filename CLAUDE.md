@@ -122,7 +122,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     statement per level in a transaction. Letters are generated on demand from the fees' current level; the app sends nothing.
 18. **Member import** (`MemberImportService`): never maps a column to `userId` (it drives rights), a role other than member only
     with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
-    other clubs), unexpected errors per row are reported as "interner Fehler", never with the exception text.
+    other clubs), unexpected errors per row are reported as "internal error" (translated), never with the exception text.
 
 19. **Confirmations** go through `js/confirm.js` (`confirmAction(title, text, { labelConfirm, severity })`, Nextcloud's own
     dialog) - never the browser's `confirm()`; name the action on the button, `severity: 'error'` for destructive ones.
@@ -130,11 +130,15 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     person reads or that depends on the calendar day (due/overdue, letters, SEPA dates, export names) uses `Service\Clock`
     (ITimeFactory + the user's/instance's time zone, optional collaborator, `Clock::todayOf()`); DB timestamps stay UTC.
 
-21. **Translations (in progress):** new or touched UI text is English source via `t('verein', '...')` / `n('verein', ...)`
-    (`/l10n`) or `IL10N->t()` in PHP - plain string literals with placeholders (`{name}`, `%s`), no template
-    literals or concatenation inside `t()`. Add the German text to `l10n/de.json` (the only hand-edited file) and run
-    `php scripts/l10n.php build`; `L10nTest` fails on a missing translation or outdated generated files.
-    `l10n/` must be deployed and is part of the release archive.
+21. **Translations:** all text is English source - `t('verein', '...')` / `n('verein', ...)` (`@nextcloud/l10n`) in the frontend,
+    `$this->l->t()` in PHP - plain string literals with placeholders (`{name}` in JS; `%s`/`%1$s` in PHP), no template
+    literals or concatenation inside `t()`; inside an HTML attribute no `"` (use “…”). Add the German text to `l10n/de.json`
+    (the only hand-edited file) and run `php scripts/l10n.php build`; `L10nTest` fails on a missing translation or outdated
+    generated files. PHP classes take `?IL10N $l10n = null` as their last constructor argument and fall back to
+    `L10n\SourceL10n` (English); a manual DI factory in `Application.php` must pass `IL10N::class`, and unit tests pass
+    `l10n: SourceL10n::fromAppLanguage('de')` so they keep asserting the German texts. Messages go out in the requesting
+    user's language; `occ` output stays English. Still German: PDF exports, dunning letters and the SEPA remittance text
+    (next step: the instance's default language). `l10n/` must be deployed and is part of the release archive.
 
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and

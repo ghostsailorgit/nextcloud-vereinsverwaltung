@@ -18,6 +18,8 @@ use OCA\Verein\Db\UserRoleMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Clubs (Vereine) and their bank accounts. Every club is unique (by name),
@@ -25,6 +27,8 @@ use OCP\AppFramework\Db\DoesNotExistException;
  * fees, role assignments and the calendar all hang off a club.
  */
 class ClubService {
+    private IL10N $l;
+
     public function __construct(
         private ClubMapper $clubMapper,
         private ClubAccountMapper $accountMapper,
@@ -34,8 +38,10 @@ class ClubService {
         private ValidationService $validation,
         private RoleMapper $roleMapper,
         private FeeRateMapper $feeRates,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -116,7 +122,7 @@ class ClubService {
     public function delete(int $id): void {
         $club = $this->clubMapper->find($id);
         if ($this->membershipMapper->countByClub($id) > 0) {
-            throw new ValidationException('Der Verein hat noch Mitglieder und kann nicht gelöscht werden');
+            throw new ValidationException($this->l->t('The club still has members and cannot be deleted'));
         }
         $this->accountMapper->deleteByClub($id);
         $this->feeRates->deleteByClub($id);
@@ -145,7 +151,7 @@ class ClubService {
             try {
                 $this->roleMapper->find((int)$roleId);
             } catch (DoesNotExistException $e) {
-                throw new ValidationException('Die gewählte Rolle existiert nicht');
+                throw new ValidationException($this->l->t('The chosen role does not exist'));
             }
             $clean[$membershipRole] = (int)$roleId;
         }
@@ -166,7 +172,7 @@ class ClubService {
     public function resolveAccount(int $clubId, ?int $accountId): ClubAccount {
         $accounts = $this->accountMapper->findByClub($clubId);
         if ($accounts === []) {
-            throw new ValidationException('Für diesen Verein ist noch kein Bankkonto hinterlegt');
+            throw new ValidationException($this->l->t('No bank account is set for this club yet'));
         }
         if ($accountId === null || $accountId <= 0) {
             return $accounts[0];
@@ -176,7 +182,7 @@ class ClubService {
                 return $account;
             }
         }
-        throw new ValidationException('Das Bankkonto gehört nicht zu diesem Verein');
+        throw new ValidationException($this->l->t('The bank account does not belong to this club'));
     }
 
     /**
@@ -204,7 +210,7 @@ class ClubService {
     public function updateAccount(int $clubId, int $accountId, array $data): ClubAccount {
         $account = $this->accountMapper->find($accountId);
         if ($account->getClubId() !== $clubId) {
-            throw new DoesNotExistException('Bankkonto nicht gefunden');
+            throw new DoesNotExistException($this->l->t('Bank account not found'));
         }
         $before = $account->jsonSerialize();
         $this->applyAccountData($account, $data);
@@ -230,7 +236,7 @@ class ClubService {
     public function deleteAccount(int $clubId, int $accountId): void {
         $account = $this->accountMapper->find($accountId);
         if ($account->getClubId() !== $clubId) {
-            throw new DoesNotExistException('Bankkonto nicht gefunden');
+            throw new DoesNotExistException($this->l->t('Bank account not found'));
         }
         $wasDefault = $account->getIsDefault();
         $this->accountMapper->delete($account);
@@ -260,11 +266,11 @@ class ClubService {
     private function applyData(Club $club, array $data, ?int $existingId = null): void {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '') {
-            throw new ValidationException('Name des Vereins ist erforderlich');
+            throw new ValidationException($this->l->t('The name of the club is required'));
         }
         foreach ($this->clubMapper->findAll() as $other) {
             if ($other->getId() !== $existingId && mb_strtolower($other->getName()) === mb_strtolower($name)) {
-                throw new ValidationException('Ein Verein mit diesem Namen existiert bereits');
+                throw new ValidationException($this->l->t('A club with this name already exists'));
             }
         }
         $club->setName($name);
@@ -286,15 +292,15 @@ class ClubService {
     private function applyAccountData(ClubAccount $account, array $data): void {
         $iban = strtoupper(str_replace(' ', '', (string)($data['iban'] ?? '')));
         if ($iban === '' || !$this->validation->validateIBAN($iban)) {
-            throw new ValidationException('IBAN ist ungültig (z.B. DE89370400440532013000)');
+            throw new ValidationException($this->l->t('IBAN is invalid (e.g. DE89370400440532013000)'));
         }
         $creditorId = str_replace(' ', '', (string)($data['creditorId'] ?? ''));
         if ($creditorId !== '' && !$this->validation->validateCreditorId($creditorId)) {
-            throw new ValidationException('Gläubiger-ID ist ungültig (z.B. DE98ZZZ09999999999)');
+            throw new ValidationException($this->l->t('Creditor ID is invalid (e.g. DE98ZZZ09999999999)'));
         }
         $bic = strtoupper(str_replace(' ', '', (string)($data['bic'] ?? '')));
         if ($bic !== '' && !preg_match('/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/', $bic)) {
-            throw new ValidationException('BIC ist ungültig');
+            throw new ValidationException($this->l->t('BIC is invalid'));
         }
         $account->setLabel(trim((string)($data['label'] ?? '')));
         $account->setIban($iban);

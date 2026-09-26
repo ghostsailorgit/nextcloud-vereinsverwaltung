@@ -130,7 +130,7 @@
       <div class="chart-container">
         <h3 class="chart-title">📅 {{ t('verein', 'Club calendar') }}</h3>
         <p class="subscribe-hint">
-          {{ t('verein', 'Birthdays and anniversaries appear automatically in the read-only calendar "Vereinstermine" in the Calendar app – for the Nextcloud groups entered under "Club". There is no public link.') }}
+          {{ t('verein', 'Birthdays and anniversaries appear automatically in the read-only calendar "Club events" in the Calendar app – for the Nextcloud groups entered under "Club". There is no public link.') }}
         </p>
         <NcButton variant="secondary" @click="openCalendarApp">{{ t('verein', 'Open the Calendar app') }}</NcButton>
       </div>

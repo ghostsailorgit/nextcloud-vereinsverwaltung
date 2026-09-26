@@ -11,6 +11,8 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Self-service: the logged-in user's own record. No RequirePermission on
@@ -18,12 +20,16 @@ use OCP\IUserSession;
  * the current Nextcloud account (see SelfServiceService).
  */
 class MeController extends Controller {
+    private IL10N $l;
+
     public function __construct(
         $AppName,
         IRequest $request,
         private SelfServiceService $selfService,
-        private IUserSession $userSession
+        private IUserSession $userSession,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
     }
 
@@ -38,7 +44,7 @@ class MeController extends Controller {
     public function index(): JSONResponse {
         $uid = $this->uid();
         if ($uid === null) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Authentication required'], 401);
+            return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Authentication required')], 401);
         }
         return new JSONResponse(['status' => 'ok'] + $this->selfService->forUser($uid));
     }
@@ -52,11 +58,11 @@ class MeController extends Controller {
     public function export() {
         $uid = $this->uid();
         if ($uid === null) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Authentication required'], 401);
+            return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Authentication required')], 401);
         }
         $data = $this->selfService->forUser($uid);
         if (!$data['linked']) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Kein Mitglied mit Ihrem Konto verknüpft'], 404);
+            return new JSONResponse(['status' => 'error', 'message' => $this->l->t('No member is linked to your account')], 404);
         }
         $data['exportedAt'] = date('c');
 

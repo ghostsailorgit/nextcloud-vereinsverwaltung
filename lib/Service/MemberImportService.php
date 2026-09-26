@@ -12,6 +12,8 @@ use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Member import from CSV (the app's own member export, or a spreadsheet saved as CSV).
@@ -25,6 +27,8 @@ use OCA\Verein\Exception\ValidationException;
  * check is the way to take over a person from another club.
  */
 class MemberImportService {
+    private IL10N $l;
+
     public const MAX_BYTES = 2 * 1024 * 1024;
     public const MAX_ROWS = 2000;
 
@@ -50,7 +54,7 @@ class MemberImportService {
     ];
 
     /** columns of the app's own export that carry nothing to import */
-    private const IGNORED = ['id', 'alter', 'mitgliedseitjahre', 'erstelltam', 'nr'];
+    private const IGNORED = ['id', 'alter', 'mitgliedseitjahre', 'erstelltam', 'nr', 'age', 'membersinceyears', 'createdon'];
 
     private const ROLES = [
         'mitglied' => 'member', 'member' => 'member', '' => 'member',
@@ -63,8 +67,10 @@ class MemberImportService {
         private MemberMapper $memberMapper,
         private FeeRateMapper $rates,
         private ClubMapper $clubs,
-        private ValidationService $validation
+        private ValidationService $validation,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -107,12 +113,12 @@ class MemberImportService {
                 $birth = $data['birthDate'];
                 if ($this->samePerson($existing[$key] ?? [], $birth)) {
                     $status = 'duplicate';
-                    $errors[] = 'ist schon Mitglied in diesem Verein';
+                    $errors[] = $this->l->t('is already a member of this club');
                 } else {
                     foreach ($seen[$key] ?? [] as [$otherLine, $otherBirth]) {
                         if ($this->samePerson([$otherBirth], $birth)) {
                             $status = 'duplicate';
-                            $errors[] = 'steht schon in Zeile ' . $otherLine . ' dieser Datei';
+                            $errors[] = $this->l->t('is already in line %s of this file', [$otherLine]);
                             break;
                         }
                     }
@@ -137,7 +143,7 @@ class MemberImportService {
      */
     public function import(int $clubId, string $csv, bool $mayAssignRoles, array $lines): array {
         if ($lines === [] || count($lines) > 100) {
-            throw new ValidationException('Bitte 1 bis 100 Zeilen auf einmal importieren');
+            throw new ValidationException($this->l->t('Please import 1 to 100 lines at a time'));
         }
         $plan = $this->plan($clubId, $csv, $mayAssignRoles);
         $wanted = array_flip(array_map('intval', $lines));
@@ -159,7 +165,7 @@ class MemberImportService {
                 $failed[] = ['line' => $row['line'], 'name' => $row['name'], 'reason' => $e->getMessage()];
             } catch (\Throwable $e) {
                 // unexpected (e.g. database) errors are not shown verbatim - they can contain SQL
-                $failed[] = ['line' => $row['line'], 'name' => $row['name'], 'reason' => 'interner Fehler'];
+                $failed[] = ['line' => $row['line'], 'name' => $row['name'], 'reason' => $this->l->t('internal error')];
             }
         }
         return ['created' => $created, 'failed' => $failed, 'skipped' => $skipped];
@@ -172,7 +178,7 @@ class MemberImportService {
      */
     private function parse(string $csv): array {
         if (strlen($csv) > self::MAX_BYTES) {
-            throw new ValidationException('Die Datei ist zu groß (höchstens 2 MB)');
+            throw new ValidationException($this->l->t('The file is too large (at most 2 MB)'));
         }
         $csv = preg_replace('/^\xEF\xBB\xBF/', '', $csv);
         if (!mb_check_encoding($csv, 'UTF-8')) {
@@ -180,7 +186,7 @@ class MemberImportService {
             $csv = mb_convert_encoding($csv, 'UTF-8', 'Windows-1252');
         }
         if (trim($csv) === '') {
-            throw new ValidationException('Die Datei ist leer');
+            throw new ValidationException($this->l->t('The file is empty'));
         }
 
         $firstLine = strtok($csv, "\n");
@@ -198,7 +204,7 @@ class MemberImportService {
         rewind($stream);
         $header = fgetcsv($stream, null, $delimiter, '"', '');
         if ($header === false || $header === [null]) {
-            throw new ValidationException('Die erste Zeile muss die Spaltenüberschriften enthalten');
+            throw new ValidationException($this->l->t('The first line must contain the column headings'));
         }
 
         $columns = [];
@@ -216,7 +222,7 @@ class MemberImportService {
             }
         }
         if (!in_array('name', $fieldByIndex, true)) {
-            throw new ValidationException('Es fehlt eine Spalte „Name“ (oder „Nachname“)');
+            throw new ValidationException($this->l->t('A column "Name" (or "Last name") is missing'));
         }
 
         $records = [];
@@ -227,7 +233,7 @@ class MemberImportService {
                 continue;
             }
             if (count($records) >= self::MAX_ROWS) {
-                throw new ValidationException('Zu viele Zeilen (höchstens ' . self::MAX_ROWS . ')');
+                throw new ValidationException($this->l->t('Too many lines (at most %s)', [self::MAX_ROWS]));
             }
             $record = [];
             foreach ($fieldByIndex as $i => $field) {
@@ -242,7 +248,7 @@ class MemberImportService {
         }
         fclose($stream);
         if ($records === []) {
-            throw new ValidationException('Die Datei enthält keine Datenzeilen');
+            throw new ValidationException($this->l->t('The file contains no data lines'));
         }
         return [$columns, $ignored, $records];
     }
@@ -278,35 +284,35 @@ class MemberImportService {
             $data['salutation'] = $salutations[mb_strtolower($salutation)];
         } else {
             $data['salutation'] = null;
-            $warnings[] = 'Anrede „' . $salutation . '“ unbekannt, wird weggelassen';
+            $warnings[] = $this->l->t('Salutation "%s" unknown, left out', [$salutation]);
         }
 
-        foreach (['birthDate' => 'Geburtsdatum', 'joinDate' => 'Eintrittsdatum', 'leaveDate' => 'Austrittsdatum', 'mandateDate' => 'Mandatsdatum'] as $field => $label) {
+        foreach (['birthDate' => $this->l->t('Birth date'), 'joinDate' => $this->l->t('Join date'), 'leaveDate' => $this->l->t('Leave date'), 'mandateDate' => $this->l->t('Mandate date')] as $field => $label) {
             $raw = trim($record[$field] ?? '');
             $date = $this->parseDate($raw);
             if ($raw !== '' && $date === null) {
-                $errors[] = $label . ' „' . $raw . '“ ist kein Datum (TT.MM.JJJJ)';
+                $errors[] = $this->l->t('%1$s "%2$s" is not a date (DD.MM.YYYY)', [$label, $raw]);
             }
             $data[$field] = $date;
         }
 
-        foreach (['foundingMember' => 'Gründungsmitglied', 'deceased' => 'Verstorben'] as $field => $label) {
+        foreach (['foundingMember' => $this->l->t('Founding member'), 'deceased' => $this->l->t('Deceased')] as $field => $label) {
             $raw = mb_strtolower(trim($record[$field] ?? ''));
             if (in_array($raw, ['', 'nein', 'no', 'n', '0', 'false', 'falsch', '-'], true)) {
                 $data[$field] = false;
             } elseif (in_array($raw, ['ja', 'yes', 'j', 'y', '1', 'true', 'wahr', 'x'], true)) {
                 $data[$field] = true;
             } else {
-                $errors[] = $label . ' „' . $record[$field] . '“: bitte Ja oder Nein';
+                $errors[] = $this->l->t('%1$s "%2$s": please Yes or No', [$label, $record[$field]]);
                 $data[$field] = false;
             }
         }
 
         $roleRaw = mb_strtolower(trim($record['role'] ?? ''));
         if (!isset(self::ROLES[$roleRaw])) {
-            $errors[] = 'Funktion „' . ($record['role'] ?? '') . '“ unbekannt (Mitglied, Kassierer oder Vorstand)';
+            $errors[] = $this->l->t('Role "%s" unknown (Member, Treasurer or Board)', [$record['role'] ?? '']);
         } elseif (self::ROLES[$roleRaw] !== 'member' && !$mayAssignRoles) {
-            $warnings[] = 'Funktion „' . $record['role'] . '“ nicht übernommen (nur mit dem Recht „Rollen verwalten“), angelegt als Mitglied';
+            $warnings[] = $this->l->t('Role "%s" not taken over (only with the permission "manage roles"), created as member', [$record['role']]);
         } else {
             $data['role'] = self::ROLES[$roleRaw];
         }
@@ -316,7 +322,7 @@ class MemberImportService {
             if (isset($ratesByName[mb_strtolower($rate)])) {
                 $data['feeRateId'] = $ratesByName[mb_strtolower($rate)];
             } else {
-                $errors[] = 'Beitragskategorie „' . $rate . '“ gibt es in diesem Verein nicht';
+                $errors[] = $this->l->t('Fee rate "%s" does not exist in this club', [$rate]);
             }
         }
 

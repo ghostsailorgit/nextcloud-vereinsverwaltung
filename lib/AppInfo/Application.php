@@ -54,7 +54,8 @@ class Application extends App implements IBootstrap {
                 $container->query(MemberMapper::class),
                 $container->query(MembershipMapper::class),
                 $container->query(ClubMapper::class),
-                $container->query(AuditLogService::class)
+                $container->query(AuditLogService::class),
+                $container->query(IL10N::class)
             );
         });
 
@@ -63,13 +64,14 @@ class Application extends App implements IBootstrap {
                 $container->query(RoleService::class),
                 $container->query(IUserSession::class),
                 $container->query(LoggerInterface::class),
-                $container->query(\OCP\IRequest::class)
+                $container->query(\OCP\IRequest::class),
+                $container->query(IL10N::class)
             );
         });
 
         // Register export services
         $context->registerService(CsvExporter::class, function (IAppContainer $container): CsvExporter {
-            return new CsvExporter();
+            return new CsvExporter($container->query(IL10N::class));
         });
 
         $context->registerService(PdfExporter::class, function (IAppContainer $container): PdfExporter {
@@ -85,7 +87,8 @@ class Application extends App implements IBootstrap {
                 $container->query(ClubMapper::class),
                 $container->query(IUserManager::class),
                 $container->query(FeeRateMapper::class),
-                $container->query(AuditLogService::class)
+                $container->query(AuditLogService::class),
+                $container->query(IL10N::class)
             );
         });
 
@@ -94,7 +97,8 @@ class Application extends App implements IBootstrap {
                 $container->query(FeeMapper::class),
                 $container->query(MembershipMapper::class),
                 $container->query(AuditLogService::class),
-                $container->query(Clock::class)
+                $container->query(Clock::class),
+                $container->query(IL10N::class)
             );
         });
 
@@ -102,7 +106,8 @@ class Application extends App implements IBootstrap {
             return new StatisticsService(
                 $container->query(MemberMapper::class),
                 $container->query(FeeMapper::class),
-                $container->query(Clock::class)
+                $container->query(Clock::class),
+                $container->query(IL10N::class)
             );
         });
 

@@ -6,6 +6,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Membership;
@@ -27,7 +28,7 @@ class FeeServiceTest extends TestCase {
     protected function setUp(): void {
         $this->fees = $this->createMock(FeeMapper::class);
         $this->memberships = $this->createMock(MembershipMapper::class);
-        $this->service = new FeeService($this->fees, $this->memberships);
+        $this->service = new FeeService($this->fees, $this->memberships, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function memberOf(int $memberId, int $clubId): void {

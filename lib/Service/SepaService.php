@@ -13,6 +13,8 @@ use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Service for generating SEPA-XML files for direct debit
@@ -24,14 +26,18 @@ use OCP\AppFramework\Db\DoesNotExistException;
  * their membership in that club.
  */
 class SepaService {
+    private IL10N $l;
+
     public function __construct(
         private FeeMapper $feeMapper,
         private MemberMapper $memberMapper,
         private MembershipMapper $membershipMapper,
         private ClubMapper $clubMapper,
         private ClubService $clubService,
-        private ?Clock $clock = null
+        private ?Clock $clock = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -45,7 +51,7 @@ class SepaService {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
         if ($account->getCreditorId() === '') {
-            throw new ValidationException('Für das Bankkonto ist keine Gläubiger-ID hinterlegt (Reiter "Vereine")');
+            throw new ValidationException($this->l->t('No creditor ID is set for the bank account ("Club" tab)'));
         }
 
         $collected = $this->collectFees($clubId);
@@ -56,9 +62,9 @@ class SepaService {
                     fn($s) => $s['memberName'] . ' (' . $s['reason'] . ')',
                     $collected['skipped']
                 ));
-                throw new ValidationException('Keine Zahlung exportierbar. Nicht berücksichtigt: ' . $names);
+                throw new ValidationException($this->l->t('No payment can be exported. Not included: %s', [$names]));
             }
-            throw new ValidationException('Keine offenen oder überfälligen Zahlungen für den SEPA-Export gefunden');
+            throw new ValidationException($this->l->t('No open or overdue payments found for the SEPA export'));
         }
 
         return [
@@ -122,11 +128,11 @@ class SepaService {
 
             $reason = null;
             if ($membership !== null && $membership->getDeactivated()) {
-                $reason = 'Mitglied deaktiviert';
+                $reason = $this->l->t('member deactivated');
             } elseif (empty($member->getIban())) {
-                $reason = 'keine IBAN hinterlegt';
+                $reason = $this->l->t('no IBAN recorded');
             } elseif ($membership === null || empty($membership->getMandateDate())) {
-                $reason = 'kein unterschriebenes SEPA-Mandat erfasst';
+                $reason = $this->l->t('no signed SEPA mandate recorded');
             }
 
             if ($reason !== null) {

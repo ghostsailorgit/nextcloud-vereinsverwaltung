@@ -19,8 +19,12 @@ use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionMethod;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 class AuthorizationMiddleware extends Middleware {
+    private IL10N $l;
+
     private RoleService $roleService;
     private IUserSession $userSession;
     private LoggerInterface $logger;
@@ -30,8 +34,10 @@ class AuthorizationMiddleware extends Middleware {
         RoleService $roleService,
         IUserSession $userSession,
         LoggerInterface $logger,
-        IRequest $request
+        IRequest $request,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         $this->request = $request;
         $this->roleService = $roleService;
         $this->userSession = $userSession;
@@ -57,7 +63,7 @@ class AuthorizationMiddleware extends Middleware {
         $user = $this->userSession->getUser();
         if ($user === null) {
             $this->logPermissionViolation('unauthenticated', 'N/A', $controller, $methodName);
-            throw new PermissionDeniedException('Authentication required');
+            throw new PermissionDeniedException($this->l->t('Authentication required'));
         }
 
         $userId = $user->getUID();
@@ -67,12 +73,12 @@ class AuthorizationMiddleware extends Middleware {
             if ($requirement->isClubScoped()) {
                 $clubId = (int)$this->request->getParam('clubId', 0);
                 if ($clubId <= 0) {
-                    throw new ValidationException('Verein (clubId) fehlt');
+                    throw new ValidationException($this->l->t('Club (clubId) is missing'));
                 }
             }
             if (!$this->roleService->userHasPermission($userId, $permission, $clubId)) {
                 $this->logPermissionViolation($userId, $permission, $controller, $methodName);
-                throw new PermissionDeniedException(sprintf('Missing permission: %s', $permission));
+                throw new PermissionDeniedException($this->l->t('Missing permission: %s', [$permission]));
             }
         }
 

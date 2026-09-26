@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Service\BackupService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -188,7 +189,7 @@ class BackupServiceTest extends TestCase {
         $factory->method('get')->willReturn($appData);
         $time = $this->createMock(ITimeFactory::class);
         $time->method('getTime')->willReturn(1790000000);
-        return new BackupService($db, $factory, $this->createMock(IAppManager::class), $time, $this->createMock(LoggerInterface::class));
+        return new BackupService($db, $factory, $this->createMock(IAppManager::class), $time, $this->createMock(LoggerInterface::class), l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     public function testRestoreCommitsInOneTransactionAndWritesASafetyBackupFirst(): void {
@@ -228,6 +229,7 @@ class BackupServiceTest extends TestCase {
             $this->createMock(IAppManager::class),
             $this->createMock(ITimeFactory::class),
             $this->createMock(LoggerInterface::class),
+            l10n: SourceL10n::fromAppLanguage('de')
         );
 
         foreach (['../../config/config.php', 'verein-backup-20260925-030000.json.gz'] as $name) {

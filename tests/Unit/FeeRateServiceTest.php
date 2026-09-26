@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeRate;
 use OCA\Verein\Db\FeeRateMapper;
@@ -46,7 +47,7 @@ class FeeRateServiceTest extends TestCase {
             return $r;
         });
 
-        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs);
+        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     public function testTheFirstCategoryBecomesTheDefault(): void {

@@ -13,9 +13,13 @@ use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserManager;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 class RoleController extends ApiController {
     use RespondsWithErrors;
+
+    private IL10N $l;
 
     private RoleService $roleService;
     private RoleMapper $roleMapper;
@@ -26,8 +30,10 @@ class RoleController extends ApiController {
         IRequest $request,
         RoleService $roleService,
         RoleMapper $roleMapper,
-        IUserManager $userManager
+        IUserManager $userManager,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($appName, $request);
         $this->roleService = $roleService;
         $this->roleMapper = $roleMapper;
@@ -131,7 +137,7 @@ class RoleController extends ApiController {
                 : array_filter(array_map('trim', explode(',', (string)$permissionInput)));
             
             if (!$name) {
-                return new JSONResponse(['status' => 'error', 'message' => 'Name erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Name is required')], 400);
             }
             
             $role = $this->roleService->createRole($name, $clubType, $description, $permissions);
@@ -210,12 +216,12 @@ class RoleController extends ApiController {
             $clubId = (int)($this->request->getParam('clubId') ?? 0);
             
             if (!$userId || !$roleId || $clubId <= 0) {
-                return new JSONResponse(['status' => 'error', 'message' => 'userId und roleId erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('userId and roleId are required')], 400);
             }
             
             // rights must not be pre-assigned to an account name that does not exist (yet)
             if (!$this->userManager->userExists((string)$userId)) {
-                return new JSONResponse(['status' => 'error', 'message' => 'Das Nextcloud-Konto existiert nicht'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('The Nextcloud account does not exist')], 400);
             }
 
             $userRole = $this->roleService->assignRole($userId, $roleId, $clubId);
@@ -235,7 +241,7 @@ class RoleController extends ApiController {
             $clubId = (int)$this->request->getParam('clubId', 0);
             
             if (!$userId || $clubId <= 0) {
-                return new JSONResponse(['status' => 'error', 'message' => 'userId erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('userId is required')], 400);
             }
             
             $this->roleService->removeUserRoles($userId, $clubId);
