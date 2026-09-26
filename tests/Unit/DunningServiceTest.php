@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubAccountMapper;
@@ -54,7 +55,7 @@ class DunningServiceTest extends TestCase {
         $accounts->method('findByClub')->willReturnCallback(fn () => $this->accountList);
         $this->db = $this->createMock(IDBConnection::class);
         $this->audit = $this->createMock(AuditLogService::class);
-        $this->service = new DunningService($this->fees, $members, $clubs, $accounts, $this->db, $this->audit);
+        $this->service = new DunningService($this->fees, $members, $clubs, $accounts, $this->db, $this->audit, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function member(int $id, string $first, string $name, bool $deactivated = false, ?string $salutation = null): Member {

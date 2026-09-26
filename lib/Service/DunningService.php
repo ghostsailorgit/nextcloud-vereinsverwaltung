@@ -15,6 +15,8 @@ use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCP\IDBConnection;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Dunning (Mahnwesen): finds fees that are overdue, groups them into one letter per person and raises
@@ -25,6 +27,8 @@ use OCP\IDBConnection;
  * Nothing is sent by the app: the letters are a PDF to print or mail (DunningService::letters()).
  */
 class DunningService {
+    private IL10N $l;
+
     public const LEVELS = [
         1 => 'Zahlungserinnerung',
         2 => '1. Mahnung',
@@ -39,8 +43,10 @@ class DunningService {
         private ClubAccountMapper $accounts,
         private IDBConnection $db,
         private ?AuditLogService $auditLog = null,
-        private ?Clock $clock = null
+        private ?Clock $clock = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /**
@@ -54,7 +60,7 @@ class DunningService {
     public function plan(int $clubId, int $overdueDays = 14, int $intervalDays = 14, ?string $today = null): array {
         $this->clubs->find($clubId);
         if ($overdueDays < 0 || $overdueDays > 365 || $intervalDays < 0 || $intervalDays > 365) {
-            throw new ValidationException('Tage müssen zwischen 0 und 365 liegen');
+            throw new ValidationException($this->l->t('Days must be between 0 and 365'));
         }
         $today = $today ?? Clock::todayOf($this->clock);
         $dueBefore = date('Y-m-d', strtotime($today . ' -' . $overdueDays . ' days'));
@@ -82,21 +88,21 @@ class DunningService {
         $total = 0.0;
         foreach ($dueByMember as $memberId => $fees) {
             $member = $membersById[$memberId] ?? null;
-            $name = $member !== null ? $member->getFullName() : 'Person #' . $memberId;
+            $name = $member !== null ? $member->getFullName() : $this->l->t('Person #%s', [$memberId]);
             $skip = function (string $reason) use (&$skipped, $memberId, $name): void {
                 $skipped[] = ['memberId' => $memberId, 'name' => $name, 'reason' => $reason];
             };
 
             if ($member === null) {
-                $skip('nicht mehr Mitglied dieses Vereins');
+                $skip($this->l->t('no longer a member of this club'));
                 continue;
             }
             if ($member->getAnonymizedAt() !== null) {
-                $skip('anonymisiert');
+                $skip($this->l->t('anonymized'));
                 continue;
             }
             if ($member->getDeactivated()) {
-                $skip('deaktiviert (keine Zahlungsvorgänge)');
+                $skip($this->l->t('deactivated (no payment transactions)'));
                 continue;
             }
 
@@ -111,11 +117,11 @@ class DunningService {
             }
             $allAtMax = array_reduce($fees, fn ($carry, Fee $f) => $carry && (int)$f->getDunningLevel() >= self::MAX_LEVEL, true);
             if ($allAtMax) {
-                $skip('höchste Mahnstufe erreicht (' . self::LEVELS[self::MAX_LEVEL] . ')');
+                $skip($this->l->t('highest dunning level reached (%s)', [$this->l->t('Second and final dunning letter')]));
                 continue;
             }
             if ($lastDunned !== null && $lastDunned > $lastLetterBefore) {
-                $skip('zuletzt gemahnt am ' . $this->formatDate($lastDunned));
+                $skip($this->l->t('last dunned on %s', [$this->formatDate($lastDunned)]));
                 continue;
             }
 
@@ -217,11 +223,11 @@ class DunningService {
     public function letters(int $clubId, array $feeIds, int $deadlineDays = 14, ?string $today = null): array {
         $club = $this->clubs->find($clubId);
         if ($deadlineDays < 1 || $deadlineDays > 90) {
-            throw new ValidationException('Zahlungsfrist muss zwischen 1 und 90 Tagen liegen');
+            throw new ValidationException($this->l->t('The payment deadline must be between 1 and 90 days'));
         }
         $wanted = array_flip(array_map('intval', $feeIds));
         if ($wanted === []) {
-            throw new ValidationException('Keine Beiträge ausgewählt');
+            throw new ValidationException($this->l->t('No fees selected'));
         }
         $today = $today ?? Clock::todayOf($this->clock);
 

@@ -6,6 +6,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubMapper;
@@ -65,7 +66,7 @@ class SepaServiceTest extends TestCase {
             }
         );
 
-        $this->service = new SepaService($this->fees, $this->members, $this->memberships, $clubs, $this->clubService);
+        $this->service = new SepaService($this->fees, $this->members, $this->memberships, $clubs, $this->clubService, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function fee(int $id, int $memberId, float $amount, ?string $description = null): void {

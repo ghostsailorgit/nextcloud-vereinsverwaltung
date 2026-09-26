@@ -9,16 +9,22 @@ namespace OCA\Verein\Service;
 
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 class StatisticsService {
+    private IL10N $l;
+
     private MemberMapper $memberMapper;
     private FeeMapper $feeMapper;
 
     public function __construct(
         MemberMapper $memberMapper,
         FeeMapper $feeMapper,
-        private ?Clock $clock = null
+        private ?Clock $clock = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         $this->memberMapper = $memberMapper;
         $this->feeMapper = $feeMapper;
     }
@@ -151,7 +157,7 @@ class StatisticsService {
 
         $labels = [];
         $data = [];
-        $monthFormatter = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+        $monthFormatter = [$this->l->t('Jan'), $this->l->t('Feb'), $this->l->t('Mar'), $this->l->t('Apr'), $this->l->t('May'), $this->l->t('Jun'), $this->l->t('Jul'), $this->l->t('Aug'), $this->l->t('Sep'), $this->l->t('Oct'), $this->l->t('Nov'), $this->l->t('Dec')];
 
         for ($i = 5; $i >= 0; $i--) {
             $monthEnd = new \DateTime('first day of this month');

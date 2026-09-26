@@ -155,7 +155,7 @@ Der Kalender braucht keine Sicherung: Er wird aus den Mitgliederdaten erzeugt.
 Das Zurückspielen wird in der CI mit SQLite, MySQL, MariaDB und PostgreSQL geprüft (für PostgreSQL werden die ID-Zähler nachgezogen).
 
 ## Kalender
-Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Vereinsjubiläen (Eintrittstag)
+Pro Verein ein Kalender „Vereinstermine <Verein>“ (der Name folgt der Sprache des Nutzers, englisch „Club events …“) mit jährlich wiederkehrenden Geburtstagen und Vereinsjubiläen (Eintrittstag)
 aktiver Mitglieder - nicht für Ausgetretene, Verstorbene, Deaktivierte oder Anonymisierte.
 
 Seit 0.18 ist er ein **App-Kalender** über Nextclouds öffentliche Schnittstelle `OCP\Calendar\ICalendarProvider`
@@ -179,6 +179,9 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
   gibt die Seite dem Frontend über `data-url-root` mit (`js/absoluteUrl.js`).
 - Tests: PHPUnit (`tests/Unit`), Nextcloud-Klassen kommen aus den `nextcloud/ocp`-Stubs.
 - PDF-Export: TCPDF aus `vendor/` (`composer install --no-dev`); fehlt es, antwortet der Export mit 503 und einem Hinweis.
+- Übersetzungen: englische Quelltexte, Deutsch in `l10n/de.json` (einzige von Hand gepflegte Datei, `php scripts/l10n.php build`
+  erzeugt den Rest; `L10nTest` meldet Fehlendes). Oberfläche und Meldungen kommen in der Sprache des Nutzers; PHP-Klassen
+  bekommen `IL10N` als optionales letztes Argument (sonst englisch über `L10n\SourceL10n`). `occ` bleibt englisch.
 - API-Übersicht: `docs/API.md` wird aus den Routen erzeugt (`php scripts/ApiDocs.php`), ein Test hält sie aktuell.
 
 ## Fehlerbehandlung

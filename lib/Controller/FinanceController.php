@@ -13,9 +13,13 @@ use OCA\Verein\Service\ValidationService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 class FinanceController extends Controller {
     use RespondsWithErrors;
+
+    private IL10N $l;
 
     private FeeService $feeService;
     private ValidationService $validationService;
@@ -24,8 +28,10 @@ class FinanceController extends Controller {
         $AppName,
         IRequest $request,
         FeeService $feeService,
-        ValidationService $validationService
+        ValidationService $validationService,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
         $this->feeService = $feeService;
         $this->validationService = $validationService;
@@ -70,7 +76,7 @@ class FinanceController extends Controller {
             if (!$validation['valid']) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Validierung fehlgeschlagen',
+                    'message' => $this->l->t('Validation failed'),
                     'errors' => $validation['errors']
                 ], 400);
             }
@@ -79,8 +85,8 @@ class FinanceController extends Controller {
             if (!$this->validationService->validateFeeStatus($status)) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Ungültiger Status',
-                    'errors' => ['Status muss open, paid, overdue oder cancelled sein']
+                    'message' => $this->l->t('Invalid status'),
+                    'errors' => [$this->l->t('Status must be open, paid, overdue or cancelled')]
                 ], 400);
             }
 
@@ -111,7 +117,7 @@ class FinanceController extends Controller {
             if (!$validation['valid']) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Validierung fehlgeschlagen',
+                    'message' => $this->l->t('Validation failed'),
                     'errors' => $validation['errors']
                 ], 400);
             }
@@ -120,8 +126,8 @@ class FinanceController extends Controller {
             if ($status && !$this->validationService->validateFeeStatus($status)) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Ungültiger Status',
-                    'errors' => ['Status muss open, paid, overdue oder cancelled sein']
+                    'message' => $this->l->t('Invalid status'),
+                    'errors' => [$this->l->t('Status must be open, paid, overdue or cancelled')]
                 ], 400);
             }
 
@@ -164,7 +170,7 @@ class FinanceController extends Controller {
             $this->feeService->delete($this->clubId(), (int)$id);
             return new JSONResponse([
                 'status' => 'ok',
-                'message' => 'Gebühr gelöscht'
+                'message' => $this->l->t('Fee deleted')
             ]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);

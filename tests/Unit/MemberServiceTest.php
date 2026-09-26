@@ -6,6 +6,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
@@ -43,7 +44,7 @@ class MemberServiceTest extends TestCase {
 
         $this->userManager = $this->createMock(IUserManager::class);
         $this->feeRates = $this->createMock(FeeRateMapper::class);
-        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates);
+        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function person(int $id, string $name = 'Mustermann'): Member {
@@ -410,7 +411,7 @@ class MemberServiceTest extends TestCase {
                 $seen[] = [$type, $id];
             }
         );
-        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, $auditLog);
+        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, $auditLog, l10n: SourceL10n::fromAppLanguage('de'));
 
         $service->anonymize(8);
 

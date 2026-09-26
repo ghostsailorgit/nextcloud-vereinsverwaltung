@@ -6,6 +6,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Exception\PermissionDeniedException;
 use OCA\Verein\Exception\ValidationException;
@@ -40,7 +41,8 @@ class AuthorizationMiddlewareTest extends TestCase {
             $this->roleService,
             $this->userSession,
             $this->createMock(LoggerInterface::class),
-            $this->request
+            $this->request,
+            l10n: SourceL10n::fromAppLanguage('de')
         );
     }
 

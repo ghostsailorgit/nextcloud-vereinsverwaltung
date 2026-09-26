@@ -164,7 +164,7 @@ if ($mode === 'calendar') {
         'city' => $club->getCity(), 'calendarGroups' => 'ci-kalender']);
     $provider = svc(\OCA\Verein\Calendar\ClubCalendarProvider::class);
     $cals = $provider->getCalendars('principals/users/ci-user');
-    check(count($cals) === 1 && $cals[0]->getDisplayName() === 'Vereinstermine CI Verein', 'ci-user (in the calendar group) gets the club calendar');
+    check(count($cals) === 1 && $cals[0]->getDisplayName() === svc(\OCP\L10N\IFactory::class)->get('verein')->t('Club events %s', ['CI Verein']), 'ci-user (in the calendar group) gets the club calendar');
     check($provider->getCalendars('principals/users/admin') === [], 'admin (not in the group) gets no club calendar');
     // active members of the run: Müller, Jung, Mitglied (honorary), Spät -> birthday + anniversary each; paused/former/anonymized none
     $events = $cals[0]->search('');

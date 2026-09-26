@@ -8,11 +8,19 @@
 namespace OCA\Verein\Service\Export;
 
 use Exception;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * CSV Exporter - UTF-8 with BOM for Excel compatibility
  */
 class CsvExporter {
+    private IL10N $l;
+
+    public function __construct(?IL10N $l10n = null) {
+        $this->l = $l10n ?? new SourceL10n();
+    }
+
     /**
      * Export data as CSV
      *
@@ -83,26 +91,28 @@ class CsvExporter {
     public function formatMembers(array $members): array {
         $headers = [
             'ID',
-            'Anrede',
-            'Vorname',
-            'Name',
-            'Straße',
-            'PLZ',
-            'Ort',
-            'Email',
-            'Rolle',
+            $this->l->t('Salutation'),
+            $this->l->t('First name'),
+            $this->l->t('Name'),
+            $this->l->t('Street'),
+            $this->l->t('Postal code'),
+            $this->l->t('City'),
+            $this->l->t('Email'),
+            $this->l->t('Role'),
             'IBAN',
             'BIC',
-            'Geburtsdatum',
-            'Alter',
-            'Eintrittsdatum',
-            'Mitglied seit (Jahre)',
-            'Austrittsdatum',
-            'Gründungsmitglied',
-            'Verstorben',
-            'Erstellt am',
+            $this->l->t('Birth date'),
+            $this->l->t('Age'),
+            $this->l->t('Join date'),
+            $this->l->t('Member since (years)'),
+            $this->l->t('Leave date'),
+            $this->l->t('Founding member'),
+            $this->l->t('Deceased'),
+            $this->l->t('Created on'),
         ];
 
+        $yes = $this->l->t('Yes');
+        $no = $this->l->t('No');
         $data = [];
         foreach ($members as $member) {
             $m = is_array($member) ? $member : $member->jsonSerialize();
@@ -124,8 +134,8 @@ class CsvExporter {
                 $m['joinDate'] ?? '',
                 $m['membershipYears'] ?? '',
                 $m['leaveDate'] ?? '',
-                !empty($m['foundingMember']) ? 'Ja' : 'Nein',
-                !empty($m['deceased']) ? 'Ja' : 'Nein',
+                !empty($m['foundingMember']) ? $yes : $no,
+                !empty($m['deceased']) ? $yes : $no,
                 $m['createdAt'] ?? ($m['created_at'] ?? ''),
             ];
         }
@@ -145,12 +155,12 @@ class CsvExporter {
     public function formatFees(array $fees): array {
         $headers = [
             'ID',
-            'Member ID',
-            'Member Name',
-            'Amount',
-            'Period',
-            'Status',
-            'Created At',
+            $this->l->t('Member ID'),
+            $this->l->t('Member'),
+            $this->l->t('Amount'),
+            $this->l->t('Period'),
+            $this->l->t('Status'),
+            $this->l->t('Created on'),
         ];
 
         $data = [];

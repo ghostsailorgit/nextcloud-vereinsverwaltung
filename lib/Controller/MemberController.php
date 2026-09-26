@@ -19,6 +19,8 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * All endpoints work in the context of one club (`clubId` request
@@ -27,6 +29,8 @@ use OCP\IUserSession;
  */
 class MemberController extends Controller {
     use RespondsWithErrors;
+
+    private IL10N $l;
 
     private MemberService $memberService;
     private ValidationService $validationService;
@@ -40,8 +44,10 @@ class MemberController extends Controller {
         private ClubMapper $clubMapper,
         private IUserSession $userSession,
         private IUserManager $userManager,
-        private SelfServiceService $selfService
+        private SelfServiceService $selfService,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
         $this->memberService = $memberService;
         $this->validationService = $validationService;
@@ -152,12 +158,12 @@ class MemberController extends Controller {
         try {
             $memberId = (int)$this->request->getParam('memberId', 0);
             if ($memberId <= 0) {
-                return new JSONResponse(['status' => 'error', 'message' => 'memberId erforderlich'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('memberId is required')], 400);
             }
             if (!$this->memberService->isMemberOfAny($memberId, $this->visibleClubIds())) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Diese Person ist keinem Verein zugeordnet, in dem Sie Mitglieder verwalten dürfen'
+                    'message' => $this->l->t('This person does not belong to any club in which you may manage members')
                 ], 403);
             }
 
@@ -168,12 +174,12 @@ class MemberController extends Controller {
             if (!$validation['valid']) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Validierung fehlgeschlagen',
+                    'message' => $this->l->t('Validation failed'),
                     'errors' => $validation['errors']
                 ], 400);
             }
             if (!$this->validationService->validateRole($data['role'])) {
-                return new JSONResponse(['status' => 'error', 'message' => 'Ungültige Rolle'], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Invalid role')], 400);
             }
 
             $member = $this->memberService->attachExisting($this->clubId(), $memberId, $data);
@@ -217,7 +223,7 @@ class MemberController extends Controller {
             if (!$validation['valid']) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Validierung fehlgeschlagen',
+                    'message' => $this->l->t('Validation failed'),
                     'errors' => $validation['errors']
                 ], 400);
             }
@@ -226,8 +232,8 @@ class MemberController extends Controller {
             if (!$this->validationService->validateRole($data['role'])) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Ungültige Rolle',
-                    'errors' => ['Rolle muss Mitglied, Kassierer oder Admin sein']
+                    'message' => $this->l->t('Invalid role'),
+                    'errors' => [$this->l->t('Role must be member, treasurer or board')]
                 ], 400);
             }
 
@@ -289,7 +295,7 @@ class MemberController extends Controller {
             if (!$validation['valid']) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Validierung fehlgeschlagen',
+                    'message' => $this->l->t('Validation failed'),
                     'errors' => $validation['errors']
                 ], 400);
             }
@@ -298,8 +304,8 @@ class MemberController extends Controller {
             if ($data['role'] && !$this->validationService->validateRole($data['role'])) {
                 return new JSONResponse([
                     'status' => 'error',
-                    'message' => 'Ungültige Rolle',
-                    'errors' => ['Rolle muss Mitglied, Kassierer oder Admin sein']
+                    'message' => $this->l->t('Invalid role'),
+                    'errors' => [$this->l->t('Role must be member, treasurer or board')]
                 ], 400);
             }
 
@@ -325,7 +331,7 @@ class MemberController extends Controller {
             $this->memberService->remove($this->clubId(), (int)$id);
             return new JSONResponse([
                 'status' => 'ok',
-                'message' => 'Mitglied gelöscht'
+                'message' => $this->l->t('Member deleted')
             ]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);

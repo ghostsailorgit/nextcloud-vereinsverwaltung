@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
@@ -46,7 +47,7 @@ class FeeRunServiceTest extends TestCase {
         $this->members->method('findByClub')->willReturnCallback(fn () => $this->memberList);
         $this->fees->method('findByClub')->willReturnCallback(fn () => $this->existingFees);
 
-        $this->service = new FeeRunService($this->rates, $this->members, $this->fees, $clubs, $this->db);
+        $this->service = new FeeRunService($this->rates, $this->members, $this->fees, $clubs, $this->db, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function rate(int $id, string $name, float $amount, bool $default = false): void {

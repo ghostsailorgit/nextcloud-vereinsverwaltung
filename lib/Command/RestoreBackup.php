@@ -28,9 +28,9 @@ class RestoreBackup extends Command {
 
     protected function configure(): void {
         $this->setName('verein:backup:restore')
-            ->setDescription('Stellt die Vereinsdaten aus einer Sicherung wieder her (ersetzt alle aktuellen Daten)')
-            ->addArgument('backup', InputArgument::REQUIRED, 'Dateiname einer Sicherung (siehe verein:backup:list) oder Pfad zu einer heruntergeladenen Sicherung')
-            ->addOption('yes', 'y', InputOption::VALUE_NONE, 'Ohne Rückfrage ausführen');
+            ->setDescription('Restores the club data from a backup (replaces all current data)')
+            ->addArgument('backup', InputArgument::REQUIRED, 'File name of a backup (see verein:backup:list) or path to a downloaded backup')
+            ->addOption('yes', 'y', InputOption::VALUE_NONE, 'Run without asking');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int {
@@ -43,20 +43,20 @@ class RestoreBackup extends Command {
         }
 
         $current = $this->backups->currentCounts();
-        $output->writeln('Sicherung vom ' . $backup['created'] . ' (App-Version ' . $backup['appVersion'] . ')');
+        $output->writeln('Backup of ' . $backup['created'] . ' (app version ' . $backup['appVersion'] . ')');
         $output->writeln(sprintf('%-24s %10s %10s', 'Tabelle', 'jetzt', 'Sicherung'));
         foreach (BackupService::TABLES as $table) {
             $inBackup = isset($backup['tables'][$table]) ? (string)count($backup['tables'][$table]) : '- (bleibt)';
             $output->writeln(sprintf('%-24s %10d %10s', $table, $current[$table], $inBackup));
         }
         $output->writeln('');
-        $output->writeln('Alle aktuellen Vereinsdaten werden ersetzt. Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt.');
+        $output->writeln('All current club data will be replaced. A backup of the current state is created automatically first.');
 
         if (!$input->getOption('yes')) {
             /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
-            if (!$helper->ask($input, $output, new ConfirmationQuestion('Wirklich wiederherstellen? [j/N] ', false, '/^(j|y)/i'))) {
-                $output->writeln('Abgebrochen, nichts wurde geändert.');
+            if (!$helper->ask($input, $output, new ConfirmationQuestion('Really restore? [y/N] ', false, '/^(j|y)/i'))) {
+                $output->writeln('Aborted, nothing was changed.');
                 return Command::FAILURE;
             }
         }
@@ -64,11 +64,11 @@ class RestoreBackup extends Command {
         try {
             $result = $this->backups->restore($backup);
         } catch (\Throwable $e) {
-            $output->writeln('<error>Wiederherstellung fehlgeschlagen, es wurde nichts geändert: ' . $e->getMessage() . '</error>');
+            $output->writeln('<error>Restore failed, nothing was changed: ' . $e->getMessage() . '</error>');
             return Command::FAILURE;
         }
 
-        $output->writeln('<info>Wiederhergestellt.</info> Sicherung des vorherigen Stands: ' . $result['safetyBackup']);
+        $output->writeln('<info>Restored.</info> Backup of the previous state: ' . $result['safetyBackup']);
         return Command::SUCCESS;
     }
 }

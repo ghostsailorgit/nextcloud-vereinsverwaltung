@@ -12,6 +12,8 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\Files\NotFoundException;
 use OCP\IRequest;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Backups cover all clubs, so every action is reserved for Nextcloud
@@ -20,7 +22,10 @@ use OCP\IRequest;
 class BackupController extends Controller {
     use RespondsWithErrors;
 
-    public function __construct(string $appName, IRequest $request, private BackupService $backups) {
+    private IL10N $l;
+
+    public function __construct(string $appName, IRequest $request, private BackupService $backups, ?IL10N $l10n = null) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($appName, $request);
     }
 
@@ -51,7 +56,7 @@ class BackupController extends Controller {
         try {
             return new DataDownloadResponse($this->backups->getContent($name), $name, 'application/gzip');
         } catch (NotFoundException $e) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Sicherung nicht gefunden'], Http::STATUS_NOT_FOUND);
+            return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Backup not found')], Http::STATUS_NOT_FOUND);
         }
     }
 }

@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Controller\MemberController;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Member;
@@ -52,12 +53,13 @@ class MemberControllerRoleGuardTest extends TestCase {
             'verein',
             $this->request,
             $this->memberService,
-            new ValidationService(),
+            new ValidationService(l10n: SourceL10n::fromAppLanguage('de')),
             $this->roleService,
             $this->createMock(ClubMapper::class),
             $session,
             $this->createMock(IUserManager::class),
-            $this->createMock(SelfServiceService::class)
+            $this->createMock(SelfServiceService::class),
+            l10n: SourceL10n::fromAppLanguage('de')
         );
 
         $this->params = ['clubId' => '3', 'name' => 'Muster', 'email' => '', 'role' => 'admin', 'userId' => 'evil-account'];

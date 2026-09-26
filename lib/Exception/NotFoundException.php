@@ -13,7 +13,7 @@ use Exception;
  * The message is written for the user and is shown to them (HTTP 404).
  */
 class NotFoundException extends Exception {
-    public function __construct(string $message = 'Nicht gefunden', ?\Throwable $previous = null) {
+    public function __construct(string $message = 'Not found', ?\Throwable $previous = null) {
         parent::__construct($message, 404, $previous);
     }
 

@@ -5,12 +5,14 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeRate;
 use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
+use OCA\Verein\Service\Export\CsvExporter;
 use OCA\Verein\Service\MemberImportService;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\ValidationService;
@@ -37,7 +39,7 @@ class MemberImportServiceTest extends TestCase {
         $youth->setId(8);
         $youth->setName('Jugend');
         $rates->method('findByClub')->willReturn([$adult, $youth]);
-        $this->service = new MemberImportService($this->members, $mapper, $rates, $this->createMock(ClubMapper::class), new ValidationService());
+        $this->service = new MemberImportService($this->members, $mapper, $rates, $this->createMock(ClubMapper::class), new ValidationService(l10n: SourceL10n::fromAppLanguage('de')), l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function existingMember(string $first, string $name, ?string $birth): void {
@@ -74,6 +76,33 @@ class MemberImportServiceTest extends TestCase {
         $this->assertFalse($data['deceased']);
         $this->assertNull($data['userId']);
         $this->assertSame(2, $plan['rows'][0]['line']);
+    }
+
+    public function testTheEnglishExportCanBeImportedAgainToo(): void {
+        // headers exactly as CsvExporter writes them for an English-speaking user (no translation table = English)
+        $export = (new CsvExporter())->formatMembers([[
+            'id' => 12, 'salutation' => 'Frau', 'firstName' => 'Erika', 'name' => 'Mustermann', 'street' => 'Musterweg 1',
+            'postalCode' => '12345', 'city' => 'Musterstadt', 'email' => 'erika@example.org', 'role' => 'member',
+            'iban' => 'DE89370400440532013000', 'bic' => 'COBADEFFXXX', 'birthDate' => '1980-02-01', 'age' => 46,
+            'joinDate' => '2010-05-01', 'membershipYears' => 16, 'leaveDate' => '', 'foundingMember' => true, 'deceased' => false,
+            'createdAt' => '2026-01-01 10:00:00',
+        ]]);
+        $this->assertContains('Founding member', $export['headers']);
+        $csv = implode(';', $export['headers']) . "\n" . implode(';', array_map('strval', $export['data'][0])) . "\n";
+
+        $plan = $this->service->plan(self::CLUB, $csv, true);
+
+        $this->assertSame([], $plan['ignoredColumns']);
+        $this->assertSame(['ok' => 1, 'error' => 0, 'duplicate' => 0], $plan['counts']);
+        $data = $plan['rows'][0]['data'];
+        $this->assertSame('Frau', $data['salutation']);
+        $this->assertSame('Erika', $data['firstName']);
+        $this->assertSame('Musterweg 1', $data['street']);
+        $this->assertSame('12345', $data['postalCode']);
+        $this->assertSame('1980-02-01', $data['birthDate']);
+        $this->assertSame('2010-05-01', $data['joinDate']);
+        $this->assertTrue($data['foundingMember']);
+        $this->assertFalse($data['deceased']);
     }
 
     public function testSpreadsheetStyleFileWithCommasGermanDatesAndOtherHeaderNames(): void {

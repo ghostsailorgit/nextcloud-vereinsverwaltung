@@ -13,6 +13,8 @@ use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Membership fee categories of a club ("Erwachsene", "Kinder", ...) with the
@@ -20,12 +22,16 @@ use OCP\AppFramework\Db\DoesNotExistException;
  * for members without an explicit category.
  */
 class FeeRateService {
+    private IL10N $l;
+
     public function __construct(
         private FeeRateMapper $rates,
         private MembershipMapper $memberships,
         private ClubMapper $clubs,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     /** @return FeeRate[] */
@@ -83,7 +89,7 @@ class FeeRateService {
     public function delete(int $clubId, int $id): void {
         $rate = $this->ownRate($clubId, $id);
         if ($this->memberships->countByFeeRate($id) > 0) {
-            throw new ValidationException('Die Beitragskategorie wird noch von Mitgliedern verwendet');
+            throw new ValidationException($this->l->t('The fee rate is still used by members'));
         }
         $wasDefault = $rate->getIsDefault();
         $this->rates->delete($rate);
@@ -103,7 +109,7 @@ class FeeRateService {
     private function ownRate(int $clubId, int $id): FeeRate {
         $rate = $this->rates->find($id);
         if ($rate->getClubId() !== $clubId) {
-            throw new DoesNotExistException('Beitragskategorie nicht gefunden');
+            throw new DoesNotExistException($this->l->t('Fee rate not found'));
         }
         return $rate;
     }
@@ -123,21 +129,21 @@ class FeeRateService {
     private function apply(FeeRate $rate, array $data, int $clubId, ?int $existingId): void {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '') {
-            throw new ValidationException('Name der Beitragskategorie ist erforderlich');
+            throw new ValidationException($this->l->t('The name of the fee rate is required'));
         }
         foreach ($this->rates->findByClub($clubId) as $other) {
             if ($other->getId() !== $existingId && mb_strtolower($other->getName()) === mb_strtolower($name)) {
-                throw new ValidationException('Diese Beitragskategorie gibt es schon');
+                throw new ValidationException($this->l->t('This fee rate already exists'));
             }
         }
 
         $raw = str_replace(',', '.', trim((string)($data['amount'] ?? '')));
         if ($raw === '' || !is_numeric($raw)) {
-            throw new ValidationException('Betrag ist ungültig');
+            throw new ValidationException($this->l->t('Amount is invalid'));
         }
         $amount = round((float)$raw, 2);
         if ($amount < 0 || $amount > 100000) {
-            throw new ValidationException('Betrag muss zwischen 0 und 100.000 liegen (0 = beitragsfrei)');
+            throw new ValidationException($this->l->t('Amount must be between 0 and 100,000 (0 = fee-free)'));
         }
 
         $rate->setName($name);

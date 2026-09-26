@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
@@ -31,7 +32,7 @@ class SelfServiceServiceTest extends TestCase {
         $this->memberships = $this->createMock(MembershipMapper::class);
         $this->clubs = $this->createMock(ClubMapper::class);
         $this->fees = $this->createMock(FeeMapper::class);
-        $this->service = new SelfServiceService($this->members, $this->memberships, $this->clubs, $this->fees);
+        $this->service = new SelfServiceService($this->members, $this->memberships, $this->clubs, $this->fees, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function person(): Member {

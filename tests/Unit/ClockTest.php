@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Tests\Unit;
 
+use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
@@ -47,7 +48,7 @@ class ClockTest extends TestCase {
         $fees->expects($this->once())->method('flagOverdueInClub')
             ->with(4, '2030-04-01', $this->anything())
             ->willReturn(0);
-        $service = new FeeService($fees, $this->createMock(MembershipMapper::class), null, $this->clock('Europe/Berlin'));
+        $service = new FeeService($fees, $this->createMock(MembershipMapper::class), null, $this->clock('Europe/Berlin'), l10n: SourceL10n::fromAppLanguage('de'));
 
         $service->flagOverdue(4);
     }
@@ -63,7 +64,7 @@ class ClockTest extends TestCase {
         $members->method('findByClub')->willReturn([]);
         $accounts = $this->createMock(ClubAccountMapper::class);
         $accounts->method('findByClub')->willReturn([]);
-        $service = new DunningService($fees, $members, $clubs, $accounts, $this->createMock(IDBConnection::class), null, $this->clock('Europe/Berlin'));
+        $service = new DunningService($fees, $members, $clubs, $accounts, $this->createMock(IDBConnection::class), null, $this->clock('Europe/Berlin'), l10n: SourceL10n::fromAppLanguage('de'));
 
         $data = $service->letters(4, [1], 14);
 

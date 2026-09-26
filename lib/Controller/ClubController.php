@@ -15,6 +15,8 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IUserSession;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Clubs and their bank accounts. Creating and deleting a club is reserved
@@ -24,14 +26,18 @@ use OCP\IUserSession;
 class ClubController extends Controller {
     use RespondsWithErrors;
 
+    private IL10N $l;
+
     public function __construct(
         $AppName,
         IRequest $request,
         private ClubService $clubService,
         private FeeRateService $feeRates,
         private RoleService $roleService,
-        private IUserSession $userSession
+        private IUserSession $userSession,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
     }
 
@@ -178,7 +184,7 @@ class ClubController extends Controller {
         try {
             return $action();
         } catch (DoesNotExistException $e) {
-            return new JSONResponse(['status' => 'error', 'message' => 'Nicht gefunden'], 404);
+            return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Not found')], 404);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }

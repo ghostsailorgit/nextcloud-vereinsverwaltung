@@ -13,18 +13,24 @@ use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Membership;
 use OCA\Verein\Db\MembershipMapper;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCA\Verein\L10n\SourceL10n;
+use OCP\IL10N;
 
 /**
  * Fees belong to one club and one of its members - every operation is scoped
  * to a club, so a fee of another club can never be read or changed through it.
  */
 class FeeService {
+    private IL10N $l;
+
     public function __construct(
         private FeeMapper $mapper,
         private MembershipMapper $membershipMapper,
         private ?AuditLogService $auditLog = null,
-        private ?Clock $clock = null
+        private ?Clock $clock = null,
+        ?IL10N $l10n = null
     ) {
+        $this->l = $l10n ?? new SourceL10n();
     }
 
     public function findAll(int $clubId): array {
@@ -35,7 +41,7 @@ class FeeService {
         try {
             return $this->mapper->findInClub($id, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new NotFoundException('Beitrag nicht gefunden');
+            throw new NotFoundException($this->l->t('Fee not found'));
         }
     }
 
@@ -49,7 +55,7 @@ class FeeService {
     ): Fee {
         $membership = $this->assertMemberOfClub($clubId, $memberId);
         if ($membership->getDeactivated()) {
-            throw new ValidationException('Das Mitglied ist deaktiviert - für deaktivierte Mitglieder werden keine Beiträge angelegt');
+            throw new ValidationException($this->l->t('The member is deactivated - no fees are created for deactivated members'));
         }
 
         $fee = new Fee();
@@ -140,7 +146,7 @@ class FeeService {
         try {
             return $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
         } catch (DoesNotExistException $e) {
-            throw new ValidationException('Das Mitglied gehört nicht zu diesem Verein');
+            throw new ValidationException($this->l->t('The member does not belong to this club'));
         }
     }
 }

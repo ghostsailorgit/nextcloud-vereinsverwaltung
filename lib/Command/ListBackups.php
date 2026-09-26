@@ -20,13 +20,13 @@ class ListBackups extends Command {
 
     protected function configure(): void {
         $this->setName('verein:backup:list')
-            ->setDescription('Listet die vorhandenen Sicherungen der Vereinsdaten (neueste zuerst)');
+            ->setDescription('Lists the existing backups of the club data (newest first)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int {
         $list = $this->backups->listBackups();
         if ($list === []) {
-            $output->writeln('Keine Sicherungen vorhanden.');
+            $output->writeln('No backups yet.');
             return Command::SUCCESS;
         }
         foreach ($list as $b) {
