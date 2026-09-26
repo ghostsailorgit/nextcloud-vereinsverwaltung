@@ -168,6 +168,7 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -276,7 +277,7 @@ export default {
     }
 
     const deleteFee = async (id) => {
-      if (!confirm('Soll diese Gebühr wirklich gelöscht werden?')) return
+      if (!(await confirmAction('Beitrag löschen', 'Soll diese Gebühr wirklich gelöscht werden?', { labelConfirm: 'Löschen', severity: 'error' }))) return
 
       loading.value = true
       try {

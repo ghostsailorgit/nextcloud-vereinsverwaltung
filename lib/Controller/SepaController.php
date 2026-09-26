@@ -25,7 +25,8 @@ class SepaController extends ApiController {
     public function __construct(
         string $appName,
         IRequest $request,
-        SepaService $service
+        SepaService $service,
+        private ?\OCA\Verein\Service\Clock $clock = null
     ) {
         parent::__construct($appName, $request);
         $this->service = $service;
@@ -55,7 +56,7 @@ class SepaController extends ApiController {
         // ExportController's CSV/PDF endpoints already do.
         $response = new DataDownloadResponse(
             $result['xml'],
-            'sepa_export_' . date('Y-m-d') . '.xml',
+            'sepa_export_' . \OCA\Verein\Service\Clock::todayOf($this->clock) . '.xml',
             'application/xml'
         );
         // Fees left out (no IBAN or no signed mandate); the frontend warns

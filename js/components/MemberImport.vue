@@ -59,6 +59,7 @@ import { ref, computed } from 'vue'
 import { showSuccess, showError, showWarning } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 
 const CHUNK = 20
@@ -113,7 +114,7 @@ export default {
 
     const runImport = async () => {
       const lines = importable.value
-      if (!lines.length || !confirm(`${lines.length} Mitglieder anlegen?`)) return
+      if (!lines.length || !(await confirmAction('Mitglieder importieren', `${lines.length} Mitglieder anlegen?`, { labelConfirm: 'Importieren', severity: 'warning' }))) return
       busy.value = true
       let created = 0
       let problems = 0

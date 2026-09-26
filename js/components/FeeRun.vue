@@ -96,6 +96,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 
 export default {
@@ -137,7 +138,7 @@ export default {
     const run = async () => {
       if (!plan.value) return
       const n = plan.value.included.length
-      if (!confirm(`${n} Beiträge für ${year.value} jetzt erzeugen?`)) return
+      if (!(await confirmAction('Beiträge erzeugen', `${n} Beiträge für ${year.value} jetzt erzeugen?`, { labelConfirm: 'Beiträge erzeugen', severity: 'warning' }))) return
       const res = await call(() => api.post('fee-run', params()))
       if (res) {
         showSuccess(`${res.data.created} Beiträge erzeugt`)

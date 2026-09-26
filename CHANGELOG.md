@@ -4,6 +4,23 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.1-beta] - 2026-09-26
+
+Nextcloud-Dialoge und das richtige „heute“.
+
+### ✨ Geändert
+- **Rückfragen im Nextcloud-Stil:** Alle 12 Bestätigungen (Löschen, Entfernen, Deaktivieren, Beitragslauf, Mahnlauf, Import,
+  „als bezahlt markieren“, Rollen entziehen …) nutzen jetzt Nextclouds eigenen Dialog statt des Browser-Fensters – mit
+  Überschrift, einem Knopf, der die Aktion benennt („Löschen“, „Entfernen“ …), und roter Darstellung bei Löschaktionen.
+
+### 🐛 Behoben
+- **„Heute“ ist jetzt der lokale Tag.** Nextcloud rechnet intern in UTC; kurz nach Mitternacht (in Deutschland bis 1 bzw. 2 Uhr)
+  galt deshalb noch der Vortag – für „Überfällige markieren“, Datum und Frist der Mahnschreiben, Einzugsdatum und Zeitangaben
+  der SEPA-Datei, Exportdatum und Dateinamen. Die App nutzt dafür jetzt Nextclouds Uhr und die Zeitzone des Nutzers bzw. der
+  Instanz. Zeitstempel in der Datenbank bleiben wie in Nextcloud UTC.
+
+---
+
 ## [0.18.0-beta] - 2026-09-26
 
 Der Vereinskalender kommt jetzt über Nextclouds offizielle Schnittstelle für App-Kalender.

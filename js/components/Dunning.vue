@@ -86,6 +86,7 @@ import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 
 // same labels as DunningService::LEVELS
@@ -149,7 +150,7 @@ export default {
     const run = async () => {
       if (!plan.value) return
       const n = plan.value.included.length
-      if (!confirm(`${n} Schreiben erstellen? Die Mahnstufe der betroffenen Beiträge wird erhöht; das lässt sich nicht automatisch zurücknehmen.`)) return
+      if (!(await confirmAction('Mahnschreiben erstellen', `${n} Schreiben erstellen? Die Mahnstufe der betroffenen Beiträge wird erhöht; das lässt sich nicht automatisch zurücknehmen.`, { labelConfirm: 'Schreiben erstellen', severity: 'warning' }))) return
       busy.value = true
       let result = null
       try {

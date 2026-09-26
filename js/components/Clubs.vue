@@ -166,6 +166,7 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import Backups from './Backups.vue'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
 
@@ -264,7 +265,7 @@ export default {
     }
 
     const deleteClub = async () => {
-      if (!confirm(`Verein „${club.value.name}“ wirklich löschen? Bankkonten und Rollenzuweisungen gehen verloren.`)) return
+      if (!(await confirmAction('Verein löschen', `Verein „${club.value.name}“ wirklich löschen? Bankkonten und Rollenzuweisungen gehen verloren.`, { labelConfirm: 'Löschen', severity: 'error' }))) return
       const ok = await run(async () => {
         await api.deleteClub(club.value.id)
         clubState.currentId = null
@@ -290,7 +291,7 @@ export default {
       if (ok) resetRateForm()
     }
     const removeRate = async (r) => {
-      if (!confirm(`Kategorie „${r.name}“ wirklich löschen?`)) return
+      if (!(await confirmAction('Beitragskategorie löschen', `Kategorie „${r.name}“ wirklich löschen?`, { labelConfirm: 'Löschen', severity: 'error' }))) return
       await run(async () => {
         await api.delete(`clubs/${club.value.id}/fee-rates/${r.id}`)
         await loadClubs()
@@ -314,7 +315,7 @@ export default {
     }
 
     const removeAccount = async (a) => {
-      if (!confirm(`Konto ${a.iban} wirklich löschen?`)) return
+      if (!(await confirmAction('Bankkonto löschen', `Konto ${a.iban} wirklich löschen?`, { labelConfirm: 'Löschen', severity: 'error' }))) return
       await run(async () => {
         await api.deleteClubAccount(club.value.id, a.id)
         await loadClubs()

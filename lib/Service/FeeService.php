@@ -22,7 +22,8 @@ class FeeService {
     public function __construct(
         private FeeMapper $mapper,
         private MembershipMapper $membershipMapper,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        private ?Clock $clock = null
     ) {
     }
 
@@ -125,7 +126,7 @@ class FeeService {
      * @return int number of fees flagged
      */
     public function flagOverdue(int $clubId): int {
-        $count = $this->mapper->flagOverdueInClub($clubId, date('Y-m-d'), date('Y-m-d H:i:s'));
+        $count = $this->mapper->flagOverdueInClub($clubId, Clock::todayOf($this->clock), date('Y-m-d H:i:s'));
         if ($count > 0) {
             $this->auditLog?->record($clubId, 'fee', 0, 'flag_overdue', ['count' => $count]);
         }
