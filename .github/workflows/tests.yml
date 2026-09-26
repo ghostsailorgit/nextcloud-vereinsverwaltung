@@ -182,7 +182,11 @@ jobs:
           echo "ok   no calendar warnings in nextcloud.log"
 
       - name: appinfo/info.xml matches Nextcloud's schema
-        run: xmllint --noout --schema server/resources/app-info.xsd server/apps/verein/appinfo/info.xml
+        run: |
+          php -r 'libxml_use_internal_errors(true); $d = new DOMDocument(); $d->load($argv[1]);
+            if ($d->schemaValidate($argv[2])) { echo "ok   info.xml is valid\n"; exit(0); }
+            foreach (libxml_get_errors() as $e) { echo "line $e->line: " . trim($e->message) . "\n"; } exit(1);' \
+            server/apps/verein/appinfo/info.xml server/resources/app-info.xsd
 
       - name: Backup restore with occ
         working-directory: server

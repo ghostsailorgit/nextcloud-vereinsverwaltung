@@ -160,7 +160,7 @@ class BackupServiceTest extends TestCase {
     }
 
     /** A service whose query builder accepts everything and throws on the Nth write statement. */
-    private function serviceWithFailingWrite(?int $failOnStatement, \OCP\IDBConnection &$db = null): BackupService {
+    private function serviceWithFailingWrite(?int $failOnStatement, ?\OCP\IDBConnection &$db = null): BackupService {
         $result = $this->createMock(\OCP\DB\IResult::class);
         $result->method('fetchAll')->willReturn([]);
         $calls = 0;
