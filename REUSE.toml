@@ -1,0 +1,23 @@
+version = 1
+SPDX-PackageName = "verein"
+SPDX-PackageSupplier = "The Nextcloud Vereinsverwaltung contributors"
+SPDX-PackageDownloadLocation = "https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung"
+
+# Code files carry their own SPDX header. These annotations cover files that cannot (or usually do not)
+# carry one. Checked in CI with `reuse lint`.
+
+[[annotations]]
+path = ["**/*.md", "docs/**", ".github/**", ".gitignore", "composer.json", "package.json", "package-lock.json", "tsconfig.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# the app icon comes from the upstream project
+[[annotations]]
+path = "img/app.svg"
+precedence = "aggregate"
+SPDX-FileCopyrightText = [
+    "2025 Wacken2012 and the nextcloud-verein contributors <https://github.com/Wacken2012/nextcloud-verein>",
+    "2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>",
+]
+SPDX-License-Identifier = "AGPL-3.0-only"

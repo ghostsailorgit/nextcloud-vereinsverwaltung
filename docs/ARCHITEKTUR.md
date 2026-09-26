@@ -152,7 +152,7 @@ herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf je
 Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` (nur per Kommandozeile, bewusst nicht in der
 Weboberfläche). Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
 Kalender und ihre Freigaben sind nicht Teil der Sicherung; sie werden beim nächsten Speichern eines Mitglieds angeglichen.
-Getestet ist das Zurückspielen mit MySQL 8.4; MariaDB, PostgreSQL und SQLite sind ungetestet (für PostgreSQL werden die ID-Zähler nachgezogen).
+Das Zurückspielen wird in der CI mit SQLite, MySQL, MariaDB und PostgreSQL geprüft (für PostgreSQL werden die ID-Zähler nachgezogen).
 
 ## Kalender
 Pro Verein ein Kalender „Vereinstermine <Verein>“ mit jährlich wiederkehrenden Geburtstagen und Jubiläen aktiver

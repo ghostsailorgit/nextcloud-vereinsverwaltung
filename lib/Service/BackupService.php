@@ -1,4 +1,8 @@
 <?php
+/**
+ * SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
 namespace OCA\Verein\Service;
 
 use OCP\App\IAppManager;

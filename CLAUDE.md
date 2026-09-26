@@ -4,7 +4,11 @@ Nextcloud app for managing one or several clubs (Vereine): members, memberships,
 debit export, roles/permissions, calendar reminders and member self-service. Fork of
 `Wacken2012/nextcloud-verein` (remote `upstream`; our history is grafted onto upstream `64a9b8b`).
 **The repository is public**: everything committed is world-readable, forever.
-UI language is German, code and comments are English. Target: Nextcloud 34, PHP 8.1+ (test instance: PHP 8.5.10 and MySQL 8.4; CI: PHP 8.3 and 8.5), Vue 3.
+UI language is German, code and comments are English. Target: Nextcloud 33-35, PHP 8.2-8.5 (test instance: NC 34, PHP 8.5.10, MySQL 8.4), Vue 3.
+**CI** (`.github/workflows/tests.yml`): unit tests on PHP 8.2 and 8.5 against the **Nextcloud 33** OCP stubs (`composer.json` pins
+`nextcloud/ocp: dev-stable33` - an API newer than the oldest supported version fails there), an `integration` job that installs real
+Nextcloud 33/34/35 on SQLite/MySQL/MariaDB/PostgreSQL and runs `tests/Integration/smoke.php` + HTTP checks + an `occ` restore, and
+`reuse lint`. Raise `info.xml` min/max only together with that matrix. Every new code file needs an SPDX header (see CONTRIBUTING.md).
 
 Read `docs/ARCHITEKTUR.md` for the data model and the decisions behind it. This file is what you
 must know to change code safely.

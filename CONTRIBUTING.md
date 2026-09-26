@@ -35,4 +35,12 @@ Die Testsuite läuft bei jedem Push und Pull Request in GitHub Actions.
 
 ## Lizenz
 
-Mit deinem Beitrag stimmst du zu, dass er unter der [AGPL-3.0-or-later](LICENSE) veröffentlicht wird, wie das gesamte Projekt.
+Mit deinem Beitrag stimmst du zu, dass er unter der Lizenz der jeweiligen Datei veröffentlicht wird: AGPL-3.0-only in Dateien aus dem
+Ursprungsprojekt, sonst AGPL-3.0-or-later (steht im SPDX-Kopf jeder Datei). Neue Code-Dateien bekommen einen solchen Kopf:
+
+```
+SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+SPDX-License-Identifier: AGPL-3.0-or-later
+```
+
+Die CI prüft das mit `reuse lint`; Dateien ohne Kopf (Doku, Konfiguration) werden in `REUSE.toml` erfasst.

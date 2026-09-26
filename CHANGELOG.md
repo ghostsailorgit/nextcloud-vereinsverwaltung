@@ -4,6 +4,26 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.17.1-beta] - 2026-09-26
+
+Lizenzangaben je Datei und ehrliche, geprüfte Kompatibilität.
+
+### 📦 Kompatibilität
+- **Nextcloud 33 bis 35, PHP 8.2 bis 8.5.** Bisher stand in `info.xml` Nextcloud 27–34 und PHP ab 8.1, getestet war aber
+  nur Nextcloud 34 mit MySQL; Nextcloud 35 war sogar ausgeschlossen, die App ließ sich dort nicht installieren.
+- Neue CI: installiert echte Nextcloud 33, 34 und 35 auf SQLite, MySQL, MariaDB und PostgreSQL, aktiviert die App,
+  prüft Import, Beitragslauf, Mahnwesen mit PDF, Protokoll, Anonymisieren und Sicherung gegen die echte Datenbank,
+  stellt HTTP-Anfragen als Admin und als Nicht-Admin und spielt eine Sicherung per `occ` zurück. Die Unit-Tests laufen
+  gegen die Schnittstellen von Nextcloud 33 (älteste unterstützte Version).
+- Der Frontend-Build funktioniert jetzt auch innerhalb eines Nextcloud-Quellbaums (eigene `tsconfig.json`).
+
+### ⚖️ Lizenz
+- Jede Datei nennt Urheber und Lizenz (SPDX, [REUSE](https://reuse.software), in der CI geprüft). Dateien aus dem
+  Ursprungsprojekt tragen wieder dessen Urheberhinweis und stehen wie dort unter AGPL-3.0-only, neue Dateien unter
+  AGPL-3.0-or-later. Neu: `AUTHORS.md`, `LICENSES/`, `REUSE.toml`; das Release-Archiv enthält sie.
+
+---
+
 ## [0.17.0-beta] - 2026-09-26
 
 Mitgliederimport aus CSV und Mahnwesen.

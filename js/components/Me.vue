@@ -1,3 +1,7 @@
+<!--
+  - SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <template>
   <div class="me-page">
     <h2>Meine Daten</h2>

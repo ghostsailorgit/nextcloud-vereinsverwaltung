@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 8.3: the version we develop on; 8.5: what the test instance runs
-        php: ['8.3', '8.5']
+        # the lowest (Nextcloud 33 needs 8.2) and the highest supported PHP version
+        php: ['8.2', '8.5']
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +26,8 @@ jobs:
           extensions: mbstring, intl, bcmath, dom, xml, zip
           coverage: none
 
-      # composer.lock is not committed, so resolve fresh (Nextcloud's OCP stubs are dev-master)
+      # composer.lock is not committed, so resolve fresh; the OCP stubs are pinned to the oldest supported
+      # Nextcloud (composer.json: dev-stable33), so an API that only exists in newer versions fails here
       - name: Install dependencies
         run: composer update --no-interaction --no-progress
 
@@ -38,6 +39,140 @@ jobs:
 
       - name: Known vulnerabilities in PHP dependencies
         run: composer audit --no-dev
+
+  # The app inside a real Nextcloud: install, enable (runs all migrations), then tests/Integration/smoke.php against
+  # the real database, calendar and app data, HTTP requests through routing/middleware as admin and as a non-admin,
+  # and a backup restore with occ. The versions and databases here are what appinfo/info.xml may claim.
+  integration:
+    name: Nextcloud ${{ matrix.server }} / ${{ matrix.db }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { server: stable33, php: '8.2', db: sqlite }
+          - { server: stable33, php: '8.2', db: mysql }
+          - { server: stable34, php: '8.4', db: pgsql }
+          - { server: stable34, php: '8.5', db: mariadb }
+          - { server: stable35, php: '8.3', db: mysql }
+          - { server: stable35, php: '8.4', db: sqlite }
+          - { server: stable35, php: '8.5', db: pgsql }
+    services:
+      mysql:
+        image: mysql:8.4
+        env: { MYSQL_ROOT_PASSWORD: rootpassword, MYSQL_DATABASE: nextcloud }
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=3s --health-retries=20
+      mariadb:
+        image: mariadb:11.4
+        env: { MARIADB_ROOT_PASSWORD: rootpassword, MARIADB_DATABASE: nextcloud }
+        ports: ['3307:3306']
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=5s --health-timeout=3s --health-retries=20
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: rootpassword, POSTGRES_USER: root, POSTGRES_DB: nextcloud }
+        ports: ['5432:5432']
+        options: --health-cmd=pg_isready --health-interval=5s --health-timeout=3s --health-retries=20
+    steps:
+      - name: Nextcloud server
+        uses: actions/checkout@v4
+        with:
+          repository: nextcloud/server
+          ref: ${{ matrix.server }}
+          submodules: true
+          path: server
+
+      - name: The app
+        uses: actions/checkout@v4
+        with:
+          path: server/apps/verein
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, iconv, fileinfo, intl, gd, zip, curl, xml, pdo_sqlite, pdo_mysql, pdo_pgsql
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/apps/verein/package-lock.json
+
+      - name: App dependencies and frontend (as in the release archive)
+        working-directory: server/apps/verein
+        run: |
+          composer update --no-dev --no-interaction --no-progress
+          npm ci
+          npm run build
+
+      - name: Install Nextcloud
+        working-directory: server
+        run: |
+          case "${{ matrix.db }}" in
+            sqlite)  DBARGS="--database=sqlite" ;;
+            mysql)   DBARGS="--database=mysql --database-host=127.0.0.1 --database-port=3306 --database-user=root --database-pass=rootpassword --database-name=nextcloud" ;;
+            mariadb) DBARGS="--database=mysql --database-host=127.0.0.1 --database-port=3307 --database-user=root --database-pass=rootpassword --database-name=nextcloud" ;;
+            pgsql)   DBARGS="--database=pgsql --database-host=127.0.0.1 --database-port=5432 --database-user=root --database-pass=rootpassword --database-name=nextcloud" ;;
+          esac
+          php occ maintenance:install --admin-user=admin --admin-pass=admin $DBARGS
+          php occ app:enable verein
+          test "$(php occ config:app:get verein enabled)" = "yes"
+          OC_PASS=ci-user-password php occ user:add --password-from-env ci-user
+
+      - name: Smoke test (services against the real database)
+        working-directory: server
+        run: php apps/verein/tests/Integration/smoke.php run
+
+      - name: HTTP through routing and the permission middleware
+        working-directory: server
+        run: |
+          php -S 127.0.0.1:8080 > /tmp/php-server.log 2>&1 &
+          sleep 3
+          CLUB=$(php -r 'echo json_decode(file_get_contents("apps/verein/tests/Integration/smoke-state.json"), true)["clubId"];')
+          OTHER=$(php -r 'echo json_decode(file_get_contents("apps/verein/tests/Integration/smoke-state.json"), true)["otherClubId"];')
+          req() { # expected-status user:password method path [body]
+            code=$(curl -s -o /tmp/body -w '%{http_code}' -u "$2" -H 'OCS-APIRequest: true' -X "$3" \
+              -H 'Content-Type: application/x-www-form-urlencoded' ${5:+--data "$5"} "http://127.0.0.1:8080/index.php/apps/verein$4")
+            if [ "$code" != "$1" ]; then echo "FAIL $3 $4 as ${2%%:*}: expected $1, got $code: $(head -c 300 /tmp/body)"; exit 1; fi
+            echo "ok   $3 $4 as ${2%%:*} -> $code"
+          }
+          A=admin:admin; U=ci-user:ci-user-password
+          req 200 $A GET "/clubs"
+          req 200 $A GET "/members?clubId=$CLUB"
+          req 200 $A GET "/audit-log?clubId=$CLUB"
+          req 200 $A POST "/fee-run/preview" "clubId=$CLUB&year=2026&dueDate=2026-03-31&prorata=1"
+          req 400 $A GET "/dunning/letters?clubId=$CLUB&feeIds=0&deadlineDays=14"
+          # the non-admin holds finance rights in $CLUB only
+          req 200 $U POST "/dunning/preview" "clubId=$CLUB&overdueDays=14&intervalDays=14"
+          req 200 $U GET "/finance?clubId=$CLUB"
+          req 403 $U GET "/members?clubId=$CLUB"
+          req 403 $U POST "/members/import/preview" "clubId=$CLUB&csv=Name%0AX"
+          req 403 $U GET "/audit-log?clubId=$CLUB"
+          req 403 $U POST "/dunning/preview" "clubId=$OTHER&overdueDays=14&intervalDays=14"
+          req 403 $U GET "/finance?clubId=$OTHER"
+          req 401 "nobody:wrong" GET "/clubs"
+
+      - name: Backup restore with occ
+        working-directory: server
+        run: |
+          BACKUP=$(php -r 'echo json_decode(file_get_contents("apps/verein/tests/Integration/smoke-state.json"), true)["backup"];')
+          php occ verein:backup:list
+          php apps/verein/tests/Integration/smoke.php mutate
+          php occ verein:backup:restore "$BACKUP" --yes
+          php apps/verein/tests/Integration/smoke.php verify
+
+      - name: Nextcloud log on failure
+        if: failure()
+        run: tail -n 60 server/data/nextcloud.log || true; tail -n 30 /tmp/php-server.log || true
+
+  reuse:
+    name: REUSE (licence of every file)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: reuse lint
+        run: pipx run reuse lint
 
   frontend:
     runs-on: ubuntu-latest
