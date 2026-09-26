@@ -26,7 +26,8 @@ jobs:
           extensions: mbstring, intl, bcmath, dom, xml, zip
           coverage: none
 
-      # composer.lock is not committed, so resolve fresh (Nextcloud's OCP stubs are dev-master)
+      # composer.lock is not committed, so resolve fresh; the OCP stubs are pinned to the oldest supported
+      # Nextcloud (composer.json: dev-stable33), so an API that only exists in newer versions fails here
       - name: Install dependencies
         run: composer update --no-interaction --no-progress
 
