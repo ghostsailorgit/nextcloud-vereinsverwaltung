@@ -4,27 +4,25 @@
 -->
 <template>
   <div class="fee-run">
-    <h2>Beitragslauf</h2>
+    <h2>{{ t('verein', 'Fee run') }}</h2>
     <p class="hint">
-      Erzeugt für alle aktiven Mitglieder den Jahresbeitrag nach ihrer Beitragskategorie (Reiter „Verein“).
-      Wer für das Jahr schon einen Beitrag hat, wird übersprungen, ein Lauf lässt sich also gefahrlos wiederholen.
-      Zuerst die Vorschau ansehen.
+      {{ t('verein', 'Creates the annual fee for all active members according to their fee rate (tab "Club"). Anyone who already has a fee for the year is skipped, so a run can safely be repeated. Look at the preview first.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
       <label class="field">
-        <span>Beitragsjahr</span>
+        <span>{{ t('verein', 'Fee year') }}</span>
         <input v-model.number="year" type="number" min="2000" max="2100" class="form-input" required />
       </label>
       <label class="field">
-        <span>Fällig am</span>
+        <span>{{ t('verein', 'Due on') }}</span>
         <input v-model="dueDate" type="date" class="form-input" required />
       </label>
       <NcTextField
         :model-value="description"
         @update:model-value="description = $event"
-        label="Bemerkung (optional)"
-        :placeholder="'Mitgliedsbeitrag ' + year"
+        :label="t('verein', 'Remark (optional)')"
+        :placeholder="t('verein', 'Membership fee {year}', { year })"
       />
       <NcCheckboxRadioSwitch
         class="prorata"
@@ -32,42 +30,41 @@
         :model-value="prorata"
         @update:model-value="prorata = $event; plan = null"
       >
-        Anteilig bei Eintritt im Beitragsjahr (ab Eintrittsmonat)
+        {{ t('verein', 'Pro rata for members joining in the fee year (from the join month)') }}
       </NcCheckboxRadioSwitch>
       <div class="buttons">
-        <NcButton type="submit" variant="secondary" :disabled="busy">Vorschau</NcButton>
+        <NcButton type="submit" variant="secondary" :disabled="busy">{{ t('verein', 'Preview') }}</NcButton>
         <NcButton
           type="button"
           variant="primary"
           :disabled="busy || !plan || !plan.included.length"
           @click="run"
         >
-          {{ plan ? plan.included.length + ' Beiträge erzeugen' : 'Beiträge erzeugen' }}
+          {{ plan ? n('verein', 'Create %n fee', 'Create %n fees', plan.included.length) : t('verein', 'Create fees') }}
         </NcButton>
         <NcButton type="button" variant="tertiary" :disabled="busy" @click="flagOverdue">
-          Überfällige markieren
+          {{ t('verein', 'Mark overdue') }}
         </NcButton>
       </div>
     </form>
 
     <div v-if="plan" class="result">
       <p class="summary">
-        <strong>{{ plan.included.length }}</strong> Beiträge über insgesamt
-        <strong>{{ formatMoney(plan.total) }}</strong> für {{ plan.year }}, fällig am {{ formatDate(plan.dueDate) }}
-        <span v-if="plan.skipped.length"> · {{ plan.skipped.length }} übersprungen</span>
+        {{ n('verein', '%n fee totalling {total} for {year}, due on {date}', '%n fees totalling {total} for {year}, due on {date}', plan.included.length, { total: formatMoney(plan.total), year: plan.year, date: formatDate(plan.dueDate) }) }}
+        <span v-if="plan.skipped.length"> · {{ n('verein', '%n skipped', '%n skipped', plan.skipped.length) }}</span>
       </p>
 
       <details v-if="plan.included.length" open>
-        <summary>Wer bekommt einen Beitrag</summary>
+        <summary>{{ t('verein', 'Who gets a fee') }}</summary>
         <table>
-          <thead><tr><th>Mitglied</th><th>Kategorie</th><th class="num">Betrag</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
           <tbody>
             <tr v-for="e in plan.included" :key="e.memberId">
               <td>{{ e.name }}</td>
               <td>
                 {{ e.category }}
                 <span v-if="e.months" class="prorata-note">
-                  · anteilig {{ e.months }}/12 von {{ formatMoney(e.fullAmount) }}
+                  · {{ t('verein', 'pro rata {months}/12 of {amount}', { months: e.months, amount: formatMoney(e.fullAmount) }) }}
                 </span>
               </td>
               <td class="num">{{ formatMoney(e.amount) }}</td>
@@ -77,9 +74,9 @@
       </details>
 
       <details v-if="plan.skipped.length">
-        <summary>Übersprungen ({{ plan.skipped.length }})</summary>
+        <summary>{{ t('verein', 'Skipped ({count})', { count: plan.skipped.length }) }}</summary>
         <table>
-          <thead><tr><th>Mitglied</th><th>Grund</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
           <tbody>
             <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
           </tbody>
@@ -95,6 +92,7 @@ import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import { t, n } from '@nextcloud/l10n'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
@@ -123,7 +121,7 @@ export default {
       try {
         return await action()
       } catch (error) {
-        showError(extractErrorMessage(error, 'Aktion fehlgeschlagen'))
+        showError(extractErrorMessage(error, t('verein', 'Action failed')))
         return null
       } finally {
         busy.value = false
@@ -137,11 +135,11 @@ export default {
 
     const run = async () => {
       if (!plan.value) return
-      const n = plan.value.included.length
-      if (!(await confirmAction('Beiträge erzeugen', `${n} Beiträge für ${year.value} jetzt erzeugen?`, { labelConfirm: 'Beiträge erzeugen', severity: 'warning' }))) return
+      const count = plan.value.included.length
+      if (!(await confirmAction(t('verein', 'Create fees'), n('verein', 'Create %n fee for {year} now?', 'Create %n fees for {year} now?', count, { year: year.value }), { labelConfirm: t('verein', 'Create fees'), severity: 'warning' }))) return
       const res = await call(() => api.post('fee-run', params()))
       if (res) {
-        showSuccess(`${res.data.created} Beiträge erzeugt`)
+        showSuccess(n('verein', '%n fee created', '%n fees created', res.data.created))
         plan.value = null
         emit('done')
       }
@@ -150,7 +148,7 @@ export default {
     const flagOverdue = async () => {
       const res = await call(() => api.post('finance/flag-overdue', {}))
       if (res) {
-        showSuccess(res.data.flagged + ' Beiträge als überfällig markiert')
+        showSuccess(n('verein', '%n fee marked as overdue', '%n fees marked as overdue', res.data.flagged))
         emit('done')
       }
     }
@@ -161,7 +159,7 @@ export default {
       return isNaN(d) ? v : d.toLocaleDateString('de-DE')
     }
 
-    return { year, dueDate, description, prorata, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
+    return { t, n, year, dueDate, description, prorata, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
   }
 }
 </script>

@@ -4,6 +4,14 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.5-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: Finanzen (Gebührenliste, neue Gebühr, Status), Beitragslauf und SEPA-Export. Mengenangaben („1 Beitrag
+  erzeugt“, „1 Beitrag als bezahlt markiert“) nutzen jetzt korrekte Einzahl/Mehrzahl; der Wortlaut ist sonst unverändert.
+
+---
+
 ## [0.18.4-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen
