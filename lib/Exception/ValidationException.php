@@ -25,7 +25,7 @@ class ValidationException extends Exception {
     public function __construct(
         string $message = "Validierungsfehler",
         int $code = 400,
-        Exception $previous = null
+        ?Exception $previous = null
     ) {
         $this->statusCode = $code;
         parent::__construct($message, $code, $previous);

@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.17.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.18.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -11,7 +11,7 @@ Stand: Version 0.17.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
 | Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben als PDF), Mitglieder deaktivieren |
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge, „bezahlt“-Markierung nach dem Export |
-| Kalender | Geburtstage und Jubiläen je Verein, nur intern geteilt |
+| Kalender | Geburtstage und Jubiläen je Verein als App-Kalender über Nextclouds öffentliche Schnittstelle, sichtbar nur für ausgewählte Gruppen |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
 | Datenschutz | Person anonymisieren statt löschen (mit Bestätigung durch Eintippen des Namens), Datenauskunft einer Person, Änderungsprotokoll ohne Klartext bei personenbezogenen Feldern, Reiter „Protokoll“ |
 | Qualität | Automatische Tests und CI, Integrationstests gegen Nextcloud 33-35 mit SQLite, MySQL, MariaDB und PostgreSQL, API-Übersicht aus dem Code erzeugt |
@@ -34,4 +34,3 @@ Stand: Version 0.17.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 - Die SEPA-Datei ist als XML wohlgeformt, wurde aber weder gegen das offizielle Schema noch mit Bankensoftware geprüft; vor dem ersten Einzug bitte selbst prüfen.
 - Alle Einzüge werden als Folgelastschrift (RCUR) gekennzeichnet; Erst- und Einmallastschriften gibt es nicht.
 - Unterstützt werden Nextcloud 33 bis 35 und PHP 8.2 bis 8.5, in der CI mit echten Nextcloud-Installationen 33, 34 und 35 auf SQLite, MySQL 8.4, MariaDB 11.4 und PostgreSQL 17 mit PHP 8.2 bis 8.5 getestet (Installation, Migrationen, Kernfunktionen, HTTP-Rechteprüfung, Wiederherstellung einer Sicherung). Im echten Betrieb erprobt ist bisher nur Nextcloud 34 mit MySQL.
-- Kalendertermine gehören einem technischen Nextcloud-Konto (dem ersten Administrator) und werden mit Gruppen geteilt.

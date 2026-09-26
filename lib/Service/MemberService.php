@@ -32,7 +32,6 @@ class MemberService {
         private ClubMapper $clubMapper,
         private IUserManager $userManager,
         private FeeRateMapper $feeRates,
-        private ?MemberCalendarService $calendarService = null,
         private ?AuditLogService $auditLog = null
     ) {
     }
@@ -125,7 +124,6 @@ class MemberService {
         $member->setMembership($this->membershipMapper->insert($membership));
 
         $this->auditLog?->record($clubId, 'member', $member->getId(), 'create', $member->jsonSerialize());
-        $this->syncCalendar($clubId, $member);
         return $member;
     }
 
@@ -154,7 +152,6 @@ class MemberService {
         $membership->setUpdatedAt(date('Y-m-d H:i:s'));
         $member->setMembership($this->membershipMapper->insert($membership));
 
-        $this->syncCalendar($clubId, $member);
         return $member;
     }
 
@@ -177,12 +174,10 @@ class MemberService {
         // club they belong to
         foreach ($this->membershipMapper->findByMember($id) as $other) {
             if ($other->getClubId() === $clubId) {
-                $this->syncCalendar($clubId, $member);
                 continue;
             }
             $inOther = clone $member;
             $inOther->setMembership($other);
-            $this->syncCalendar($other->getClubId(), $inOther);
         }
 
         return $member;
@@ -195,9 +190,6 @@ class MemberService {
      */
     public function remove(int $clubId, int $id): void {
         $member = $this->find($clubId, $id);
-
-        $club = $this->clubMapper->find($clubId);
-        $this->calendarService?->removeMember($club, $member);
 
         $this->feeMapper->deleteByMemberInClub($id, $clubId);
         $membershipId = $member->getMembership()->getId();
@@ -234,7 +226,6 @@ class MemberService {
             $membership->setUpdatedAt(date('Y-m-d H:i:s'));
             $member->setMembership($this->membershipMapper->update($membership));
             $this->auditLog?->record($clubId, 'membership', $membership->getId(), $deactivated ? 'deactivate' : 'activate', ['memberId' => $id]);
-            $this->syncCalendar($clubId, $member);
         }
         return $member;
     }
@@ -305,13 +296,6 @@ class MemberService {
         if ($changes !== []) {
             $this->auditLog->record($clubId, 'member', $member->getId(), 'update', $changes);
         }
-    }
-
-    private function syncCalendar(int $clubId, Member $member): void {
-        if ($this->calendarService === null) {
-            return;
-        }
-        $this->calendarService->syncMember($this->clubMapper->find($clubId), $member);
     }
 
     /**

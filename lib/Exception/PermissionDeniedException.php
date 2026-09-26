@@ -25,7 +25,7 @@ class PermissionDeniedException extends Exception {
     public function __construct(
         string $message = "Berechtigung verweigert",
         int $code = 403,
-        Exception $previous = null
+        ?Exception $previous = null
     ) {
         $this->statusCode = $code;
         parent::__construct($message, $code, $previous);

@@ -26,7 +26,7 @@
           @update:model-value="form.calendarGroups = $event"
           label="Nextcloud-Gruppen für den Vereinskalender"
           placeholder="vorstand, mitglieder"
-          helper-text="Kommagetrennt. Diese Gruppen können den Kalender „Vereinstermine“ (Geburtstage, Jubiläen) sehen."
+          helper-text="Kommagetrennt. Mitglieder dieser Nextcloud-Gruppen sehen den Kalender „Vereinstermine“ mit Geburtstagen und Vereinsjubiläen automatisch in ihrer Kalender-App und auf dem Handy (nur lesend). Geburtstage sind personenbezogene Daten – nur Gruppen eintragen, die sie sehen sollen."
         />
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">Speichern</NcButton>

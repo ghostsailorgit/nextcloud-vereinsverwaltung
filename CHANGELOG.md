@@ -4,6 +4,32 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.0-beta] - 2026-09-26
+
+Der Vereinskalender kommt jetzt über Nextclouds offizielle Schnittstelle für App-Kalender.
+
+### ✨ Geändert
+- **Vereinskalender als App-Kalender** (`OCP\Calendar\ICalendarProvider`): Der Kalender „Vereinstermine <Verein>“ wird bei jedem
+  Abruf aus den Mitgliederdaten erzeugt, statt Termine als Kopie in einem geteilten Kalender zu speichern. Wer in einer der
+  Kalendergruppen des Vereins ist, sieht ihn automatisch in der Kalender-App und auf dem Handy (CalDAV), nur lesend. Deaktivieren,
+  Austritt, Tod und Anonymisieren wirken sofort; es gibt keine zweite Kopie der Geburtsdaten mehr und keine vergessenen Termine
+  (im alten Kalender der Test-Instanz stand noch der Termin einer längst gelöschten Person).
+- Die App braucht dafür keine internen Klassen der Nextcloud-Kalender-App mehr – ein Nextcloud-Update kann den Kalender nicht
+  mehr unbemerkt brechen.
+- **Beim Update** löscht die App einmalig den bisherigen gespeicherten Kalender samt Terminen und Freigaben
+  (Reparaturschritt `RemoveLegacyCalendars`). Scheitert das, bleibt er stehen und der Grund steht im Update-Protokoll.
+
+### 🐛 Behoben
+- `appinfo/info.xml` entsprach nicht Nextclouds Schema (Reihenfolge der Abschnitte) – der App Store hätte die App abgelehnt.
+  Die CI prüft das jetzt.
+
+### 🔧 Technik
+- CI: der App-Kalender (sichtbar nur für Gruppenmitglieder, Termine per CalDAV, Schreiben abgewiesen, keine Log-Warnungen) und
+  das Entfernen eines alten Kalenders laufen auf Nextcloud 33, 34 und 35 mit allen Datenbanken.
+- `sabre/vobject` nur als Entwicklungsabhängigkeit (für Tests); zur Laufzeit nutzt die App die Kopie aus Nextcloud.
+
+---
+
 ## [0.17.1-beta] - 2026-09-26
 
 Lizenzangaben je Datei und ehrliche, geprüfte Kompatibilität.

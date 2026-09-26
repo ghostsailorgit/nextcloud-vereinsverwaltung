@@ -32,7 +32,6 @@ class ClubService {
         private UserRoleMapper $userRoleMapper,
         private RoleService $roleService,
         private ValidationService $validation,
-        private MemberCalendarService $calendar,
         private RoleMapper $roleMapper,
         private FeeRateMapper $feeRates,
         private ?AuditLogService $auditLog = null
@@ -87,7 +86,6 @@ class ClubService {
         $club->setCreatedAt(date('Y-m-d H:i:s'));
         $club = $this->clubMapper->insert($club);
         $this->auditLog?->record($club->getId(), 'club', $club->getId(), 'create', $club->jsonSerialize());
-        $this->calendar->syncClubCalendar($club);
         return $club;
     }
 
@@ -106,7 +104,6 @@ class ClubService {
                 $this->auditLog->record($id, 'club', $id, 'update', $changes);
             }
         }
-        $this->calendar->syncClubCalendar($club);
         return $club;
     }
 
@@ -121,7 +118,6 @@ class ClubService {
         if ($this->membershipMapper->countByClub($id) > 0) {
             throw new ValidationException('Der Verein hat noch Mitglieder und kann nicht gelöscht werden');
         }
-        $this->calendar->deleteClubCalendar($club);
         $this->accountMapper->deleteByClub($id);
         $this->feeRates->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);

@@ -58,7 +58,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 4. **Automatic rights** (`RoleService::derivedRoles()`): explicit assignments + roles mapped from the linked
    person's *active* memberships (no leave date, not deceased, not deactivated). Deactivating a membership
    (`MemberService::deactivate()`, per club) deletes nothing; it stops payments (fee run, SEPA export and manual
-   fees skip/refuse the member), removes the birthday/anniversary calendar events and suspends this derivation
+   fees skip/refuse the member), hides the member from the club calendar and suspends this derivation
    until `activate()`. No mapping configured = nothing derived.
 5. **SEPA export only includes fees whose member has an IBAN AND a mandate signature date**; the rest are
    reported with the reason, never dropped silently. Mandate reference falls back to `M<clubId>-<memberId>`.
@@ -78,10 +78,13 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 10. Schema changes are `lib/Migration/Version*` classes (the legacy `appinfo/database.xml` is NOT processed).
    Bump `<version>` in `appinfo/info.xml` for every release so Nextcloud runs `occ upgrade` and the
    browser gets the new (immutable-cached) JS.
-11. Calendar events are managed through `OCA\DAV\CalDAV\CalDavBackend` (the public `OCP\Calendar` API cannot
-    update/delete). The calendar is shared read-only with Nextcloud groups configured per club - never with a
-    public link (member birth dates are personal data).
-12. **Audit log** (`AuditLogService`, injected as an optional collaborator like `MemberCalendarService` - a
+11. **Calendar = app calendar, nothing stored:** `lib/Calendar/ClubCalendarProvider` (public `OCP\Calendar\ICalendarProvider`,
+    registered in `Application::register()`) gives users in a club's calendar groups a read-only calendar computed live from
+    the member data (`ClubCalendar`; `ClubEvent` answers `$event['UID']`, which Nextcloud's AppCalendar wrapper relies on).
+    Never go back to storing events or sharing a calendar, and never expose it publicly (birth dates are personal data).
+    The only remaining use of DAV internals is the one-time repair step `Migration/RemoveLegacyCalendars` (deletes the
+    pre-0.18 stored calendars; looked up by class name, failures only logged).
+12. **Audit log** (`AuditLogService`, injected as an optional collaborator - a
     service without one just logs nothing, so existing tests that construct a service directly still compile):
     call `record()` after a create/delete, or `diff(before, after)` then `record()` with the result after an
     update, so a manual DI factory in `Application.php` must be updated too when you add the param (see

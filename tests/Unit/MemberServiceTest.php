@@ -43,7 +43,7 @@ class MemberServiceTest extends TestCase {
 
         $this->userManager = $this->createMock(IUserManager::class);
         $this->feeRates = $this->createMock(FeeRateMapper::class);
-        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, null);
+        $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates);
     }
 
     private function person(int $id, string $name = 'Mustermann'): Member {
@@ -202,7 +202,7 @@ class MemberServiceTest extends TestCase {
         $this->assertFalse($other->isFormer());
     }
 
-    // --- deactivating (see RoleService::derivedRoles(), FeeRunService, SepaService, MemberCalendarService)
+    // --- deactivating (see RoleService::derivedRoles(), FeeRunService, SepaService, ClubCalendar)
 
     public function testDeactivateSetsTheFlagOnTheMembershipOfThisClub(): void {
         $this->updatable(8);
@@ -410,7 +410,7 @@ class MemberServiceTest extends TestCase {
                 $seen[] = [$type, $id];
             }
         );
-        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, null, $auditLog);
+        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, $auditLog);
 
         $service->anonymize(8);
 

@@ -11,6 +11,8 @@
  *   php smoke.php run     creates clubs, members (incl. CSV import), fee run, dunning + letters, audit log paging,
  *                         a role for the non-admin CI user, anonymize, and a backup; writes smoke-state.json
  *   php smoke.php mutate  deletes a member (to see the restore bring it back)
+ *   php smoke.php calendar the club app calendar for a group member (not for others) and the one-time removal of
+ *                         an old stored calendar by the repair step RemoveLegacyCalendars
  *   php smoke.php verify  after `occ verein:backup:restore <backup> --yes`: counts must equal the backup's
  *
  * Exits non-zero on the first failed check. Only made-up data ("CI ..."), in a throw-away CI instance.
@@ -149,6 +151,52 @@ if ($mode === 'mutate') {
     svc(MemberService::class)->remove($state['clubId'], $state['deleteMember']);
     $counts = svc(BackupService::class)->currentCounts();
     check($counts['verein_members'] === $state['counts']['verein_members'] - 1, 'a member was removed before the restore');
+    exit(0);
+}
+if ($mode === 'calendar') {
+    // 1) the app calendar (ClubCalendarProvider): only for users in one of the club's calendar groups
+    $groups = svc(\OCP\IGroupManager::class);
+    $group = $groups->createGroup('ci-kalender');
+    $group->addUser(svc(\OCP\IUserManager::class)->get('ci-user'));
+    $clubs = svc(ClubService::class);
+    $club = $clubs->find($state['clubId']);
+    $clubs->update($club->getId(), ['name' => $club->getName(), 'street' => $club->getStreet(), 'postalCode' => $club->getPostalCode(),
+        'city' => $club->getCity(), 'calendarGroups' => 'ci-kalender']);
+    $provider = svc(\OCA\Verein\Calendar\ClubCalendarProvider::class);
+    $cals = $provider->getCalendars('principals/users/ci-user');
+    check(count($cals) === 1 && $cals[0]->getDisplayName() === 'Vereinstermine CI Verein', 'ci-user (in the calendar group) gets the club calendar');
+    check($provider->getCalendars('principals/users/admin') === [], 'admin (not in the group) gets no club calendar');
+    // active members of the run: Müller, Jung, Mitglied (honorary), Spät -> birthday + anniversary each; paused/former/anonymized none
+    $events = $cals[0]->search('');
+    check(count($events) === 8, 'club calendar has 8 events (got ' . count($events) . ')');
+    check((string)$events[0]['UID'] !== '', 'events answer $event[\'UID\'] like Nextcloud\'s AppCalendar reads them');
+
+    // 2) the one-time cleanup of the old stored calendar, as it existed up to 0.17
+    $backend = Server::get('OCA\\DAV\\CalDAV\\CalDavBackend');
+    $calId = $backend->createCalendar('principals/users/admin', 'vereinstermine-ci', ['{DAV:}displayname' => 'Vereinstermine CI Verein']);
+    $backend->createCalendarObject($calId, 'verein-member-1-birthday.ics',
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:verein-member-1-birthday@verein\r\nDTSTAMP:20260101T000000Z\r\nDTSTART;VALUE=DATE:19800201\r\nRRULE:FREQ=YEARLY\r\nSUMMARY:x\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n");
+    $club = $clubs->find($state['clubId']);
+    $club->setCalendarUri('vereinstermine-ci');
+    svc(\OCA\Verein\Db\ClubMapper::class)->update($club);
+    $output = new class implements \OCP\Migration\IOutput {
+        public array $lines = [];
+        public function debug(string $message): void { $this->lines[] = $message; }
+        public function info($message) { $this->lines[] = $message; }
+        public function warning($message) { $this->lines[] = 'WARNING ' . $message; }
+        public function startProgress($max = 0) {}
+        public function advance($step = 1, $description = '') {}
+        public function finishProgress() {}
+    };
+    $step = svc(\OCA\Verein\Migration\RemoveLegacyCalendars::class);
+    $step->run($output);
+    echo '     repair output: ' . implode(' | ', $output->lines) . "\n";
+    check($backend->getCalendarByUri('principals/users/admin', 'vereinstermine-ci') === null, 'old stored calendar deleted by the repair step');
+    check($clubs->find($state['clubId'])->getCalendarUri() === null, 'club no longer points to an old calendar');
+    $again = clone $output;
+    $again->lines = [];
+    $step->run($again);
+    check($again->lines === [], 'second run of the repair step does nothing');
     exit(0);
 }
 if ($mode === 'verify') {
