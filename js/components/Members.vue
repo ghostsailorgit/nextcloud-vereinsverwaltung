@@ -15,112 +15,114 @@
 
     <!-- Form für neues/zu bearbeitendes Mitglied -->
     <div v-if="canManage" class="form-section">
-      <h2>{{ editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied hinzufügen' }}</h2>
+      <h2>{{ editingId ? t('verein', 'Edit member') : t('verein', 'Add new member') }}</h2>
 
       <!-- Add a person who is already a member of another club (no duplicate) -->
       <div v-if="!editingId" class="lookup-box">
-        <h3 class="form-subheader">Person aus einem anderen Verein übernehmen</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Take over a person from another club') }}</h3>
         <NcTextField
           :model-value="lookupQuery"
           @update:model-value="onLookupInput"
           type="text"
-          label="Name suchen"
-          placeholder="Nachname oder Vorname"
+          :label="t('verein', 'Search name')"
+          :placeholder="t('verein', 'Last name or first name')"
         />
         <label class="date-field">
-          <span>Eintrittsdatum in diesen Verein</span>
+          <span>{{ t('verein', 'Join date in this club') }}</span>
           <input v-model="lookupJoinDate" type="date" class="form-input" />
         </label>
         <ul v-if="lookupResults.length" class="lookup-results">
           <li v-for="r in lookupResults" :key="r.id">
-            <span>{{ r.fullName }} <small>({{ r.birthDate || 'kein Geburtsdatum' }}, {{ r.city || 'kein Ort' }})</small></span>
-            <NcButton variant="secondary" :disabled="loading" @click="attachExisting(r)">Übernehmen</NcButton>
+            <span>{{ r.fullName }} <small>({{ r.birthDate || t('verein', 'no birth date') }}, {{ r.city || t('verein', 'no city') }})</small></span>
+            <NcButton variant="secondary" :disabled="loading" @click="attachExisting(r)">{{ t('verein', 'Take over') }}</NcButton>
           </li>
         </ul>
         <p v-else-if="lookupQuery.trim().length >= 2 && lookupDone" class="hint">
-          Keine passende Person in deinen anderen Vereinen gefunden.
+          {{ t('verein', 'No matching person found in your other clubs.') }}
         </p>
       </div>
 
       <form @submit.prevent="saveMember" class="member-form">
-        <h3 class="form-subheader">Persönliche Daten</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Personal data') }}</h3>
         <NcSelect
           v-model="formData.salutation"
           :options="salutationOptions"
-          input-label="Anrede"
-          placeholder="-- wählen --"
+          :reduce="option => option.id"
+          label="label"
+          :input-label="t('verein', 'Salutation')"
+          :placeholder="t('verein', '-- choose --')"
         />
         <NcTextField
           :model-value="formData.firstName"
           @update:model-value="formData.firstName = $event"
           type="text"
-          label="Vorname"
+          :label="t('verein', 'First name')"
           placeholder="Max"
         />
         <NcTextField
           :model-value="formData.name"
           @update:model-value="formData.name = $event"
           type="text"
-          label="Name"
+          :label="t('verein', 'Name')"
           placeholder="Mustermann"
           required
         />
         <label class="date-field">
-          <span>Geburtsdatum</span>
+          <span>{{ t('verein', 'Birth date') }}</span>
           <input v-model="formData.birthDate" type="date" class="form-input" />
         </label>
 
-        <h3 class="form-subheader">Adresse</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Address') }}</h3>
         <NcTextField
           :model-value="formData.street"
           @update:model-value="formData.street = $event"
           type="text"
-          label="Straße"
+          :label="t('verein', 'Street')"
         />
         <NcTextField
           :model-value="formData.postalCode"
           @update:model-value="formData.postalCode = $event"
           type="text"
-          label="PLZ"
+          :label="t('verein', 'Postal code')"
         />
         <NcTextField
           :model-value="formData.city"
           @update:model-value="formData.city = $event"
           type="text"
-          label="Ort"
+          :label="t('verein', 'City')"
         />
         <NcTextField
           :model-value="formData.email"
           @update:model-value="formData.email = $event"
           type="email"
-          label="E-Mail"
-          placeholder="max@example.com (optional)"
+          :label="t('verein', 'E-mail')"
+          :placeholder="t('verein', 'max@example.com (optional)')"
         />
 
         <div class="account-link">
           <NcSelectUsers
             v-model="selectedUser"
             :options="userOptions"
-            input-label="Verknüpftes Nextcloud-Konto"
+            :input-label="t('verein', 'Linked Nextcloud account')"
             :disabled="!canManageRoles"
-            placeholder="Name oder Benutzername eingeben"
+            :placeholder="t('verein', 'Enter name or user name')"
             @search="onUserSearch"
             @update:model-value="onUserPicked"
           />
           <p class="hint">
-            Optional. Verknüpft dieses Mitglied mit seinem Nextcloud-Login (z. B. Vorstandsmitglieder). Damit kann es unter „Meine Daten“ seine Daten einsehen; Vereinsrolle und Konto bestimmen zusammen die automatischen Rechte.
-            <strong v-if="!canManageRoles">Rolle und Konto ändern darf nur, wer Rollen verwalten darf.</strong>
-            <span v-if="!formData.userId && userOptions.length">Vorschläge nach Namen stehen im Dropdown.</span>
+            {{ t('verein', 'Optional. Links this member to their Nextcloud login (e.g. board members). They can then view their data under "My data"; club role and account together determine the automatic rights.') }}
+            <strong v-if="!canManageRoles">{{ t('verein', 'Only those who may manage roles can change role and account.') }}</strong>
+            <span v-if="!formData.userId && userOptions.length">{{ t('verein', 'Suggestions by name are in the dropdown.') }}</span>
           </p>
         </div>
 
-        <h3 class="form-subheader">Mitgliedschaft</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Membership') }}</h3>
         <label class="date-field">
-          <span>Eintrittsdatum</span>
+          <span>{{ t('verein', 'Join date') }}</span>
           <input v-model="formData.joinDate" type="date" class="form-input" />
         </label>
         <label class="date-field">
-          <span>Austrittsdatum</span>
+          <span>{{ t('verein', 'Leave date') }}</span>
           <input v-model="formData.leaveDate" type="date" class="form-input" />
         </label>
         <NcSelect
@@ -128,7 +130,7 @@
           :options="roleOptions"
           :reduce="option => option.id"
           label="label"
-          input-label="Rolle"
+          :input-label="t('verein', 'Role')"
           :clearable="false"
           :disabled="!canManageRoles"
         />
@@ -137,19 +139,19 @@
           :options="feeRateOptions"
           :reduce="r => r.id"
           label="label"
-          input-label="Beitragskategorie"
-          placeholder="Standard des Vereins"
+          :input-label="t('verein', 'Fee rate')"
+          :placeholder="t('verein', 'Club default')"
         />
         <label class="checkbox-field">
           <input v-model="formData.foundingMember" type="checkbox" />
-          <span>Gründungsmitglied</span>
+          <span>{{ t('verein', 'Founding member') }}</span>
         </label>
         <label class="checkbox-field">
           <input v-model="formData.deceased" type="checkbox" />
-          <span>Verstorben</span>
+          <span>{{ t('verein', 'Deceased') }}</span>
         </label>
 
-        <h3 class="form-subheader">Bankverbindung</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Bank account') }}</h3>
         <NcTextField
           :model-value="formData.iban"
           @update:model-value="formData.iban = $event"
@@ -163,34 +165,34 @@
           label="BIC"
         />
 
-        <h3 class="form-subheader">SEPA-Lastschriftmandat (für diesen Verein)</h3>
+        <h3 class="form-subheader">{{ t('verein', 'SEPA direct debit mandate (for this club)') }}</h3>
         <NcTextField
           :model-value="formData.mandateReference"
           @update:model-value="formData.mandateReference = $event"
           type="text"
-          label="Mandatsreferenz"
-          placeholder="leer = automatisch"
+          :label="t('verein', 'Mandate reference')"
+          :placeholder="t('verein', 'empty = automatic')"
         />
         <label class="date-field">
-          <span>Unterschriftsdatum</span>
+          <span>{{ t('verein', 'Signature date') }}</span>
           <input v-model="formData.mandateDate" type="date" class="form-input" />
         </label>
         <div class="mandate-file">
-          <span>Unterschriebenes Mandat (PDF)</span>
+          <span>{{ t('verein', 'Signed mandate (PDF)') }}</span>
           <div class="mandate-file-row">
             <a v-if="formData.mandateFile" :href="mandateFileUrl(formData.mandateFile)" target="_blank" rel="noopener">{{ formData.mandateFile }}</a>
-            <span v-else class="hint">keine Datei verknüpft</span>
-            <NcButton type="button" variant="secondary" @click="pickMandateFile">Datei wählen</NcButton>
-            <NcButton v-if="formData.mandateFile" type="button" variant="tertiary" @click="formData.mandateFile = ''">Entfernen</NcButton>
+            <span v-else class="hint">{{ t('verein', 'no file linked') }}</span>
+            <NcButton type="button" variant="secondary" @click="pickMandateFile">{{ t('verein', 'Choose file') }}</NcButton>
+            <NcButton v-if="formData.mandateFile" type="button" variant="tertiary" @click="formData.mandateFile = ''">{{ t('verein', 'Remove') }}</NcButton>
           </div>
         </div>
 
         <div class="form-actions">
           <NcButton type="submit" variant="primary" :disabled="loading">
-            {{ loading ? 'Wird gespeichert...' : (editingId ? 'Speichern' : 'Hinzufügen') }}
+            {{ loading ? t('verein', 'Saving...') : (editingId ? t('verein', 'Save') : t('verein', 'Add')) }}
           </NcButton>
           <NcButton v-if="editingId" type="button" variant="tertiary" @click="cancelEdit">
-            Abbrechen
+            {{ t('verein', 'Cancel') }}
           </NcButton>
         </div>
       </form>
@@ -201,10 +203,10 @@
 
     <div class="table-section">
       <div class="section-header">
-        <h2>Mitgliederliste</h2>
+        <h2>{{ t('verein', 'Member list') }}</h2>
         <div class="export-buttons">
           <NcButton v-if="canManage" variant="secondary" @click="showImport = !showImport">
-            {{ showImport ? 'Import schließen' : 'CSV importieren' }}
+            {{ showImport ? t('verein', 'Close import') : t('verein', 'Import CSV') }}
           </NcButton>
           <ExportButtons resource="members" inline />
         </div>
@@ -226,16 +228,16 @@
         <table class="members-table">
           <thead>
             <tr>
-              <th>Nr.</th>
-              <th>Name</th>
-              <th>E-Mail</th>
-              <th>Ort</th>
-              <th>NC-Konto</th>
-              <th>Alter</th>
-              <th>Mitglied seit</th>
-              <th>Rolle</th>
-              <th>Status</th>
-              <th>Aktionen</th>
+              <th>{{ t('verein', 'No.') }}</th>
+              <th>{{ t('verein', 'Name') }}</th>
+              <th>{{ t('verein', 'E-mail') }}</th>
+              <th>{{ t('verein', 'City') }}</th>
+              <th>{{ t('verein', 'NC account') }}</th>
+              <th>{{ t('verein', 'Age') }}</th>
+              <th>{{ t('verein', 'Member since') }}</th>
+              <th>{{ t('verein', 'Role') }}</th>
+              <th>{{ t('verein', 'Status') }}</th>
+              <th>{{ t('verein', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -245,29 +247,29 @@
               <td>{{ member.email }}</td>
               <td>{{ member.city || '-' }}</td>
               <td>
-                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> (Konto fehlt)</span></span>
+                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'account missing') }})</span></span>
                 <span v-else class="hint">–</span>
               </td>
-              <td>{{ member.age !== null && member.age !== undefined ? member.age + ' J.' : '-' }}</td>
-              <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? member.membershipYears + ' J.' : '-' }}</td>
+              <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n yr.', '%n yrs.', member.age) : '-' }}</td>
+              <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n yr.', '%n yrs.', member.membershipYears) : '-' }}</td>
               <td>
                 <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
               </td>
               <td class="status-cell">
-                <span v-if="member.deceased" class="status-badge deceased">Verstorben</span>
-                <span v-if="member.anonymizedAt" class="status-badge anonymized" title="Personenbezogene Daten wurden unwiderruflich entfernt">Anonymisiert</span>
-                <span v-else-if="member.isFormer" class="status-badge former">Ehemalig</span>
+                <span v-if="member.deceased" class="status-badge deceased">{{ t('verein', 'Deceased') }}</span>
+                <span v-if="member.anonymizedAt" class="status-badge anonymized" :title="t('verein', 'Personal data was removed irreversibly')">{{ t('verein', 'Anonymized') }}</span>
+                <span v-else-if="member.isFormer" class="status-badge former">{{ t('verein', 'Former') }}</span>
                 <span
                   v-else-if="member.deactivated"
                   class="status-badge deactivated"
-                  title="Keine Beiträge, keine Geburtstagstermine und keine automatischen Rechte, bis das Mitglied wieder aktiviert wird"
-                >Deaktiviert</span>
-                <span v-else class="status-badge active">Aktiv</span>
-                <span v-if="member.foundingMember" class="status-badge founding" title="Gründungsmitglied">★</span>
+                  :title="t('verein', 'No fees, no birthday events and no automatic rights until the member is activated again')"
+                >{{ t('verein', 'Deactivated') }}</span>
+                <span v-else class="status-badge active">{{ t('verein', 'Active') }}</span>
+                <span v-if="member.foundingMember" class="status-badge founding" :title="t('verein', 'Founding member')">★</span>
               </td>
               <td class="actions">
                 <NcButton v-if="canManage" @click="startEdit(member)" variant="secondary">
-                  Bearbeiten
+                  {{ t('verein', 'Edit') }}
                 </NcButton>
                 <NcButton
                   v-if="canManage && canManageRoles && member.deactivated"
@@ -275,7 +277,7 @@
                   variant="secondary"
                   :disabled="loading"
                 >
-                  Aktivieren
+                  {{ t('verein', 'Activate') }}
                 </NcButton>
                 <NcButton
                   v-else-if="canManage && canManageRoles"
@@ -283,7 +285,7 @@
                   variant="secondary"
                   :disabled="loading"
                 >
-                  Deaktivieren
+                  {{ t('verein', 'Deactivate') }}
                 </NcButton>
                 <NcButton
                   v-if="canManage"
@@ -291,31 +293,31 @@
                   variant="error"
                   :disabled="loading"
                 >
-                  Aus Verein entfernen
+                  {{ t('verein', 'Remove from club') }}
                 </NcButton>
                 <NcButton
                   variant="tertiary"
                   :disabled="loading"
-                  title="Alle gespeicherten Daten dieser Person in diesem Verein als JSON-Datei (Auskunft nach Art. 15 DSGVO)"
+                  :title="t('verein', 'All stored data of this person in this club as a JSON file (information under Art. 15 GDPR)')"
                   @click="exportMember(member)"
                 >
-                  Datenauskunft
+                  {{ t('verein', 'Data information') }}
                 </NcButton>
                 <NcButton
                   v-if="canManageRoles && member.isFormer && !member.anonymizedAt"
                   variant="error"
                   :disabled="loading"
-                  title="Personenbezogene Daten unwiderruflich entfernen (nur wenn die Person überall ausgetreten oder verstorben ist)"
+                  :title="t('verein', 'Remove personal data irreversibly (only if the person has left everywhere or is deceased)')"
                   @click="anonymizeTarget = member"
                 >
-                  Anonymisieren
+                  {{ t('verein', 'Anonymize') }}
                 </NcButton>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-if="filteredMembers.length === 0" class="empty-state">Keine Mitglieder in dieser Kategorie</p>
+      <p v-if="filteredMembers.length === 0" class="empty-state">{{ t('verein', 'No members in this category') }}</p>
     </div>
 
     <AnonymizeDialog
@@ -332,6 +334,7 @@ import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
+import { t, n } from '@nextcloud/l10n'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -388,12 +391,18 @@ export default {
     const category = ref('active')
 
     const roleOptions = [
-      { id: 'member', label: 'Mitglied' },
-      { id: 'admin', label: 'Vorstand' },
-      { id: 'treasurer', label: 'Kassierer' }
+      { id: 'member', label: t('verein', 'Member') },
+      { id: 'admin', label: t('verein', 'Board') },
+      { id: 'treasurer', label: t('verein', 'Treasurer') }
     ]
 
-    const salutationOptions = ['Herr', 'Frau', 'Divers', 'Firma']
+    // the stored value stays German (it is printed in letters); only the label is translated
+    const salutationOptions = [
+      { id: 'Herr', label: t('verein', 'Mr') },
+      { id: 'Frau', label: t('verein', 'Ms') },
+      { id: 'Divers', label: t('verein', 'Diverse') },
+      { id: 'Firma', label: t('verein', 'Company') }
+    ]
 
     const formData = reactive(emptyFormData())
     const canManage = computed(() => can('verein.member.manage'))
@@ -403,7 +412,7 @@ export default {
     const feeRateOptions = computed(() =>
       (currentClub.value?.feeRates || []).map(r => ({
         id: r.id,
-        label: r.name + ' (' + Number(r.amount).toFixed(2).replace('.', ',') + ' €)' + (r.isDefault ? ' – Standard' : '')
+        label: r.name + ' (' + Number(r.amount).toFixed(2).replace('.', ',') + ' €)' + (r.isDefault ? ' – ' + t('verein', 'default') : '')
       }))
     )
 
@@ -417,7 +426,7 @@ export default {
         const response = await api.get('members/users', { params: { query } })
         userOptions.value = (response.data.users || []).map(u => ({
           ...u,
-          subname: u.linkedTo ? `${u.id} – bereits verknüpft mit ${u.linkedTo}` : u.id
+          subname: u.linkedTo ? t('verein', '{id} – already linked to {name}', { id: u.id, name: u.linkedTo }) : u.id
         }))
       } catch (error) {
         userOptions.value = []
@@ -438,7 +447,7 @@ export default {
 
     const onUserPicked = (user) => {
       if (user && user.linkedToId && user.linkedToId !== editingId.value) {
-        showError(`${user.displayName} ist bereits mit ${user.linkedTo} verknüpft`)
+        showError(t('verein', '{user} is already linked to {name}', { user: user.displayName, name: user.linkedTo }))
         setSelectedUserFrom(formData)
         return
       }
@@ -480,13 +489,13 @@ export default {
           joinDate: lookupJoinDate.value,
           role: 'member'
         })
-        showSuccess(person.fullName + ' wurde dem Verein hinzugefügt')
+        showSuccess(t('verein', '{name} was added to the club', { name: person.fullName }))
         lookupQuery.value = ''
         lookupResults.value = []
         lookupJoinDate.value = ''
         await fetchMembers()
       } catch (error) {
-        showError(extractErrorMessage(error, 'Person konnte nicht hinzugefügt werden'))
+        showError(extractErrorMessage(error, t('verein', 'Person could not be added')))
       } finally {
         loading.value = false
       }
@@ -496,7 +505,7 @@ export default {
     const pickMandateFile = async () => {
       try {
         const start = currentClub.value?.documentsPath || '/'
-        const path = await getFilePickerBuilder('Unterschriebenes SEPA-Mandat wählen')
+        const path = await getFilePickerBuilder(t('verein', 'Choose signed SEPA mandate'))
           .setMultiSelect(false)
           .setMimeTypeFilter(['application/pdf', 'image/jpeg', 'image/png'])
           .startAt(start)
@@ -527,7 +536,7 @@ export default {
         members.value = response.data.members || []
       } catch (error) {
         console.error('Error fetching members:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Laden der Mitglieder'))
+        showError(extractErrorMessage(error, t('verein', 'Error loading the members')))
       } finally {
         loading.value = false
       }
@@ -537,9 +546,9 @@ export default {
       const active = members.value.filter(m => !m.isFormer).length
       const former = members.value.filter(m => m.isFormer).length
       return [
-        { id: 'active', label: 'Aktiv', count: active },
-        { id: 'former', label: 'Ehemalig', count: former },
-        { id: 'all', label: 'Alle', count: members.value.length }
+        { id: 'active', label: t('verein', 'Active'), count: active },
+        { id: 'former', label: t('verein', 'Former'), count: former },
+        { id: 'all', label: t('verein', 'All'), count: members.value.length }
       ]
     })
 
@@ -568,13 +577,13 @@ export default {
           alertErrors.value = response.data.errors || []
           if (alertRef.value) alertRef.value.open()
         } else {
-          showSuccess(editingId.value ? 'Mitglied aktualisiert' : 'Mitglied hinzugefügt')
+          showSuccess(editingId.value ? t('verein', 'Member updated') : t('verein', 'Member added'))
           cancelEdit()
           await fetchMembers()
         }
       } catch (error) {
         const data = error.response?.data
-        alertError.value = data?.message || error.message || 'Fehler beim Speichern des Mitglieds'
+        alertError.value = data?.message || error.message || t('verein', 'Error saving the member')
         alertErrors.value = data?.errors || []
         if (alertRef.value) alertRef.value.open()
         console.error('Error saving member:', error)
@@ -600,7 +609,7 @@ export default {
         if (!formData.userId) runUserSearch(formData.name)
       } catch (error) {
         console.error('Error loading member details:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Laden des Mitglieds'))
+        showError(extractErrorMessage(error, t('verein', 'Error loading the member')))
       }
     }
 
@@ -612,33 +621,33 @@ export default {
     }
 
     const deleteMember = async (id) => {
-      if (!(await confirmAction('Aus dem Verein entfernen', 'Soll dieses Mitglied aus dem Verein entfernt werden? Seine Beiträge in diesem Verein werden ebenfalls gelöscht; die Person bleibt in anderen Vereinen erhalten.', { labelConfirm: 'Entfernen', severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Remove from the club'), t('verein', 'Remove this member from the club? Their fees in this club are deleted as well; the person remains in other clubs.'), { labelConfirm: t('verein', 'Remove'), severity: 'error' }))) return
 
       loading.value = true
       try {
         await api.delete(`members/${id}`)
-        showSuccess('Mitglied gelöscht')
+        showSuccess(t('verein', 'Member deleted'))
         if (editingId.value === id) cancelEdit()
         await fetchMembers()
       } catch (error) {
         console.error('Error deleting member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Löschen des Mitglieds'))
+        showError(extractErrorMessage(error, t('verein', 'Error deleting the member')))
       } finally {
         loading.value = false
       }
     }
 
     const deactivateMember = async (id) => {
-      if (!(await confirmAction('Mitglied deaktivieren', 'Dieses Mitglied deaktivieren? Es wird nicht mehr für Beiträge und SEPA-Einzug berücksichtigt, die Geburtstags- und Jubiläumstermine entfallen und automatisch abgeleitete Rechte (aus der Vereinsfunktion) werden ausgesetzt. Nichts wird gelöscht; mit „Aktivieren“ ist alles wieder da.', { labelConfirm: 'Deaktivieren', severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Deactivate member'), t('verein', 'Deactivate this member? They are no longer included in fees and SEPA collection, the birthday and anniversary events are dropped and automatically derived rights (from the club role) are suspended. Nothing is deleted; "Activate" brings everything back.'), { labelConfirm: t('verein', 'Deactivate'), severity: 'warning' }))) return
 
       loading.value = true
       try {
         await api.post(`members/${id}/deactivate`)
-        showSuccess('Mitglied deaktiviert')
+        showSuccess(t('verein', 'Member deactivated'))
         await fetchMembers()
       } catch (error) {
         console.error('Error deactivating member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Deaktivieren des Mitglieds'))
+        showError(extractErrorMessage(error, t('verein', 'Error deactivating the member')))
       } finally {
         loading.value = false
       }
@@ -648,11 +657,11 @@ export default {
       loading.value = true
       try {
         await api.post(`members/${id}/activate`)
-        showSuccess('Mitglied aktiviert')
+        showSuccess(t('verein', 'Member activated'))
         await fetchMembers()
       } catch (error) {
         console.error('Error activating member:', error)
-        showError(extractErrorMessage(error, 'Fehler beim Aktivieren des Mitglieds'))
+        showError(extractErrorMessage(error, t('verein', 'Error activating the member')))
       } finally {
         loading.value = false
       }
@@ -670,14 +679,14 @@ export default {
         const url = URL.createObjectURL(response.data)
         const link = document.createElement('a')
         link.href = url
-        link.download = `mitgliedsdaten-${member.id}.json`
+        link.download = t('verein', 'member-data-{id}.json', { id: member.id })
         document.body.appendChild(link)
         link.click()
         link.remove()
         setTimeout(() => URL.revokeObjectURL(url), 1000)
       } catch (error) {
         // the error body arrives as a Blob because of responseType
-        let message = 'Datenauskunft fehlgeschlagen'
+        let message = t('verein', 'Data information failed')
         try {
           message = JSON.parse(await error.response.data.text()).message || message
         } catch (e) {
@@ -692,6 +701,8 @@ export default {
     }
 
     return {
+      t,
+      n,
       members,
       loading,
       editingId,
