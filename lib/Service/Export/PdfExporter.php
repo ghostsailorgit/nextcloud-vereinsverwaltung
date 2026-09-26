@@ -17,6 +17,11 @@ if (file_exists($tcpdf_file)) {
  * PDF Exporter using TCPDF
  */
 class PdfExporter {
+    public function __construct(
+        private ?\OCA\Verein\Service\Clock $clock = null
+    ) {
+    }
+
     /**
      * Create TCPDF instance with common settings
      *
@@ -58,7 +63,7 @@ class PdfExporter {
         $pdf->Cell(0, 10, 'Mitgliederliste', 0, 1, 'C');
 
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 5, 'Exportiert am: ' . date('d.m.Y H:i:s'), 0, 1, 'R');
+        $pdf->Cell(0, 5, 'Exportiert am: ' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s'), 0, 1, 'R');
         $pdf->Ln(5);
 
         // Table header
@@ -106,7 +111,7 @@ class PdfExporter {
 
         return [
             'content' => $content,
-            'filename' => 'members_' . date('Y-m-d_His') . '.pdf',
+            'filename' => 'members_' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('Y-m-d_His') . '.pdf',
             'mimeType' => 'application/pdf',
         ];
     }
@@ -126,7 +131,7 @@ class PdfExporter {
         $pdf->Cell(0, 10, 'Gebührenliste', 0, 1, 'C');
 
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 5, 'Exportiert am: ' . date('d.m.Y H:i:s'), 0, 1, 'R');
+        $pdf->Cell(0, 5, 'Exportiert am: ' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('d.m.Y H:i:s'), 0, 1, 'R');
         $pdf->Ln(5);
 
         // Table header
@@ -200,7 +205,7 @@ class PdfExporter {
 
         return [
             'content' => $content,
-            'filename' => 'fees_' . date('Y-m-d_His') . '.pdf',
+            'filename' => 'fees_' . \OCA\Verein\Service\Clock::nowOf($this->clock)->format('Y-m-d_His') . '.pdf',
             'mimeType' => 'application/pdf',
         ];
     }
@@ -285,7 +290,7 @@ class PdfExporter {
 
         return [
             'content' => $pdf->Output('', 'S'),
-            'filename' => 'mahnschreiben_' . date('Y-m-d') . '.pdf',
+            'filename' => 'mahnschreiben_' . \OCA\Verein\Service\Clock::todayOf($this->clock) . '.pdf',
             'mimeType' => 'application/pdf',
         ];
     }

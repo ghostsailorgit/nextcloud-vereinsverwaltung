@@ -16,7 +16,8 @@ class StatisticsService {
 
     public function __construct(
         MemberMapper $memberMapper,
-        FeeMapper $feeMapper
+        FeeMapper $feeMapper,
+        private ?Clock $clock = null
     ) {
         $this->memberMapper = $memberMapper;
         $this->feeMapper = $feeMapper;
@@ -236,7 +237,7 @@ class StatisticsService {
 
     private function countNewMembersThisMonth(array $members): int {
         $count = 0;
-        $currentMonth = date('Y-m');
+        $currentMonth = Clock::nowOf($this->clock)->format('Y-m');
         
         foreach ($members as $member) {
             $createdAt = $member->getCreatedAt();

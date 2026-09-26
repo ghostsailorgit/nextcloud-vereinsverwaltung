@@ -38,7 +38,8 @@ class DunningService {
         private ClubMapper $clubs,
         private ClubAccountMapper $accounts,
         private IDBConnection $db,
-        private ?AuditLogService $auditLog = null
+        private ?AuditLogService $auditLog = null,
+        private ?Clock $clock = null
     ) {
     }
 
@@ -55,7 +56,7 @@ class DunningService {
         if ($overdueDays < 0 || $overdueDays > 365 || $intervalDays < 0 || $intervalDays > 365) {
             throw new ValidationException('Tage müssen zwischen 0 und 365 liegen');
         }
-        $today = $today ?? date('Y-m-d');
+        $today = $today ?? Clock::todayOf($this->clock);
         $dueBefore = date('Y-m-d', strtotime($today . ' -' . $overdueDays . ' days'));
         $lastLetterBefore = date('Y-m-d', strtotime($today . ' -' . $intervalDays . ' days'));
 
@@ -166,7 +167,7 @@ class DunningService {
      */
     public function run(int $clubId, int $overdueDays = 14, int $intervalDays = 14, ?string $today = null): array {
         $plan = $this->plan($clubId, $overdueDays, $intervalDays, $today);
-        $now = ($today ?? date('Y-m-d')) . ' ' . date('H:i:s');
+        $now = ($today ?? Clock::todayOf($this->clock)) . ' ' . Clock::nowOf($this->clock)->format('H:i:s');
 
         $idsByLevel = [];
         foreach ($plan['included'] as $letter) {
@@ -222,7 +223,7 @@ class DunningService {
         if ($wanted === []) {
             throw new ValidationException('Keine Beiträge ausgewählt');
         }
-        $today = $today ?? date('Y-m-d');
+        $today = $today ?? Clock::todayOf($this->clock);
 
         $membersById = [];
         foreach ($this->members->findByClub($clubId) as $member) {

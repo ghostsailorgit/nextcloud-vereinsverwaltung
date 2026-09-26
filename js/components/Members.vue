@@ -329,6 +329,7 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { absoluteUrl } from '../absoluteUrl'
@@ -611,7 +612,7 @@ export default {
     }
 
     const deleteMember = async (id) => {
-      if (!confirm('Soll dieses Mitglied aus dem Verein entfernt werden? Seine Beiträge in diesem Verein werden ebenfalls gelöscht; die Person bleibt in anderen Vereinen erhalten.')) return
+      if (!(await confirmAction('Aus dem Verein entfernen', 'Soll dieses Mitglied aus dem Verein entfernt werden? Seine Beiträge in diesem Verein werden ebenfalls gelöscht; die Person bleibt in anderen Vereinen erhalten.', { labelConfirm: 'Entfernen', severity: 'error' }))) return
 
       loading.value = true
       try {
@@ -628,7 +629,7 @@ export default {
     }
 
     const deactivateMember = async (id) => {
-      if (!confirm('Dieses Mitglied deaktivieren? Es wird nicht mehr für Beiträge und SEPA-Einzug berücksichtigt, die Geburtstags- und Jubiläumstermine entfallen und automatisch abgeleitete Rechte (aus der Vereinsfunktion) werden ausgesetzt. Nichts wird gelöscht; mit „Aktivieren“ ist alles wieder da.')) return
+      if (!(await confirmAction('Mitglied deaktivieren', 'Dieses Mitglied deaktivieren? Es wird nicht mehr für Beiträge und SEPA-Einzug berücksichtigt, die Geburtstags- und Jubiläumstermine entfallen und automatisch abgeleitete Rechte (aus der Vereinsfunktion) werden ausgesetzt. Nichts wird gelöscht; mit „Aktivieren“ ist alles wieder da.', { labelConfirm: 'Deaktivieren', severity: 'warning' }))) return
 
       loading.value = true
       try {

@@ -150,6 +150,7 @@ import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
+import { confirmAction } from '../confirm'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -213,7 +214,7 @@ export default {
       }
     },
     async removeAssignments(entry) {
-      if (!confirm('Alle Rollen von ' + entry.displayName + ' in diesem Verein entziehen?')) return
+      if (!(await confirmAction('Rollen entziehen', 'Alle Rollen von ' + entry.displayName + ' in diesem Verein entziehen?', { labelConfirm: 'Entziehen', severity: 'warning' }))) return
       try {
         await axios.delete(generateUrl('/apps/verein/roles/users'), { params: { userId: entry.userId, clubId: clubState.currentId } })
         showSuccess('Rollen entzogen')
@@ -320,7 +321,7 @@ export default {
       }
     },
     async deleteRole(id) {
-      if (!confirm('Rolle wirklich löschen?')) return
+      if (!(await confirmAction('Rolle löschen', 'Rolle wirklich löschen?', { labelConfirm: 'Löschen', severity: 'error' }))) return
       try {
         await axios.delete(generateUrl(`/apps/verein/roles/${id}`))
         showSuccess('Rolle gelöscht')

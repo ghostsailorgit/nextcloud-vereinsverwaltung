@@ -109,6 +109,7 @@ import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { api } from '../api'
+import { confirmAction } from '../confirm'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { clubState, currentClub } from '../store/club'
@@ -160,7 +161,7 @@ export default {
       }
     },
     async markExportedPaid() {
-      if (!confirm(this.exportedFeeIds.length + ' Beiträge als bezahlt markieren? Das sollte erst nach dem Einreichen bei der Bank geschehen.')) return
+      if (!(await confirmAction('Als bezahlt markieren', this.exportedFeeIds.length + ' Beiträge als bezahlt markieren? Das sollte erst nach dem Einreichen bei der Bank geschehen.', { labelConfirm: 'Als bezahlt markieren', severity: 'warning' }))) return
       this.marking = true
       try {
         const res = await api.post('finance/mark-paid', { feeIds: this.exportedFeeIds.join(',') })

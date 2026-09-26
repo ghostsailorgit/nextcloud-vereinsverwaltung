@@ -29,7 +29,8 @@ class SepaService {
         private MemberMapper $memberMapper,
         private MembershipMapper $membershipMapper,
         private ClubMapper $clubMapper,
-        private ClubService $clubService
+        private ClubService $clubService,
+        private ?Clock $clock = null
     ) {
     }
 
@@ -162,7 +163,7 @@ class SepaService {
             return $description;
         }
         $year = substr($dueDate, 0, 4);
-        return 'Mitgliedsbeitrag ' . (ctype_digit($year) ? $year : date('Y'));
+        return 'Mitgliedsbeitrag ' . (ctype_digit($year) ? $year : Clock::nowOf($this->clock)->format('Y'));
     }
 
     /**
@@ -193,9 +194,10 @@ class SepaService {
         float $totalAmount,
         array $transactions
     ): string {
-        $msgId = 'VEREIN-' . date('YmdHis');
-        $creationDateTime = date('Y-m-d\TH:i:s');
-        $collectionDate = date('Y-m-d', strtotime('+5 days'));
+        $now = Clock::nowOf($this->clock);
+        $msgId = 'VEREIN-' . $now->format('YmdHis');
+        $creationDateTime = $now->format('Y-m-d\TH:i:s');
+        $collectionDate = $now->modify('+5 days')->format('Y-m-d');
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . "\n";

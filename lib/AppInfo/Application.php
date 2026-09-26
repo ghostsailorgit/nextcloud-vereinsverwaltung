@@ -22,6 +22,7 @@ use OCA\Verein\Service\Export\PdfExporter;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\FeeService;
 use OCA\Verein\Service\AuditLogService;
+use OCA\Verein\Service\Clock;
 use OCA\Verein\Service\StatisticsService;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
@@ -92,14 +93,16 @@ class Application extends App implements IBootstrap {
             return new FeeService(
                 $container->query(FeeMapper::class),
                 $container->query(MembershipMapper::class),
-                $container->query(AuditLogService::class)
+                $container->query(AuditLogService::class),
+                $container->query(Clock::class)
             );
         });
 
         $context->registerService(StatisticsService::class, function (IAppContainer $container): StatisticsService {
             return new StatisticsService(
                 $container->query(MemberMapper::class),
-                $container->query(FeeMapper::class)
+                $container->query(FeeMapper::class),
+                $container->query(Clock::class)
             );
         });
 

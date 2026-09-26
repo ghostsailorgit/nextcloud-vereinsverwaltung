@@ -124,6 +124,12 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
     other clubs), unexpected errors per row are reported as "interner Fehler", never with the exception text.
 
+19. **Confirmations** go through `js/confirm.js` (`confirmAction(title, text, { labelConfirm, severity })`, Nextcloud's own
+    dialog) - never the browser's `confirm()`; name the action on the button, `severity: 'error'` for destructive ones.
+20. **"Today" is local:** Nextcloud runs PHP in UTC, so `date('Y-m-d')` is yesterday shortly after midnight in Europe. Anything a
+    person reads or that depends on the calendar day (due/overdue, letters, SEPA dates, export names) uses `Service\Clock`
+    (ITimeFactory + the user's/instance's time zone, optional collaborator, `Clock::todayOf()`); DB timestamps stay UTC.
+
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and
   `ROADMAP.md`** (move items between done/next), and `docs/ARCHITEKTUR.md` when the data model or rules change, in the same
