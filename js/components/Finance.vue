@@ -1,6 +1,7 @@
 ﻿<template>
   <div class="finance-container">
     <FeeRun v-if="canWriteFinance" @done="fetchFees" />
+    <Dunning v-if="canWriteFinance" @done="fetchFees" />
 
     <!-- Form für neue Gebühr -->
     <div class="form-section">
@@ -92,6 +93,11 @@
 
               <td v-if="editingId !== fee.id">
                 <span :class="['status-badge', fee.status]">{{ getStatusLabel(fee.status) }}</span>
+                <span
+                  v-if="fee.dunningLevel > 0"
+                  class="dunning-badge"
+                  :title="fee.lastDunnedAt ? 'zuletzt gemahnt am ' + formatDay(fee.lastDunnedAt) : ''"
+                >{{ dunningLabel(fee.dunningLevel) }}</span>
               </td>
               <td v-if="editingId === fee.id" class="cell-field">
                 <NcSelect
@@ -164,13 +170,14 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import ExportButtons from './ExportButtons.vue'
 import FeeRun from './FeeRun.vue'
+import Dunning, { DUNNING_LEVELS } from './Dunning.vue'
 import { can } from '../store/club'
 import axios from '@nextcloud/axios'
 import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
-  components: { NcButton, NcTextField, NcSelect, ExportButtons, FeeRun },
+  components: { NcButton, NcTextField, NcSelect, ExportButtons, FeeRun, Dunning },
   setup() {
     const canWriteFinance = computed(() => can('verein.finance.write'))
     const fees = ref([])
@@ -294,6 +301,12 @@ export default {
       return labels[status] || status
     }
 
+    const dunningLabel = (level) => DUNNING_LEVELS[level] || `Mahnstufe ${level}`
+    const formatDay = (v) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || '')
+      return m ? `${m[3]}.${m[2]}.${m[1]}` : v
+    }
+
     const formatDate = (dateString) => {
       if (!dateString) return '-'
       return new Date(dateString).toLocaleDateString('de-DE', {
@@ -343,6 +356,8 @@ export default {
       deleteFee,
       getMemberName,
       getStatusLabel,
+      dunningLabel,
+      formatDay,
       formatDate
     }
   }
@@ -570,6 +585,14 @@ export default {
     background: var(--color-background-darker);
     color: var(--color-text-secondary);
   }
+}
+
+.dunning-badge {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 12px;
+  color: var(--color-error);
+  white-space: nowrap;
 }
 
 .actions {

@@ -58,6 +58,13 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | POST | `/members/{id}/anonymize` | `verein.role.manage` |
 | GET | `/members/{id}/export` | `verein.member.view` |
 
+## Mitgliederimport (CSV)
+
+| Methode | Pfad | Erforderliches Recht |
+|---|---|---|
+| POST | `/members/import/preview` | `verein.member.manage` |
+| POST | `/members/import` | `verein.member.manage` |
+
 ## Beiträge (Finanzen)
 
 | Methode | Pfad | Erforderliches Recht |
@@ -75,6 +82,14 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 |---|---|---|
 | POST | `/fee-run/preview` | `verein.finance.write` |
 | POST | `/fee-run` | `verein.finance.write` |
+
+## Mahnwesen
+
+| Methode | Pfad | Erforderliches Recht |
+|---|---|---|
+| POST | `/dunning/preview` | `verein.finance.write` |
+| POST | `/dunning` | `verein.finance.write` |
+| GET | `/dunning/letters` | `verein.finance.write` |
 
 ## SEPA-Lastschrift
 

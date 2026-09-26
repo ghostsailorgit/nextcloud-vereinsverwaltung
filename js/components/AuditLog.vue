@@ -79,7 +79,8 @@ const ACTIONS = {
   activate: 'aktiviert',
   anonymize: 'anonymisiert',
   mark_paid: 'als bezahlt markiert',
-  flag_overdue: 'als überfällig markiert'
+  flag_overdue: 'als überfällig markiert',
+  dunning: 'gemahnt'
 }
 
 const FIELDS = {
@@ -193,6 +194,10 @@ export default {
       if (!c || typeof c !== 'object') return []
       if (e.entityType === 'fee_run') {
         return [{ text: `${c.year}: ${c.created} Beiträge, zusammen ${money(c.total || 0)}, fällig ${formatDate(c.dueDate)}${c.prorata ? ', anteilig' : ''}` }]
+      }
+      if (e.action === 'dunning') {
+        const levels = Object.entries(c.levels || {}).map(([label, n]) => `${n}× ${label}`).join(', ')
+        return [{ text: `${c.letters} Schreiben für ${c.count} Beiträge, zusammen ${money(c.total || 0)}${levels ? ' (' + levels + ')' : ''}` }]
       }
       if (e.action === 'mark_paid' || e.action === 'flag_overdue') {
         return [{ text: `${c.count} Beiträge` }]

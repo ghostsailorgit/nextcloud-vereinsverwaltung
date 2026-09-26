@@ -4,6 +4,33 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.17.0-beta] - 2026-09-26
+
+Mitgliederimport aus CSV und Mahnwesen.
+
+### ✨ Neu
+- **Mitglieder aus CSV importieren** (Reiter „Mitglieder“ → „CSV importieren“, Recht „Mitglieder verwalten“): Die Datei wird
+  zuerst nur geprüft; jede Zeile zeigt „bereit“, „schon vorhanden“ oder „fehlerhaft“ mit Grund. Erkannt werden Semikolon,
+  Komma und Tab, UTF-8 und Windows-1252 (Excel), deutsche und englische Spaltennamen einschließlich des eigenen
+  Mitglieder-Exports, Datumsangaben als TT.MM.JJJJ, TT.MM.JJ oder JJJJ-MM-TT, IBAN mit Leerzeichen, Beitragskategorien über
+  ihren Namen. Doppelte (im Verein oder in der Datei) werden nicht angelegt; gleicher Name mit verschiedenem Geburtsdatum
+  gilt als zwei Personen. Eine Funktion wie „Vorstand“ wird nur mit dem Recht „Rollen verwalten“ übernommen, eine
+  Verknüpfung mit einem Nextcloud-Konto nie. Importiert wird in Paketen mit Fortschrittsanzeige.
+- **Mahnwesen** (Reiter „Finanzen“, Recht „Finanzen bearbeiten“): Für Beiträge, deren Fälligkeit eine einstellbare Zeit
+  zurückliegt, entsteht ein Schreiben je Person – Zahlungserinnerung, 1. Mahnung, 2. und letzte Mahnung. Wer vor kurzem
+  schon ein Schreiben bekam, deaktiviert oder anonymisiert ist oder die letzte Stufe erreicht hat, wird mit Grund
+  übersprungen. Die Schreiben kommen als PDF für Fensterumschläge (Absender, Anschrift, Beitragsliste, Frist,
+  Bankverbindung des Vereins, Verwendungszweck) und lassen sich erneut herunterladen. Die Beitragsliste zeigt die Mahnstufe,
+  das Protokoll jeden Mahnlauf.
+
+### 🔧 Technik
+- Migration `Version020009`: `verein_fees.dunning_level`, `verein_fees.last_dunned_at`.
+- Neue Endpunkte: `POST /members/import/preview`, `POST /members/import`, `POST /dunning/preview`, `POST /dunning`,
+  `GET /dunning/letters` (siehe `docs/API.md`).
+- Doku: In `CLAUDE.md` fehlte seit 0.15.1 ein Stück von Regel 7 (`AuditLogEntry::$entityId`).
+
+---
+
 ## [0.16.1-beta] - 2026-09-25
 
 Oberfläche für die Datenschutz-Funktionen.

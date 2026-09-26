@@ -18,9 +18,7 @@ class PdfExporter {
      * @return TCPDF
      */
     private function createPdf() {
-        if (!class_exists('TCPDF')) {
-            throw new \OCA\Verein\Exception\DependencyMissingException('PDF-Export nicht verfügbar: Die Bibliothek TCPDF fehlt auf dem Server. Der Administrator muss im App-Verzeichnis "composer install --no-dev" ausführen.');
-        }
+        $this->requireTcpdf();
         $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
         // Set document properties
@@ -200,5 +198,108 @@ class PdfExporter {
             'filename' => 'fees_' . date('Y-m-d_His') . '.pdf',
             'mimeType' => 'application/pdf',
         ];
+    }
+
+    /**
+     * One dunning letter per page (DunningService::letters()), laid out for a DIN A4 window envelope
+     * (address field 20 mm from the left, 45 mm from the top).
+     *
+     * @param array $data see DunningService::letters()
+     * @return array with keys: content, filename, mimeType
+     */
+    public function exportDunningLetters(array $data): array {
+        $this->requireTcpdf();
+        $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetCreator('Vereins-App');
+        $pdf->SetAuthor($data['club']['name']);
+        $pdf->SetTitle('Mahnschreiben');
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(25, 20, 20);
+        $pdf->SetAutoPageBreak(true, 20);
+
+        $sender = implode(' · ', array_merge([$data['club']['name']], $data['club']['address']));
+        $money = fn (float $v): string => number_format($v, 2, ',', '.') . ' €';
+
+        foreach ($data['letters'] as $letter) {
+            $pdf->AddPage();
+
+            // sender line and address field of the window envelope
+            $pdf->SetXY(20, 45);
+            $pdf->SetFont('helvetica', '', 7);
+            $pdf->Cell(85, 4, $sender, 'B', 1);
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->SetX(20);
+            $pdf->MultiCell(85, 5, implode("\n", $letter['address']), 0, 'L', false, 1);
+
+            $pdf->SetXY(125, 50);
+            $pdf->Cell(60, 5, $data['date'], 0, 1, 'R');
+
+            $pdf->SetXY(25, 100);
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell(0, 7, $letter['title'] . ' – ' . $data['club']['name'], 0, 1);
+            $pdf->Ln(4);
+
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->MultiCell(0, 5, $letter['greeting'], 0, 'L', false, 1);
+            $pdf->Ln(2);
+            $pdf->MultiCell(0, 5, $this->dunningText((int)$letter['level'], $data['deadline']), 0, 'L', false, 1);
+            $pdf->Ln(3);
+
+            $pdf->SetFont('helvetica', 'B', 10);
+            $pdf->Cell(95, 6, 'Beitrag', 'B', 0);
+            $pdf->Cell(35, 6, 'fällig seit', 'B', 0);
+            $pdf->Cell(0, 6, 'Betrag', 'B', 1, 'R');
+            $pdf->SetFont('helvetica', '', 10);
+            foreach ($letter['fees'] as $fee) {
+                $pdf->Cell(95, 6, (string)$fee['text'], 0, 0);
+                $pdf->Cell(35, 6, (string)$fee['dueDate'], 0, 0);
+                $pdf->Cell(0, 6, $money((float)$fee['amount']), 0, 1, 'R');
+            }
+            $pdf->SetFont('helvetica', 'B', 10);
+            $pdf->Cell(130, 7, 'Offener Betrag', 'T', 0);
+            $pdf->Cell(0, 7, $money((float)$letter['total']), 'T', 1, 'R');
+            $pdf->Ln(4);
+
+            $pdf->SetFont('helvetica', '', 10);
+            if ($data['account'] !== null) {
+                $pay = "Bitte überweisen Sie den Betrag bis zum {$data['deadline']} auf das Konto des Vereins:\n"
+                    . 'Kontoinhaber: ' . $data['club']['name'] . "\n"
+                    . 'IBAN: ' . trim(chunk_split((string)$data['account']['iban'], 4, ' ')) . "\n"
+                    . ($data['account']['bic'] !== '' ? 'BIC: ' . $data['account']['bic'] . "\n" : '')
+                    . 'Verwendungszweck: ' . $letter['reference'];
+            } else {
+                $pay = "Bitte begleichen Sie den Betrag bis zum {$data['deadline']}. Die Bankverbindung erfahren Sie beim Vorstand.";
+            }
+            $pdf->MultiCell(0, 5, $pay, 0, 'L', false, 1);
+            $pdf->Ln(3);
+            $pdf->MultiCell(0, 5, 'Sollten Sie den Betrag inzwischen überwiesen haben, betrachten Sie dieses Schreiben bitte als gegenstandslos. Bei Fragen wenden Sie sich gern an den Vorstand.', 0, 'L', false, 1);
+            $pdf->Ln(6);
+            $pdf->MultiCell(0, 5, "Mit freundlichen Grüßen\n\nDer Vorstand\n" . $data['club']['name'], 0, 'L', false, 1);
+        }
+
+        return [
+            'content' => $pdf->Output('', 'S'),
+            'filename' => 'mahnschreiben_' . date('Y-m-d') . '.pdf',
+            'mimeType' => 'application/pdf',
+        ];
+    }
+
+    private function dunningText(int $level, string $deadline): string {
+        return match ($level) {
+            1 => 'sicher ist es Ihrer Aufmerksamkeit entgangen: Für die folgenden Mitgliedsbeiträge konnten wir noch keinen '
+                . 'Zahlungseingang feststellen. Wir bitten Sie, den offenen Betrag bis zum ' . $deadline . ' zu begleichen.',
+            2 => 'leider konnten wir trotz unserer Zahlungserinnerung bisher keinen Zahlungseingang für die folgenden '
+                . 'Mitgliedsbeiträge feststellen. Bitte begleichen Sie den offenen Betrag bis spätestens ' . $deadline . '.',
+            default => 'trotz Zahlungserinnerung und Mahnung sind die folgenden Mitgliedsbeiträge weiterhin offen. Wir bitten '
+                . 'Sie letztmalig, den Betrag bis spätestens ' . $deadline . ' zu begleichen. Andernfalls behält sich der '
+                . 'Vorstand weitere Schritte nach der Satzung vor.',
+        };
+    }
+
+    private function requireTcpdf(): void {
+        if (!class_exists('TCPDF')) {
+            throw new \OCA\Verein\Exception\DependencyMissingException('PDF-Export nicht verfügbar: Die Bibliothek TCPDF fehlt auf dem Server. Der Administrator muss im App-Verzeichnis "composer install --no-dev" ausführen.');
+        }
     }
 }

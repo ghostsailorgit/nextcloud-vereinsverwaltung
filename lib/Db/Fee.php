@@ -27,6 +27,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCreatedAt(?string $createdAt)
  * @method ?string getUpdatedAt()
  * @method void setUpdatedAt(?string $updatedAt)
+ * @method int getDunningLevel()
+ * @method void setDunningLevel(int $dunningLevel)
+ * @method ?string getLastDunnedAt()
+ * @method void setLastDunnedAt(?string $lastDunnedAt)
  */
 class Fee extends Entity implements JsonSerializable {
     protected int $memberId = 0;
@@ -39,6 +43,13 @@ class Fee extends Entity implements JsonSerializable {
     protected ?string $period = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
+    // 0 = never dunned, 1-3 = DunningService::LEVELS (the column has DB default 0, so INSERT may omit it)
+    protected int $dunningLevel = 0;
+    protected ?string $lastDunnedAt = null;
+
+    public function __construct() {
+        $this->addType('dunningLevel', 'integer');
+    }
 
     public function jsonSerialize(): array {
         return [
@@ -51,6 +62,8 @@ class Fee extends Entity implements JsonSerializable {
             'paidDate' => $this->paidDate,
             'description' => $this->description,
             'period' => $this->period,
+            'dunningLevel' => $this->dunningLevel,
+            'lastDunnedAt' => $this->lastDunnedAt,
         ];
     }
 }

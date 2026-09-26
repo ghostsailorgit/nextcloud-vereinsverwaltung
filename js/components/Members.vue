@@ -192,10 +192,15 @@
     </div>
 
     <!-- Members Table -->
+    <MemberImport v-if="canManage && showImport" class="import-section" @done="fetchMembers" />
+
     <div class="table-section">
       <div class="section-header">
         <h2>Mitgliederliste</h2>
         <div class="export-buttons">
+          <NcButton v-if="canManage" variant="secondary" @click="showImport = !showImport">
+            {{ showImport ? 'Import schließen' : 'CSV importieren' }}
+          </NcButton>
           <ExportButtons resource="members" inline />
         </div>
       </div>
@@ -330,6 +335,7 @@ import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import Alert from './Alert.vue'
 import ExportButtons from './ExportButtons.vue'
 import AnonymizeDialog from './AnonymizeDialog.vue'
+import MemberImport from './MemberImport.vue'
 
 const emptyFormData = () => ({
   salutation: null,
@@ -363,7 +369,8 @@ export default {
     NcSelectUsers,
     Alert,
     ExportButtons,
-    AnonymizeDialog
+    AnonymizeDialog,
+    MemberImport
   },
   setup() {
     const members = ref([])
@@ -645,6 +652,8 @@ export default {
       }
     }
 
+    const showImport = ref(false)
+
     // member row whose anonymize confirmation is open (null = closed)
     const anonymizeTarget = ref(null)
 
@@ -695,6 +704,7 @@ export default {
       deactivateMember,
       activateMember,
       anonymizeTarget,
+      showImport,
       exportMember,
       fetchMembers,
       canManage,
@@ -738,6 +748,9 @@ export default {
 }
 
 .members-container.no-form { display: flex; }
+
+/* the import spans both columns of the wide layout */
+.import-section { grid-column: 1 / -1; }
 
 .form-section,
 .table-section {

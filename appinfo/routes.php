@@ -30,6 +30,8 @@ return [
         ['name' => 'member#index', 'url' => '/members', 'verb' => 'GET'],
         // literal route must come before /members/{id}
         ['name' => 'member#lookup', 'url' => '/members/lookup', 'verb' => 'GET'],
+        ['name' => 'memberImport#preview', 'url' => '/members/import/preview', 'verb' => 'POST'],
+        ['name' => 'memberImport#run', 'url' => '/members/import', 'verb' => 'POST'],
         ['name' => 'member#searchUsers', 'url' => '/members/users', 'verb' => 'GET'],
         ['name' => 'member#attach', 'url' => '/memberships', 'verb' => 'POST'],
         ['name' => 'member#create', 'url' => '/members', 'verb' => 'POST'],
@@ -46,6 +48,9 @@ return [
         ['name' => 'finance#flagOverdue', 'url' => '/finance/flag-overdue', 'verb' => 'POST'],
         ['name' => 'feeRun#preview', 'url' => '/fee-run/preview', 'verb' => 'POST'],
         ['name' => 'feeRun#run', 'url' => '/fee-run', 'verb' => 'POST'],
+        ['name' => 'dunning#preview', 'url' => '/dunning/preview', 'verb' => 'POST'],
+        ['name' => 'dunning#run', 'url' => '/dunning', 'verb' => 'POST'],
+        ['name' => 'dunning#letters', 'url' => '/dunning/letters', 'verb' => 'GET'],
         ['name' => 'finance#create', 'url' => '/finance', 'verb' => 'POST'],
         ['name' => 'finance#update', 'url' => '/finance/{id}', 'verb' => 'PUT'],
         ['name' => 'finance#destroy', 'url' => '/finance/{id}', 'verb' => 'DELETE'],

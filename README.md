@@ -7,8 +7,8 @@ Eine Nextcloud-App, mit der ein oder mehrere Vereine ihre **Mitglieder, Beiträg
 ## Funktionen
 
 - **Mehrere Vereine in einer Installation.** Eine Person kann in mehreren Vereinen Mitglied sein, mit eigenem Eintrittsdatum, eigener Funktion und eigenem SEPA-Mandat je Verein. Jeder Verein hat eigene Bankkonten (IBAN, BIC, Gläubiger-ID).
-- **Mitglieder:** Stammdaten, Funktion (Mitglied, Kassierer, Vorstand), Ein- und Austritt, Gründungsmitglied, verstorben, Suche und Filter. Mitglieder lassen sich **deaktivieren**: Sie werden dann nicht mehr für Beiträge und Lastschriften berücksichtigt und erscheinen nicht mehr im Kalender.
-- **Beiträge:** Beitragskategorien je Verein (auch beitragsfrei), **Beitragslauf** mit Vorschau (wiederholbar, ohne doppelte Beiträge, wahlweise anteilig bei Eintritt im laufenden Jahr), einzelne Beiträge, Status offen/bezahlt/überfällig.
+- **Mitglieder:** Stammdaten, Funktion (Mitglied, Kassierer, Vorstand), Ein- und Austritt, Gründungsmitglied, verstorben, Suche und Filter, **Import aus CSV** (auch aus Excel) mit Vorschau und Dubletten-Erkennung. Mitglieder lassen sich **deaktivieren**: Sie werden dann nicht mehr für Beiträge und Lastschriften berücksichtigt und erscheinen nicht mehr im Kalender.
+- **Beiträge:** Beitragskategorien je Verein (auch beitragsfrei), **Beitragslauf** mit Vorschau (wiederholbar, ohne doppelte Beiträge, wahlweise anteilig bei Eintritt im laufenden Jahr), einzelne Beiträge, Status offen/bezahlt/überfällig, **Mahnwesen** mit drei Stufen und Mahnschreiben als PDF.
 - **SEPA-Lastschrift** (pain.008.001.02) je Verein und Bankkonto, mit Mandatsverwaltung (Referenz, Unterschriftsdatum, unterschriebenes Mandat als Datei in Nextcloud). Beiträge, die sich nicht einziehen lassen (keine IBAN, kein Mandat), werden mit Grund gemeldet statt still übersprungen. Nach dem Einreichen bei der Bank lassen sich genau die exportierten Beiträge als bezahlt markieren.
 - **Rechte je Verein.** Wer im Vorstand des einen Vereins ist, sieht den anderen Verein nicht. Rechte lassen sich per Rolle vergeben oder **automatisch aus der Vereinsfunktion** ableiten (das Mitglied ist mit seinem Nextcloud-Konto verknüpft).
 - **Meine Daten:** Jedes verknüpfte Mitglied sieht seine eigenen Daten und Beiträge und kann sie als JSON herunterladen (nur lesend).
@@ -16,7 +16,7 @@ Eine Nextcloud-App, mit der ein oder mehrere Vereine ihre **Mitglieder, Beiträg
 - **Export** als CSV und PDF, **Statistik** auf der Startseite.
 - **Sicherung und Änderungsprotokoll:** tägliche automatische Sicherung aller Vereinsdaten (30 Tage), Wiederherstellung per `occ`; ein Änderungsprotokoll (Reiter „Protokoll“) erfasst, wer was geändert hat, ohne personenbezogene Inhalte im Klartext.
 
-Nicht enthalten: Buchhaltung, Mahnwesen, Online-Beitritt, Serienbriefe. Die Oberfläche ist auf Deutsch.
+Nicht enthalten: Buchhaltung, Online-Beitritt, Serienbriefe, Versand von E-Mails. Die Oberfläche ist auf Deutsch.
 
 ## Voraussetzungen
 

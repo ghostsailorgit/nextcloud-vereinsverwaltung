@@ -63,7 +63,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the
    `email` migration) or make the property default `null` (see `FeeRate::$amount`: a 0.00 fee-free category
-   failed to insert until then; same for `AuditLogEntry::`, bulk actions log id 0; `tests/Unit/EntityInsertTest` pins both). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
+   failed to insert until then; same for `AuditLogEntry::$entityId`, bulk actions log id 0; `tests/Unit/EntityInsertTest` pins both). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
    "Incorrect integer value".
 8. **Annual fee run** (`FeeRunService`): one fee per active member by category, idempotent per member+year
    (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who
@@ -109,6 +109,13 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     entity type, so a new field on `Member` needs nothing done to stay safe by default - only add to the list if it should
     show up in plain text (a deny-list missed derived/joined fields like `fullName`, `mandateReference`/`mandateFile`, `age`
     once before; don't repeat that with a new sensitive-fields list elsewhere).
+
+17. **Dunning** (`DunningService`): one letter per person over all their due fees, level = highest level so far + 1, capped at 3;
+    deactivated/anonymized people and anyone dunned within `intervalDays` are skipped with a reason. Preview first, the run is one
+    statement per level in a transaction. Letters are generated on demand from the fees' current level; the app sends nothing.
+18. **Member import** (`MemberImportService`): never maps a column to `userId` (it drives rights), a role other than member only
+    with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
+    other clubs), unexpected errors per row are reported as "interner Fehler", never with the exception text.
 
 ## Working conventions
 - **With every feature/fix/release update `CHANGELOG.md` (new entry at the top, matching the `info.xml` version) and

@@ -1,14 +1,15 @@
 # Planung
 
-Stand: Version 0.16.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.17.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
 | Thema | Inhalt |
 |---|---|
 | Mehrere Vereine | Vereine, Mitgliedschaften (eine Person in mehreren Vereinen), Bankkonten, Rechte je Verein |
+| Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung |
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
-| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mitglieder deaktivieren |
+| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben als PDF), Mitglieder deaktivieren |
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge, „bezahlt“-Markierung nach dem Export |
 | Kalender | Geburtstage und Jubiläen je Verein, nur intern geteilt |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
@@ -17,8 +18,9 @@ Stand: Version 0.16.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 ## Als Nächstes
 
-- **Mitgliederimport** aus CSV, mit Vorschau und Prüfung von IBAN und Doppelten.
-- **Mahnwesen:** Mahnstufen und Mahnschreiben für überfällige Beiträge.
+- Weitere Funktionen (SEPA-Export, Deaktivieren, Selbstauskunft, Sicherung) mit echten Läufen und einem Nicht-Admin-Konto
+  nachtesten, wie bei den neuen Funktionen.
+- Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).
 
 ## Ideen ohne Termin
 

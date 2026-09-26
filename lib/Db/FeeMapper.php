@@ -68,6 +68,30 @@ class FeeMapper extends QBMapper {
     }
 
     /**
+     * Records a dunning step for the given fees of the club in one statement per chunk: sets the level and
+     * the date, and an open fee becomes overdue. Paid and cancelled fees are never touched.
+     *
+     * @param int[] $ids
+     * @return int number of fees changed
+     */
+    public function markDunnedInClub(int $clubId, array $ids, int $level, string $now): int {
+        $changed = 0;
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $ids))), 500) as $chunk) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->update($this->getTableName())
+                ->set('dunning_level', $qb->createNamedParameter($level, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT))
+                ->set('last_dunned_at', $qb->createNamedParameter($now))
+                ->set('status', $qb->createNamedParameter('overdue'))
+                ->set('updated_at', $qb->createNamedParameter($now))
+                ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+                ->andWhere($qb->expr()->in('id', $qb->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
+                ->andWhere($qb->expr()->in('status', $qb->createNamedParameter(['open', 'overdue'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+            $changed += $qb->executeStatement();
+        }
+        return $changed;
+    }
+
+    /**
      * Open fees of the club that were due before $today become overdue.
      *
      * @return int number of fees changed

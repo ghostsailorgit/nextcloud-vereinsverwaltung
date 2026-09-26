@@ -41,8 +41,10 @@ function generateApiDocs(string $root): string {
     $titles = [
         'club' => 'Vereine, Bankkonten, Beitragskategorien',
         'member' => 'Mitglieder',
+        'memberImport' => 'Mitgliederimport (CSV)',
         'finance' => 'Beiträge (Finanzen)',
         'feeRun' => 'Beitragslauf',
+        'dunning' => 'Mahnwesen',
         'sepa' => 'SEPA-Lastschrift',
         'export' => 'Export (CSV/PDF)',
         'statistics' => 'Statistik',

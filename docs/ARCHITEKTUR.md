@@ -24,7 +24,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `anonymized_at` (siehe „Anonymisieren“) |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
-| `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge |
+| `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge, `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
 | `verein_audit_log` | Änderungsprotokoll: wer hat wann was geändert (siehe „Änderungsprotokoll“) |
@@ -114,7 +114,27 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   fehlende Daten nicht zu einem zu niedrigen Beitrag führen. Die Option gilt je Lauf, nicht je Verein (keine gespeicherte
   Einstellung); ein Austritt im Beitragsjahr wird nicht anteilig gerechnet (Ausgetretene bekommen keinen Beitrag).
 - **Nach dem SEPA-Export** bietet die Seite an, genau die exportierten Beiträge als bezahlt zu markieren (erst nach dem Einreichen bei der Bank).
-- **Überfällige markieren** setzt offene Beiträge mit abgelaufener Fälligkeit auf „überfällig“. Mahnschreiben gibt es noch nicht.
+- **Überfällige markieren** setzt offene Beiträge mit abgelaufener Fälligkeit auf „überfällig“.
+- **Mahnwesen** (`DunningService`, Reiter „Finanzen“, Recht „Finanzen bearbeiten“): Beiträge, die offen oder überfällig und seit
+  mindestens N Tagen fällig sind, ergeben ein Schreiben je Person mit allen solchen Beiträgen. Stufe = höchste bisherige Stufe
+  der Beiträge + 1: Zahlungserinnerung, 1. Mahnung, 2. und letzte Mahnung; danach wird die Person mit Grund übersprungen.
+  Übersprungen werden außerdem deaktivierte (keine Zahlungsvorgänge) und anonymisierte Personen sowie alle, die innerhalb
+  des eingestellten Abstands schon ein Schreiben bekommen haben - ein Lauf lässt sich deshalb gefahrlos wiederholen.
+  Vorschau zuerst, der Lauf setzt Stufe und Datum in einer Transaktion (je Stufe eine SQL-Anweisung) und macht offene
+  Beiträge überfällig. Die Schreiben (`GET /dunning/letters`, PDF für DIN-Fensterumschläge, sortiert nach Nachname) nennen
+  die Bankverbindung des Standardkontos und lassen sich später erneut erzeugen, jeweils mit der aktuellen Stufe. Die App
+  verschickt nichts; bezahlte Beiträge behalten ihre Stufe als Verlauf.
+
+## Mitgliederimport
+CSV-Import (`MemberImportService`, Knopf „CSV importieren“ im Reiter „Mitglieder“, Recht „Mitglieder verwalten“). Die Oberfläche
+liest die Datei und schickt sie als UTF-8 (Windows-1252 von Excel wird erkannt); der Server erkennt Trennzeichen und Spalten
+über deutsche und englische Überschriften, darunter die des eigenen Exports, und prüft jede Zeile mit denselben Regeln wie
+das Mitgliederformular. Zeilennummern entsprechen den Zeilen der Tabellenkalkulation. Doppelte werden gemeldet, nicht
+angelegt: gleicher Vor- und Nachname gilt als dieselbe Person, außer beide Geburtsdaten sind bekannt und verschieden.
+Gesucht wird nur im importierenden Verein und in der Datei - ob es die Person in einem anderen Verein gibt, verrät der Import
+nicht (dafür gibt es die Suche mit der Zwei-Vereins-Prüfung). Eine Funktion außer „Mitglied“ wird nur mit „Rollen verwalten“
+übernommen, eine Konto-Verknüpfung nie (sie steuert Rechte). Angelegt wird in Paketen zu höchstens 100 Zeilen (die
+Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protokoll und Kalender.
 
 ## SEPA-Lastschrift
 - Pro Verein und Bankkonto wird eine pain.008.001.02-Datei erzeugt.
