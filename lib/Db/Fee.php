@@ -48,7 +48,7 @@ class Fee extends Entity implements JsonSerializable {
     protected ?string $period = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
-    // 0 = never dunned, 1-3 = DunningService::LEVELS (the column has DB default 0, so INSERT may omit it)
+    // 0 = never dunned, 1-3 = DunningService::levelLabel() (the column has DB default 0, so INSERT may omit it)
     protected int $dunningLevel = 0;
     protected ?string $lastDunnedAt = null;
 

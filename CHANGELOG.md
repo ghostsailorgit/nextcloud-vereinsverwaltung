@@ -4,6 +4,23 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.8-beta] - 2026-09-26
+
+### 🌐 Übersetzungen
+- Übersetzbar: Mahnschreiben, die PDF-Exporte der Mitglieder- und Gebührenliste, der Verwendungszweck im SEPA-Export und
+  der Standardtext „Mitgliedsbeitrag <Jahr>“ im Beitragslauf. Diese Dokumente kommen in der Sprache der Nextcloud-Instanz,
+  wenn der Administrator eine festgelegt hat (`default_language` oder `force_language` in der config.php); dann sehen die
+  Briefe gleich aus, egal wer sie druckt. Ohne diese Einstellung gilt die Sprache dessen, der sie erstellt.
+- Damit ist die App vollständig übersetzbar; Deutsch ist die mitgelieferte Übersetzung.
+
+### 🐛 Korrigiert
+- Der PDF-Export der Mitglieder- und Gebührenliste bekam keine Zeitzone und benannte die Datei nach der UTC-Zeit;
+  jetzt wie überall die lokale Zeit.
+- Im PDF der Gebührenliste erscheint der Status „storniert“ jetzt übersetzt statt als „cancelled“.
+- Im PDF der Mitgliederliste steht in der Spalte „Rolle“ jetzt Mitglied, Kassierer oder Vorstand statt der internen Werte „member“ oder „admin“.
+
+---
+
 ## [0.18.7-beta] - 2026-09-26
 
 ### 🌐 Übersetzungen

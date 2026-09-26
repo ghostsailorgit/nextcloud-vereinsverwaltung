@@ -87,7 +87,7 @@ import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 
-// same labels as DunningService::LEVELS
+// same labels as DunningService::levelLabel()
 export const DUNNING_LEVELS = {
   1: t('verein', 'Payment reminder'),
   2: t('verein', 'First dunning letter'),

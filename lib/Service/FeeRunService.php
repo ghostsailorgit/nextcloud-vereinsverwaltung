@@ -17,6 +17,7 @@ use OCA\Verein\Exception\ValidationException;
 use OCP\IDBConnection;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
+use OCA\Verein\L10n\DocumentL10n;
 
 /**
  * The annual fee run: creates one membership fee per active member of a club
@@ -29,6 +30,7 @@ use OCP\IL10N;
  */
 class FeeRunService {
     private IL10N $l;
+    private IL10N $doc;
 
     public function __construct(
         private FeeRateMapper $rates,
@@ -37,9 +39,11 @@ class FeeRunService {
         private ClubMapper $clubs,
         private IDBConnection $db,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        ?DocumentL10n $documentL10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
+        $this->doc = $documentL10n?->get() ?? $this->l;
     }
 
     /**
@@ -59,7 +63,7 @@ class FeeRunService {
         }
         $description = trim((string)$description);
         if ($description === '') {
-            $description = $this->l->t('Membership fee %s', [$year]);
+            $description = $this->doc->t('Membership fee %s', [$year]);
         }
         if (mb_strlen($description) > 500) {
             throw new ValidationException($this->l->t('Remark is too long'));

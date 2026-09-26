@@ -15,6 +15,7 @@ use OCA\Verein\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
+use OCA\Verein\L10n\DocumentL10n;
 
 /**
  * Service for generating SEPA-XML files for direct debit
@@ -27,6 +28,7 @@ use OCP\IL10N;
  */
 class SepaService {
     private IL10N $l;
+    private IL10N $doc;
 
     public function __construct(
         private FeeMapper $feeMapper,
@@ -35,9 +37,11 @@ class SepaService {
         private ClubMapper $clubMapper,
         private ClubService $clubService,
         private ?Clock $clock = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        ?DocumentL10n $documentL10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
+        $this->doc = $documentL10n?->get() ?? $this->l;
     }
 
     /**
@@ -169,7 +173,7 @@ class SepaService {
             return $description;
         }
         $year = substr($dueDate, 0, 4);
-        return 'Mitgliedsbeitrag ' . (ctype_digit($year) ? $year : Clock::nowOf($this->clock)->format('Y'));
+        return $this->doc->t('Membership fee %s', [ctype_digit($year) ? $year : Clock::nowOf($this->clock)->format('Y')]);
     }
 
     /**

@@ -75,7 +75,11 @@ class Application extends App implements IBootstrap {
         });
 
         $context->registerService(PdfExporter::class, function (IAppContainer $container): PdfExporter {
-            return new PdfExporter();
+            return new PdfExporter(
+                $container->query(Clock::class),
+                $container->query(IL10N::class),
+                $container->query(\OCA\Verein\L10n\DocumentL10n::class)
+            );
         });
 
         // Register member and fee services
