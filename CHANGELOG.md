@@ -22,6 +22,9 @@ Der Vereinskalender kommt jetzt über Nextclouds offizielle Schnittstelle für A
 ### 🐛 Behoben
 - `appinfo/info.xml` entsprach nicht Nextclouds Schema (Reihenfolge der Abschnitte) – der App Store hätte die App abgelehnt.
   Die CI prüft das jetzt.
+- Unter PHP 8.4 und neuer schrieb Nextcloud bei jeder abgelehnten oder ungültigen Anfrage eine Deprecation-Meldung als
+  Fehler ins Log (implizit nullbarer Parameter in `ValidationException`/`PermissionDeniedException`). Die CI scheitert jetzt an
+  solchen Deprecations und an Warnungen der App im Nextcloud-Log.
 
 ### 🔧 Technik
 - CI: der App-Kalender (sichtbar nur für Gruppenmitglieder, Termine per CalDAV, Schreiben abgewiesen, keine Log-Warnungen) und
