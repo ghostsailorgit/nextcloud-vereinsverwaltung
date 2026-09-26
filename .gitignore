@@ -60,3 +60,4 @@ tmp/
 
 # PHPUnit
 .phpunit.result.cache
+tests/Integration/smoke-state.json

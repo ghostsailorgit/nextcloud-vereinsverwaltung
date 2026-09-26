@@ -1,4 +1,9 @@
 <?php
+/**
+ * SPDX-FileCopyrightText: 2025 Wacken2012 and the nextcloud-verein contributors <https://github.com/Wacken2012/nextcloud-verein>
+ * SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
 /** @var array $_ */
 // linkTo() alone does not add any cache-busting query string (unlike the
 // script() helper below, which does) - a CSS-only fix would otherwise never

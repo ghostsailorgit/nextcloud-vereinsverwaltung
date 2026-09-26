@@ -1,5 +1,9 @@
 <?php
 /**
+ * SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+/**
  * Generates docs/API.md from appinfo/routes.php and the #[RequirePermission] attributes of the
  * controllers, so the documentation cannot drift from the code.
  *

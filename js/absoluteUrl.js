@@ -1,3 +1,7 @@
+/**
+ * SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
 // Builds a URL below this Nextcloud's root, e.g. absoluteUrl('/apps/verein/clubs').
 //
 // The page template (templates/main.php) puts the installation's URL prefix on the #app element

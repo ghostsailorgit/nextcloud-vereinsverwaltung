@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  - SPDX-FileCopyrightText: 2025 Wacken2012 and the nextcloud-verein contributors <https://github.com/Wacken2012/nextcloud-verein>
+  - SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+  - SPDX-License-Identifier: AGPL-3.0-only
+-->
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>verein</id>
@@ -17,8 +22,8 @@ A comprehensive club/association management solution for Nextcloud with member m
     <bugs>https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues</bugs>
     <repository type="git">https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung.git</repository>
     <dependencies>
-        <php min-version="8.1" max-version="8.5"/>
-        <nextcloud min-version="27" max-version="34"/>
+        <php min-version="8.2" max-version="8.5"/>
+        <nextcloud min-version="33" max-version="35"/>
     </dependencies>
     <navigations>
         <navigation>
