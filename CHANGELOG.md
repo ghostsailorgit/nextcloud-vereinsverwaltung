@@ -4,6 +4,42 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.19.0-beta] - 2026-09-29
+
+Englisch auf Veröffentlichungsniveau, Datum und Beträge nach Spracheinstellung, PDFs mit allen Schriftzeichen.
+
+### 🌐 Übersetzungen
+- Alle englischen Texte (Oberfläche, Meldungen, Mahnschreiben, PDFs, Import-Hilfe) nach einem festen Glossar überarbeitet
+  (`docs/GLOSSARY.md`): ein Begriff je Fachbegriff – *club*, *position* statt „club role“ für die Vereinsfunktion,
+  *fee category* statt „fee rate“, *payment reminders* statt „dunning“, *audit log*, *account* statt „user“, *Email*,
+  *date of birth*, *date joined/left*, Anrede *Mr/Ms/Mx/Company*, amerikanische Schreibweise, typografische
+  Anführungszeichen. Ein Test liest die verbotenen Wörter aus dem Glossar und prüft Stilregeln.
+- Die App heißt auf Englisch „Club Management“ (Menü „Clubs“), auf Deutsch weiter „Vereinsverwaltung“/„Verein“;
+  `info.xml` hat Name, Kurzbeschreibung und Beschreibung auf Englisch und Deutsch sowie Links zur Dokumentation.
+- Nicht übersetzbare Stellen beseitigt: Die Anrede erschien unter „Meine Daten“ und in der Mitgliederliste als
+  gespeicherter deutscher Wert, Nextcloud-Protokolleinträge waren deutsch (jetzt englisch wie in Nextcloud üblich),
+  ungenutzte deutsche Konstanten entfernt.
+- Deutsch vereinheitlicht: „Beitrag“ statt „Gebühr“, „CSV-Export“/„PDF-Export“, Reiter „Verein“ statt „Vereine“.
+
+### ✨ Neu
+- Datum und Beträge erscheinen im Format der Spracheinstellung: in der Oberfläche nach dem Gebietsschema des Kontos
+  (€1,234.50 / 12/1/2026 bzw. 1.234,50 € / 1.12.2026), in Mahnschreiben und PDFs in der Dokumentsprache. Bisher überall
+  fest deutsch; die SEPA-Vorschau zeigte Datumsangaben sogar im Datenbankformat (2026-12-01).
+- PDFs nutzen die Schrift DejaVu Sans: Namen wie „Łukasz“ oder kyrillische erscheinen jetzt richtig (bisher „?ukasz“).
+  Zu lange Texte in Tabellenzellen werden gestaucht statt überzulaufen.
+- Der CSV-Export schreibt Anrede und Funktion als Bezeichnung („Ms“, „Board“ bzw. „Frau“, „Vorstand“) statt der internen
+  Werte; der Import erkennt die englischen Spaltennamen und Werte (Title, Date of birth, Date joined, Position, Fee
+  category, Mr/Ms/Mx/Company, Board …), ein englischer Export lässt sich also wieder importieren.
+- Der Jahresbeitrag einer Kategorie wird als Zahl eingegeben (Eingabefeld nach Spracheinstellung).
+
+### 🐛 Korrigiert
+- Der Import nahm die Funktion „Board“ nicht an, obwohl die Fehlermeldung sie vorschlug.
+- Die PDF-Mitgliederliste konnte Namen mitten in einem Umlaut abschneiden (Kürzen nach Bytes statt nach Zeichen).
+- Die heruntergeladenen Mahnschreiben hießen im Browser immer `mahnschreiben_….pdf`; jetzt nennt sie der Server in der
+  Sprache der Schreiben.
+
+---
+
 ## [0.18.12-beta] - 2026-09-29
 
 Installation ohne Kommandozeile und ohne Hürden durch die Server-Umgebung.

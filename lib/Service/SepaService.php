@@ -71,17 +71,17 @@ class SepaService {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
         if (trim((string)$account->getCreditorId()) === '') {
-            throw new ValidationException($this->l->t('No creditor ID is set for the bank account ("Club" tab)'));
+            throw new ValidationException($this->l->t('No creditor ID is set for the bank account (“Club” tab)'));
         }
         if (!$this->validation->validateCreditorId(self::compact($account->getCreditorId()))) {
-            throw new ValidationException($this->l->t('The creditor ID of the bank account is invalid ("Club" tab)'));
+            throw new ValidationException($this->l->t('The creditor ID of the bank account is invalid (“Club” tab)'));
         }
         if (!$this->validation->validateIBAN(self::compact($account->getIban()))) {
-            throw new ValidationException($this->l->t('The IBAN of the bank account is invalid ("Club" tab)'));
+            throw new ValidationException($this->l->t('The IBAN of the bank account is invalid (“Club” tab)'));
         }
         $bic = self::compact($account->getBic());
         if ($bic !== '' && !preg_match(self::BIC_PATTERN, $bic)) {
-            throw new ValidationException($this->l->t('The BIC of the bank account is invalid ("Club" tab)'));
+            throw new ValidationException($this->l->t('The BIC of the bank account is invalid (“Club” tab)'));
         }
 
         $collected = $this->collectFees($clubId);
@@ -92,9 +92,9 @@ class SepaService {
                     fn($s) => $s['memberName'] . ' (' . $s['reason'] . ')',
                     $collected['skipped']
                 ));
-                throw new ValidationException($this->l->t('No payment can be exported. Not included: %s', [$names]));
+                throw new ValidationException($this->l->t('No fee can be exported. Not included: %s', [$names]));
             }
-            throw new ValidationException($this->l->t('No open or overdue payments found for the SEPA export'));
+            throw new ValidationException($this->l->t('No unpaid or overdue fees for the SEPA export'));
         }
 
         return [
@@ -193,9 +193,9 @@ class SepaService {
             } elseif ($membership === null || $mandateDate === '') {
                 $reason = $this->l->t('no signed SEPA mandate recorded');
             } elseif (!self::isDate($mandateDate)) {
-                $reason = $this->l->t('signature date of the mandate is invalid');
+                $reason = $this->l->t('date of signature of the mandate is invalid');
             } elseif ($mandateDate > $today) {
-                $reason = $this->l->t('signature date of the mandate is in the future');
+                $reason = $this->l->t('date of signature of the mandate is in the future');
             } elseif (!preg_match(self::ID_PATTERN, $membership->getEffectiveMandateReference())) {
                 $reason = $this->l->t('mandate reference contains characters not allowed in SEPA (max. 35 letters, digits and simple special characters)');
             } elseif ($due > $latestDue && self::isDate($due)) {

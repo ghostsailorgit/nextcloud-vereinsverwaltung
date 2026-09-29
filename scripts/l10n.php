@@ -56,6 +56,13 @@ function extract(): array {
             }
         }
     }
+    // Nextcloud translates the navigation entries of appinfo/info.xml with the app's translations
+    $info = (string)file_get_contents(ROOT . '/appinfo/info.xml');
+    if (preg_match_all('#<navigation>.*?<name>([^<]+)</name>#s', $info, $nav, PREG_OFFSET_CAPTURE)) {
+        foreach ($nav[1] as [$name, $offset]) {
+            $add(html_entity_decode($name, ENT_XML1), ROOT . '/appinfo/info.xml', substr_count(substr($info, 0, $offset), "\n") + 1);
+        }
+    }
     ksort($found);
     return $found;
 }

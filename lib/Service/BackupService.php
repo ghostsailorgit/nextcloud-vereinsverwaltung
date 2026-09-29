@@ -168,7 +168,7 @@ class BackupService {
                 $folder->getFile($name)->delete();
                 $deleted[] = $name;
             } catch (\Throwable $e) {
-                $this->logger->warning('Verein: alte Sicherung konnte nicht gelöscht werden: ' . $name, ['exception' => $e]);
+                $this->logger->warning('Verein: could not delete old backup ' . $name, ['exception' => $e]);
             }
         }
         return $deleted;
@@ -308,7 +308,7 @@ class BackupService {
             $this->db->commit();
         } catch (\Throwable $e) {
             $this->db->rollBack();
-            $this->logger->error('Verein: Wiederherstellung fehlgeschlagen, nichts wurde geändert', ['exception' => $e]);
+            $this->logger->error('Verein: restore failed, nothing was changed', ['exception' => $e]);
             throw $e;
         }
 
@@ -354,7 +354,7 @@ class BackupService {
                     "SELECT setval(pg_get_serial_sequence('*PREFIX*$table', 'id'), COALESCE((SELECT MAX(id) FROM *PREFIX*$table), 1))"
                 )->closeCursor();
             } catch (\Throwable $e) {
-                $this->logger->warning('Verein: ID-Zähler von ' . $table . ' konnte nicht angeglichen werden', ['exception' => $e]);
+                $this->logger->warning('Verein: could not adjust the id sequence of ' . $table, ['exception' => $e]);
             }
         }
     }

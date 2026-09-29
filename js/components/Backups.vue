@@ -6,7 +6,7 @@
   <div class="card backups">
     <h3>{{ t('verein', 'Backups (administrator)') }}</h3>
     <p class="hint">
-      {{ t('verein', 'All club data (all clubs, members, fees, roles) is backed up automatically every day. Backups older than {days} days are deleted automatically. They are stored in Nextcloud\'s app data folder, not in the files.', { days: retentionDays }) }}
+      {{ t('verein', 'All club data (all clubs, members, fees, roles) is backed up automatically every day. Backups older than {days} days are deleted automatically. They are stored in Nextcloud\'s app data folder, not in Files.', { days: retentionDays }) }}
     </p>
     <p>
       <NcButton variant="primary" :disabled="busy" @click="create">{{ t('verein', 'Back up now') }}</NcButton>
@@ -33,6 +33,7 @@
 import { ref, onMounted } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
+import { formatDateTime, formatNumber } from '../format'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { api } from '../api'
 import { absoluteUrl } from '../absoluteUrl'
@@ -72,10 +73,10 @@ export default {
       }
     }
 
-    const formatTime = (ts) => new Date(ts * 1000).toLocaleString('de-DE')
+    const formatTime = (ts) => formatDateTime(ts)
     const formatSize = (bytes) => bytes >= 1048576
-      ? (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB'
-      : Math.max(1, Math.round(bytes / 1024)) + ' KB'
+      ? formatNumber(bytes / 1048576, 1) + ' MB'
+      : formatNumber(Math.max(1, Math.round(bytes / 1024))) + ' KB'
     const downloadUrl = (name) => absoluteUrl('/apps/verein/backups/' + encodeURIComponent(name))
 
     onMounted(load)

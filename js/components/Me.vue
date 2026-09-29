@@ -10,16 +10,16 @@
 
     <template v-else-if="data && data.linked">
       <p class="hint">
-        {{ t('verein', 'This is the data the club has stored about you (self-disclosure). If something is wrong, please contact the board.') }}
+        {{ t('verein', 'This is the data the club has stored about you. If anything is wrong, please contact the board.') }}
       </p>
 
       <div class="card">
         <h3>{{ t('verein', 'Personal data') }}</h3>
         <dl>
           <dt>{{ t('verein', 'Name') }}</dt><dd>{{ personName }}</dd>
-          <dt>{{ t('verein', 'Birth date') }}</dt><dd>{{ formatDate(data.person.birthDate) }}</dd>
+          <dt>{{ t('verein', 'Date of birth') }}</dt><dd>{{ formatDate(data.person.birthDate) }}</dd>
           <dt>{{ t('verein', 'Postal address') }}</dt><dd>{{ address }}</dd>
-          <dt>{{ t('verein', 'E-mail') }}</dt><dd>{{ data.person.email || '–' }}</dd>
+          <dt>{{ t('verein', 'Email') }}</dt><dd>{{ data.person.email || '–' }}</dd>
           <dt>IBAN</dt><dd>{{ data.person.iban || '–' }}</dd>
           <dt>BIC</dt><dd>{{ data.person.bic || '–' }}</dd>
           <dt>{{ t('verein', 'Nextcloud account') }}</dt><dd>{{ data.nextcloudAccount }}</dd>
@@ -32,7 +32,7 @@
           <span :class="['badge', m.isFormer ? 'former' : 'active']">{{ m.isFormer ? t('verein', 'Former') : t('verein', 'Active') }}</span>
         </h3>
         <dl>
-          <dt>{{ t('verein', 'Club role') }}</dt><dd>{{ roleLabel(m.role) }}<span v-if="m.foundingMember"> · {{ t('verein', 'Founding member') }} ★</span></dd>
+          <dt>{{ t('verein', 'Position') }}</dt><dd>{{ roleLabel(m.role) }}<span v-if="m.foundingMember"> · {{ t('verein', 'Founding member') }} ★</span></dd>
           <dt>{{ t('verein', 'Member since') }}</dt>
           <dd>{{ formatDate(m.joinDate) }}<span v-if="m.membershipYears !== null"> ({{ n('verein', '%n year', '%n years', m.membershipYears) }})</span></dd>
           <dt v-if="m.leaveDate">{{ t('verein', 'Left on') }}</dt><dd v-if="m.leaveDate">{{ formatDate(m.leaveDate) }}</dd>
@@ -47,12 +47,12 @@
       <div class="card">
         <h3>{{ t('verein', 'Fees') }}</h3>
         <table v-if="data.fees.length">
-          <thead><tr><th>{{ t('verein', 'Club') }}</th><th>{{ t('verein', 'Due') }}</th><th>{{ t('verein', 'Amount') }}</th><th>{{ t('verein', 'Status') }}</th><th>{{ t('verein', 'Remark') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Club') }}</th><th>{{ t('verein', 'Due') }}</th><th>{{ t('verein', 'Amount') }}</th><th>{{ t('verein', 'Status') }}</th><th>{{ t('verein', 'Comment') }}</th></tr></thead>
           <tbody>
             <tr v-for="(f, i) in data.fees" :key="i">
               <td>{{ f.club }}</td>
               <td>{{ formatDate(f.dueDate) }}</td>
-              <td>{{ Number(f.amount).toFixed(2) }} €</td>
+              <td>{{ formatMoney(f.amount) }}</td>
               <td>{{ statusLabel(f.status) }}</td>
               <td>{{ f.description || '' }}</td>
             </tr>
@@ -68,7 +68,7 @@
     </template>
 
     <p v-else class="hint">
-      {{ t('verein', 'No member is linked to your Nextcloud account yet. The board can set this up in the member form under "Linked Nextcloud account".') }}
+      {{ t('verein', 'No member is linked to your Nextcloud account yet. The board can set this up in the member form under “Linked Nextcloud account”.') }}
     </p>
   </div>
 </template>
@@ -78,6 +78,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from '@nextcloud/axios'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney, formatDate, salutationLabel } from '../format'
 import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
 
@@ -103,7 +104,7 @@ export default {
     const personName = computed(() => {
       const p = data.value?.person
       if (!p) return ''
-      return [p.salutation, p.firstName, p.name].filter(Boolean).join(' ')
+      return [salutationLabel(p.salutation), p.firstName, p.name].filter(Boolean).join(' ')
     })
     const address = computed(() => {
       const p = data.value?.person
@@ -112,20 +113,15 @@ export default {
       return line || '–'
     })
 
-    const formatDate = (value) => {
-      if (!value) return '–'
-      const d = new Date(String(value).replace(' ', 'T'))
-      return isNaN(d) ? value : d.toLocaleDateString('de-DE')
-    }
     const roleLabel = (role) => ({ member: t('verein', 'Member'), treasurer: t('verein', 'Treasurer'), admin: t('verein', 'Board') }[role] || role)
-    const statusLabel = (s) => ({ open: t('verein', 'open'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'cancelled') }[s] || s)
+    const statusLabel = (s) => ({ open: t('verein', 'unpaid'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'canceled') }[s] || s)
 
     const download = () => {
       window.location.href = absoluteUrl('/apps/verein/me/export')
     }
     const print = () => window.print()
 
-    return { t, n, data, loading, error, personName, address, formatDate, roleLabel, statusLabel, download, print }
+    return { t, n, data, loading, error, personName, address, formatDate, formatMoney, roleLabel, statusLabel, download, print }
   }
 }
 </script>

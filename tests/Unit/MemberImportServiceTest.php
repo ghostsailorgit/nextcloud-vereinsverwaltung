@@ -82,12 +82,13 @@ class MemberImportServiceTest extends TestCase {
         // headers exactly as CsvExporter writes them for an English-speaking user (no translation table = English)
         $export = (new CsvExporter())->formatMembers([[
             'id' => 12, 'salutation' => 'Frau', 'firstName' => 'Erika', 'name' => 'Mustermann', 'street' => 'Musterweg 1',
-            'postalCode' => '12345', 'city' => 'Musterstadt', 'email' => 'erika@example.org', 'role' => 'member',
+            'postalCode' => '12345', 'city' => 'Musterstadt', 'email' => 'erika@example.org', 'role' => 'admin',
             'iban' => 'DE89370400440532013000', 'bic' => 'COBADEFFXXX', 'birthDate' => '1980-02-01', 'age' => 46,
             'joinDate' => '2010-05-01', 'membershipYears' => 16, 'leaveDate' => '', 'foundingMember' => true, 'deceased' => false,
             'createdAt' => '2026-01-01 10:00:00',
         ]]);
         $this->assertContains('Founding member', $export['headers']);
+        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][8]], 'labels, not the internal ids');
         $csv = implode(';', $export['headers']) . "\n" . implode(';', array_map('strval', $export['data'][0])) . "\n";
 
         $plan = $this->service->plan(self::CLUB, $csv, true);
@@ -96,6 +97,7 @@ class MemberImportServiceTest extends TestCase {
         $this->assertSame(['ok' => 1, 'error' => 0, 'duplicate' => 0], $plan['counts']);
         $data = $plan['rows'][0]['data'];
         $this->assertSame('Frau', $data['salutation']);
+        $this->assertSame('admin', $data['role'], 'position "Board" read back');
         $this->assertSame('Erika', $data['firstName']);
         $this->assertSame('Musterweg 1', $data['street']);
         $this->assertSame('12345', $data['postalCode']);

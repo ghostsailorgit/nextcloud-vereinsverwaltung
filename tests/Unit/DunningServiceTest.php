@@ -277,7 +277,7 @@ class DunningServiceTest extends TestCase {
         $this->fee(1, 10, 24, '2025-03-31', 'overdue', 1, '2026-01-01');
 
         $plan = $service->plan(self::CLUB, 14, 14, self::TODAY);
-        $this->assertSame('First dunning letter', $plan['included'][0]['levelLabel']);
+        $this->assertSame('Second reminder', $plan['included'][0]['levelLabel']);
 
         $letter = $service->letters(self::CLUB, [1], 14, self::TODAY)['letters'][0];
         $this->assertSame('Zahlungserinnerung', $letter['title']);

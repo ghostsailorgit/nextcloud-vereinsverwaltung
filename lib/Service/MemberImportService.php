@@ -34,7 +34,7 @@ class MemberImportService {
 
     /** normalised header => field; see normaliseHeader() */
     private const COLUMNS = [
-        'anrede' => 'salutation', 'salutation' => 'salutation',
+        'anrede' => 'salutation', 'salutation' => 'salutation', 'title' => 'salutation',
         'vorname' => 'firstName', 'firstname' => 'firstName',
         'name' => 'name', 'nachname' => 'name', 'familienname' => 'name', 'lastname' => 'name', 'surname' => 'name',
         'strasse' => 'street', 'strassehausnummer' => 'street', 'strasseundhausnummer' => 'street', 'anschrift' => 'street', 'street' => 'street',
@@ -42,23 +42,23 @@ class MemberImportService {
         'ort' => 'city', 'wohnort' => 'city', 'stadt' => 'city', 'city' => 'city',
         'email' => 'email', 'mail' => 'email', 'emailadresse' => 'email',
         'iban' => 'iban', 'bic' => 'bic',
-        'geburtsdatum' => 'birthDate', 'geburtstag' => 'birthDate', 'birthdate' => 'birthDate',
-        'eintritt' => 'joinDate', 'eintrittsdatum' => 'joinDate', 'mitgliedseit' => 'joinDate', 'joindate' => 'joinDate',
-        'austritt' => 'leaveDate', 'austrittsdatum' => 'leaveDate', 'leavedate' => 'leaveDate',
-        'rolle' => 'role', 'funktion' => 'role', 'role' => 'role',
-        'beitragskategorie' => 'feeRate', 'kategorie' => 'feeRate', 'feerate' => 'feeRate',
+        'geburtsdatum' => 'birthDate', 'geburtstag' => 'birthDate', 'birthdate' => 'birthDate', 'dateofbirth' => 'birthDate',
+        'eintritt' => 'joinDate', 'eintrittsdatum' => 'joinDate', 'mitgliedseit' => 'joinDate', 'joindate' => 'joinDate', 'datejoined' => 'joinDate', 'joined' => 'joinDate',
+        'austritt' => 'leaveDate', 'austrittsdatum' => 'leaveDate', 'leavedate' => 'leaveDate', 'dateleft' => 'leaveDate', 'left' => 'leaveDate',
+        'rolle' => 'role', 'funktion' => 'role', 'role' => 'role', 'position' => 'role',
+        'beitragskategorie' => 'feeRate', 'kategorie' => 'feeRate', 'feerate' => 'feeRate', 'feecategory' => 'feeRate', 'category' => 'feeRate',
         'mandatsreferenz' => 'mandateReference', 'mandatereference' => 'mandateReference',
-        'mandatsdatum' => 'mandateDate', 'mandatunterschriebenam' => 'mandateDate', 'mandatedate' => 'mandateDate',
+        'mandatsdatum' => 'mandateDate', 'mandatunterschriebenam' => 'mandateDate', 'mandatedate' => 'mandateDate', 'dateofsignature' => 'mandateDate',
         'grundungsmitglied' => 'foundingMember', 'gruendungsmitglied' => 'foundingMember', 'foundingmember' => 'foundingMember',
         'verstorben' => 'deceased', 'deceased' => 'deceased',
     ];
 
     /** columns of the app's own export that carry nothing to import */
-    private const IGNORED = ['id', 'alter', 'mitgliedseitjahre', 'erstelltam', 'nr', 'age', 'membersinceyears', 'createdon'];
+    private const IGNORED = ['id', 'alter', 'mitgliedseitjahre', 'erstelltam', 'nr', 'age', 'membersinceyears', 'createdon', 'memberid', 'yearsofmembership'];
 
     private const ROLES = [
         'mitglied' => 'member', 'member' => 'member', '' => 'member',
-        'vorstand' => 'admin', 'admin' => 'admin',
+        'vorstand' => 'admin', 'admin' => 'admin', 'board' => 'admin',
         'kassierer' => 'treasurer', 'kassiererin' => 'treasurer', 'kassenwart' => 'treasurer', 'kassenwartin' => 'treasurer', 'treasurer' => 'treasurer',
     ];
 
@@ -222,7 +222,7 @@ class MemberImportService {
             }
         }
         if (!in_array('name', $fieldByIndex, true)) {
-            throw new ValidationException($this->l->t('A column "Name" (or "Last name") is missing'));
+            throw new ValidationException($this->l->t('A column “Name” (or “Last name”) is missing'));
         }
 
         $records = [];
@@ -277,21 +277,24 @@ class MemberImportService {
 
         $salutation = trim($record['salutation'] ?? '');
         $salutations = ['herr' => 'Herr', 'hr.' => 'Herr', 'hr' => 'Herr', 'frau' => 'Frau', 'fr.' => 'Frau', 'fr' => 'Frau',
-            'divers' => 'Divers', 'firma' => 'Firma'];
+            'divers' => 'Divers', 'firma' => 'Firma',
+            // the English labels (and so an English export)
+            'mr' => 'Herr', 'mr.' => 'Herr', 'ms' => 'Frau', 'ms.' => 'Frau', 'mrs' => 'Frau', 'mrs.' => 'Frau',
+            'mx' => 'Divers', 'mx.' => 'Divers', 'company' => 'Firma'];
         if ($salutation === '') {
             $data['salutation'] = null;
         } elseif (isset($salutations[mb_strtolower($salutation)])) {
             $data['salutation'] = $salutations[mb_strtolower($salutation)];
         } else {
             $data['salutation'] = null;
-            $warnings[] = $this->l->t('Salutation "%s" unknown, left out', [$salutation]);
+            $warnings[] = $this->l->t('Title “%s” unknown, left empty', [$salutation]);
         }
 
-        foreach (['birthDate' => $this->l->t('Birth date'), 'joinDate' => $this->l->t('Join date'), 'leaveDate' => $this->l->t('Leave date'), 'mandateDate' => $this->l->t('Mandate date')] as $field => $label) {
+        foreach (['birthDate' => $this->l->t('Date of birth'), 'joinDate' => $this->l->t('Date joined'), 'leaveDate' => $this->l->t('Date left'), 'mandateDate' => $this->l->t('Date of signature')] as $field => $label) {
             $raw = trim($record[$field] ?? '');
             $date = $this->parseDate($raw);
             if ($raw !== '' && $date === null) {
-                $errors[] = $this->l->t('%1$s "%2$s" is not a date (DD.MM.YYYY)', [$label, $raw]);
+                $errors[] = $this->l->t('%1$s “%2$s” is not a valid date (use DD.MM.YYYY or YYYY-MM-DD)', [$label, $raw]);
             }
             $data[$field] = $date;
         }
@@ -303,16 +306,16 @@ class MemberImportService {
             } elseif (in_array($raw, ['ja', 'yes', 'j', 'y', '1', 'true', 'wahr', 'x'], true)) {
                 $data[$field] = true;
             } else {
-                $errors[] = $this->l->t('%1$s "%2$s": please Yes or No', [$label, $record[$field]]);
+                $errors[] = $this->l->t('%1$s “%2$s”: please enter Yes or No', [$label, $record[$field]]);
                 $data[$field] = false;
             }
         }
 
         $roleRaw = mb_strtolower(trim($record['role'] ?? ''));
         if (!isset(self::ROLES[$roleRaw])) {
-            $errors[] = $this->l->t('Role "%s" unknown (Member, Treasurer or Board)', [$record['role'] ?? '']);
+            $errors[] = $this->l->t('Position “%s” unknown (Member, Treasurer or Board)', [$record['role'] ?? '']);
         } elseif (self::ROLES[$roleRaw] !== 'member' && !$mayAssignRoles) {
-            $warnings[] = $this->l->t('Role "%s" not taken over (only with the permission "manage roles"), created as member', [$record['role']]);
+            $warnings[] = $this->l->t('Position “%s” not applied (requires the “manage roles” permission); imported as member', [$record['role']]);
         } else {
             $data['role'] = self::ROLES[$roleRaw];
         }
@@ -322,7 +325,7 @@ class MemberImportService {
             if (isset($ratesByName[mb_strtolower($rate)])) {
                 $data['feeRateId'] = $ratesByName[mb_strtolower($rate)];
             } else {
-                $errors[] = $this->l->t('Fee rate "%s" does not exist in this club', [$rate]);
+                $errors[] = $this->l->t('Fee category “%s” does not exist in this club', [$rate]);
             }
         }
 

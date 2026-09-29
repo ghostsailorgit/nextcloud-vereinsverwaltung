@@ -9,7 +9,7 @@
 
     <div v-if="accounts.length === 0" class="form-container">
       <p>
-        {{ t('verein', 'No bank account is set for this club yet. Account, BIC and creditor ID are maintained in the "Clubs" tab.') }}
+        {{ t('verein', 'No bank account is set for this club yet. Add the account, BIC and creditor ID in the “Club” tab.') }}
       </p>
     </div>
 
@@ -22,7 +22,7 @@
             :options="accounts"
             :reduce="a => a.id"
             :get-option-label="accountLabel"
-            :input-label="t('verein', 'Account for the collection')"
+            :input-label="t('verein', 'Bank account for the collection')"
             :clearable="false"
           />
         </div>
@@ -34,7 +34,7 @@
           <p>
             <strong>{{ t('verein', 'Creditor ID:') }}</strong>
             <span v-if="selectedAccount.creditorId">{{ selectedAccount.creditorId }}</span>
-            <span v-else class="missing">{{ t('verein', 'missing – enter it in the "Clubs" tab') }}</span>
+            <span v-else class="missing">{{ t('verein', 'missing – enter it in the “Club” tab') }}</span>
           </p>
         </div>
 
@@ -63,9 +63,9 @@
         <p><strong>{{ t('verein', 'Creditor:') }}</strong> {{ previewData.creditorName }}</p>
         <p><strong>IBAN:</strong> {{ previewData.creditorIban }}</p>
         <p><strong>{{ t('verein', 'Number of transactions:') }}</strong> {{ previewData.transactionCount }}</p>
-        <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
-        <p><strong>{{ t('verein', 'Earliest collection date:') }}</strong> {{ previewData.collectionDate }}</p>
-        <p>{{ t('verein', 'Fees are never collected before their due date: fees due up to 14 days after the earliest collection date are collected on their due date, later ones stay open for a later export.') }}</p>
+        <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ formatMoney(previewData.totalAmount) }}</p>
+        <p><strong>{{ t('verein', 'Earliest collection date:') }}</strong> {{ formatDate(previewData.collectionDate) }}</p>
+        <p>{{ t('verein', 'Fees are never collected before their due date: fees due up to 14 days after the earliest collection date are collected on their due date; later ones remain unpaid until a later export.') }}</p>
         <p>{{ t('verein', 'Names and texts are converted to the SEPA character set (ä → ae, & → +).') }}</p>
       </div>
 
@@ -73,7 +73,7 @@
         <strong>{{ t('verein', 'Not included in the export:') }}</strong>
         <ul>
           <li v-for="(s, idx) in previewData.skipped" :key="idx">
-            {{ s.memberName }} – {{ s.amount.toFixed(2) }} €, {{ t('verein', 'due {date}', { date: s.dueDate }) }}
+            {{ s.memberName }} – {{ formatMoney(s.amount) }}, {{ t('verein', 'due {date}', { date: formatDate(s.dueDate) }) }}
             <em>({{ s.reason }})</em>
           </li>
         </ul>
@@ -95,10 +95,10 @@
           <tr v-for="(txn, idx) in previewData.transactions" :key="idx">
             <td>{{ txn.memberName }}</td>
             <td>{{ txn.iban }}</td>
-            <td>{{ txn.mandateReference }} ({{ txn.mandateDate }})</td>
-            <td>{{ txn.amount.toFixed(2) }} €</td>
-            <td>{{ txn.dueDate }}</td>
-            <td>{{ txn.collectionDate }}</td>
+            <td>{{ txn.mandateReference }} ({{ formatDate(txn.mandateDate) }})</td>
+            <td>{{ formatMoney(txn.amount) }}</td>
+            <td>{{ formatDate(txn.dueDate) }}</td>
+            <td>{{ formatDate(txn.collectionDate) }}</td>
           </tr>
         </tbody>
       </table>
@@ -116,6 +116,7 @@ import { confirmAction } from '../confirm'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney, formatDate } from '../format'
 import { clubState, currentClub } from '../store/club'
 
 export default {
@@ -147,6 +148,8 @@ export default {
   methods: {
     t,
     n,
+    formatMoney,
+    formatDate,
     accountLabel(account) {
       return (account.label ? account.label + ' – ' : '') + account.iban
     },
@@ -167,7 +170,7 @@ export default {
       }
     },
     async markExportedPaid() {
-      if (!(await confirmAction(t('verein', 'Mark as paid'), n('verein', 'Mark %n fee as paid? This should only happen after submitting to the bank.', 'Mark %n fees as paid? This should only happen after submitting to the bank.', this.exportedFeeIds.length), { labelConfirm: t('verein', 'Mark as paid'), severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Mark as paid'), n('verein', 'Mark %n fee as paid? Only do this after submitting the file to the bank.', 'Mark %n fees as paid? Only do this after submitting the file to the bank.', this.exportedFeeIds.length), { labelConfirm: t('verein', 'Mark as paid'), severity: 'warning' }))) return
       this.marking = true
       try {
         const res = await api.post('finance/mark-paid', { feeIds: this.exportedFeeIds.join(',') })
@@ -200,11 +203,11 @@ export default {
         this.exportedFeeIds = (response.headers['x-sepa-fee-ids'] || '').split(',').filter(Boolean).map(Number)
         const skipped = parseInt(response.headers['x-sepa-skipped'] || '0', 10)
         if (skipped > 0) {
-          showError(n('verein', 'Attention: %n open payment is missing from the export (no IBAN or no mandate). Details in the preview.', 'Attention: %n open payments are missing from the export (no IBAN or no mandate). Details in the preview.', skipped))
+          showError(n('verein', 'Attention: %n unpaid fee is not in the export (for example no IBAN or no mandate). See the preview for details.', 'Attention: %n unpaid fees are not in the export (for example no IBAN or no mandate). See the preview for details.', skipped))
         }
       } catch (error) {
         console.error('Error generating SEPA:', error)
-        let message = t('verein', 'Error generating the SEPA file')
+        let message = t('verein', 'Error creating the SEPA file')
         if (error.response?.data instanceof Blob) {
           try {
             const parsed = JSON.parse(await error.response.data.text())

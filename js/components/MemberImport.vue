@@ -6,7 +6,7 @@
   <div class="member-import">
     <h2>{{ t('verein', 'Import members from CSV') }}</h2>
     <p class="hint">
-      {{ t('verein', 'First line = column headings. Recognised are among others Salutation, First name, Name (or Last name), Street, Postal code, City, E-mail, IBAN, BIC, Birth date, Join date, Leave date, Role, Fee rate, Mandate reference, Mandate date, Founding member, Deceased - so the app\'s own member export as well. Separator semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. First everything is only checked, nothing is saved.') }}
+      {{ t('verein', 'The first line must contain the column headings. Recognized headings include Title, First name, Last name, Street, Postal code, City, Email, IBAN, BIC, Date of birth, Date joined, Date left, Position, Fee category, Mandate reference, Date of signature, Founding member and Deceased – so the app\'s own member export can be imported too. Separator: semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. Everything is checked first; nothing is saved until you confirm.') }}
     </p>
 
     <div class="pick">
@@ -21,7 +21,7 @@
         <span v-if="plan.counts.error"> · {{ n('verein', '%n with errors', '%n with errors', plan.counts.error) }}</span>
       </p>
       <p class="hint">
-        {{ t('verein', 'Recognised columns: {list}', { list: Object.keys(plan.columns).join(', ') }) }}
+        {{ t('verein', 'Recognized columns: {list}', { list: Object.keys(plan.columns).join(', ') }) }}
         <span v-if="plan.ignoredColumns.length"><br>{{ t('verein', 'Not imported: {list}', { list: plan.ignoredColumns.join(', ') }) }}</span>
       </p>
 
@@ -135,7 +135,7 @@ export default {
         progress.value = ''
       }
       if (created) showSuccess(n('verein', '%n member imported', '%n members imported', created))
-      if (problems) showWarning(n('verein', '%n line not imported - see the list', '%n lines not imported - see the list', problems))
+      if (problems) showWarning(n('verein', '%n line not imported – see the list', '%n lines not imported – see the list', problems))
       if (created) emit('done')
     }
 
@@ -143,7 +143,7 @@ export default {
       const o = outcome.value[r.line]
       if (o === 'created') return '✓ ' + t('verein', 'imported')
       if (o) return '✗ ' + o.replace(/^failed: /, t('verein', 'Error: ')).replace(/^skipped: /, t('verein', 'skipped: '))
-      return { ok: t('verein', 'ready'), error: t('verein', 'faulty'), duplicate: t('verein', 'already exists') }[r.status] || r.status
+      return { ok: t('verein', 'ready'), error: t('verein', 'invalid'), duplicate: t('verein', 'already exists') }[r.status] || r.status
     }
 
     const reset = () => {

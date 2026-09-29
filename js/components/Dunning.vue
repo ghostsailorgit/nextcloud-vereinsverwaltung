@@ -4,18 +4,18 @@
 -->
 <template>
   <div class="dunning">
-    <h2>{{ t('verein', 'Dunning') }}</h2>
+    <h2>{{ t('verein', 'Payment reminders') }}</h2>
     <p class="hint">
-      {{ t('verein', 'For open fees whose due date has passed, this creates one letter per person and raises the dunning level: payment reminder → first dunning letter → second and final dunning letter. Anyone who received a letter recently is skipped, so a run can safely be repeated. The app sends nothing – the letters come as a PDF to print or send.') }}
+      {{ t('verein', 'For unpaid fees past their due date, this creates one letter per person and raises the reminder level: payment reminder → second reminder → final notice. Anyone who received a letter recently is skipped, so the run can safely be repeated. The app sends nothing – you get the letters as a PDF to print or send.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
       <label class="field">
-        <span>{{ t('verein', 'Due for at least (days)') }}</span>
+        <span>{{ t('verein', 'Overdue by at least (days)') }}</span>
         <input v-model.number="overdueDays" type="number" min="0" max="365" class="form-input" required @input="plan = null" />
       </label>
       <label class="field">
-        <span>{{ t('verein', 'Days since the last letter') }}</span>
+        <span>{{ t('verein', 'Minimum days since the last letter') }}</span>
         <input v-model.number="intervalDays" type="number" min="0" max="365" class="form-input" required @input="plan = null" />
       </label>
       <label class="field">
@@ -44,7 +44,7 @@
         <span v-if="plan.skipped.length"> · {{ n('verein', '%n skipped', '%n skipped', plan.skipped.length) }}</span>
       </p>
       <p v-if="!plan.hasAccount" class="warning">
-        {{ t('verein', 'No bank account is set for this club (tab "Club"). The letters will then not name any bank details.') }}
+        {{ t('verein', 'No bank account is set for this club (“Club” tab), so the letters will not include bank details.') }}
       </p>
       <p v-if="withoutAddress" class="warning">
         {{ n('verein', '%n person without a complete address – their letter cannot be sent by post.', '%n people without a complete address – their letters cannot be sent by post.', withoutAddress) }}
@@ -53,7 +53,7 @@
       <details v-if="plan.included.length" open>
         <summary>{{ t('verein', 'Who gets a letter') }}</summary>
         <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Open') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Unpaid') }}</th></tr></thead>
           <tbody>
             <tr v-for="e in plan.included" :key="e.memberId">
               <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> ({{ t('verein', 'no address') }})</span></td>
@@ -83,6 +83,7 @@ import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney } from '../format'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
@@ -90,8 +91,8 @@ import { extractErrorMessage } from '../errorMessage'
 // same labels as DunningService::levelLabel()
 export const DUNNING_LEVELS = {
   1: t('verein', 'Payment reminder'),
-  2: t('verein', 'First dunning letter'),
-  3: t('verein', 'Second and final dunning letter'),
+  2: t('verein', 'Second reminder'),
+  3: t('verein', 'Final notice'),
 }
 
 export default {
@@ -130,8 +131,10 @@ export default {
         const url = URL.createObjectURL(response.data)
         const link = document.createElement('a')
         link.href = url
-        const d = new Date() // local date, not toISOString() (UTC: the day before shortly after midnight)
-        link.download = `mahnschreiben_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.pdf`
+        // the server names the file in the letters' language and with the local date
+        const disposition = response.headers?.['content-disposition'] || ''
+        const name = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)
+        link.download = name ? decodeURIComponent(name[1]) : 'letters.pdf'
         document.body.appendChild(link)
         link.click()
         link.remove()
@@ -152,13 +155,13 @@ export default {
     const run = async () => {
       if (!plan.value) return
       const count = plan.value.included.length
-      if (!(await confirmAction(t('verein', 'Create dunning letters'), n('verein', 'Create %n letter? The dunning level of the fees concerned is raised; this cannot be undone automatically.', 'Create %n letters? The dunning level of the fees concerned is raised; this cannot be undone automatically.', count), { labelConfirm: t('verein', 'Create letters'), severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Create reminder letters'), n('verein', 'Create %n letter? The reminder level of these fees is raised; this cannot be undone automatically.', 'Create %n letters? The reminder level of these fees is raised; this cannot be undone automatically.', count), { labelConfirm: t('verein', 'Create letters'), severity: 'warning' }))) return
       busy.value = true
       let result = null
       try {
         result = (await api.post('dunning', params())).data
       } catch (error) {
-        showError(extractErrorMessage(error, t('verein', 'Dunning run failed')))
+        showError(extractErrorMessage(error, t('verein', 'Reminder run failed')))
       } finally {
         busy.value = false
       }
@@ -172,7 +175,7 @@ export default {
       }
     }
 
-    const money = (v) => Number(v).toFixed(2).replace('.', ',') + ' €'
+    const money = formatMoney
 
     return { t, n, overdueDays, intervalDays, deadlineDays, plan, busy, lastFeeIds, withoutAddress, preview, run, download, money }
   }

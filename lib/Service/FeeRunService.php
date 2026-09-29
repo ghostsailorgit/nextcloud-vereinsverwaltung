@@ -66,7 +66,7 @@ class FeeRunService {
             $description = $this->doc->t('Membership fee %s', [$year]);
         }
         if (mb_strlen($description) > 500) {
-            throw new ValidationException($this->l->t('Remark is too long'));
+            throw new ValidationException($this->l->t('Comment is too long'));
         }
 
         $ratesById = [];
@@ -107,7 +107,7 @@ class FeeRunService {
             }
             $join = $member->getJoinDate();
             if (!empty($join) && (int)substr($join, 0, 4) > $year) {
-                $skip($this->l->t('joins only after %s', [$year]));
+                $skip($this->l->t('joins after %s', [$year]));
                 continue;
             }
             if (isset($alreadyBilled[$member->getId()])) {
@@ -117,11 +117,11 @@ class FeeRunService {
 
             $rate = $this->rateFor($member->getMembership()?->getFeeRateId(), $ratesById, $default);
             if ($rate === null) {
-                $skip($this->l->t('no fee rate'));
+                $skip($this->l->t('no fee category'));
                 continue;
             }
             if ((float)$rate->getAmount() <= 0) {
-                $skip($this->l->t('fee-free (%s)', [$rate->getName()]));
+                $skip($this->l->t('fee-exempt (%s)', [$rate->getName()]));
                 continue;
             }
 
@@ -129,7 +129,7 @@ class FeeRunService {
             $months = $prorata ? $this->monthsInYear($join, $year) : 12;
             $amount = $months === 12 ? $fullAmount : round($fullAmount * $months / 12, 2);
             if ($amount <= 0) {
-                $skip($this->l->t('pro-rata fee 0.00 €'));
+                $skip($this->l->t('pro rata fee would be 0'));
                 continue;
             }
 

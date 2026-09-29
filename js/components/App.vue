@@ -40,7 +40,7 @@
         <p v-if="!loaded">{{ t('verein', 'Loading clubs…') }}</p>
         <p v-else-if="loadError" class="verein-error">{{ loadError }}</p>
         <p v-else-if="!clubs.length && !isAdmin && !hasMe">
-          {{ t('verein', 'You are not assigned to any club yet. Please ask an administrator to assign you a role in the club management.') }}
+          {{ t('verein', 'You are not assigned to any club yet. Please ask an administrator to give you a role in a club.') }}
         </p>
         <component
           :is="currentComponent"
@@ -104,11 +104,11 @@ export default {
     const allTabs = computed(() => [
       { id: 'dashboard', label: t('verein', 'Dashboard'), emoji: '📊', show: can('verein.member.view') },
       { id: 'members', label: t('verein', 'Members'), emoji: '👥', show: can('verein.member.view') },
-      { id: 'finance', label: t('verein', 'Finance'), emoji: '💰', show: can('verein.finance.read') },
+      { id: 'finance', label: t('verein', 'Finances'), emoji: '💰', show: can('verein.finance.read') },
       { id: 'roles', label: t('verein', 'Roles'), emoji: '🛡️', show: can('verein.role.manage') },
       { id: 'sepa', label: t('verein', 'SEPA export'), emoji: '🏦', show: can('verein.sepa.export') },
       { id: 'clubs', label: t('verein', 'Club'), emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
-      { id: 'audit', label: t('verein', 'Log'), emoji: '📜', show: can('verein.audit.view') },
+      { id: 'audit', label: t('verein', 'Audit log'), emoji: '📜', show: can('verein.audit.view') },
       { id: 'me', label: t('verein', 'My data'), emoji: '👤', show: !!clubState.me?.linked },
       {
         id: 'documents',

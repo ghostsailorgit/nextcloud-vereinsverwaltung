@@ -23,10 +23,10 @@ class SourceL10nTest extends TestCase {
     public function testGermanTranslationsWithPositionalPlaceholders(): void {
         $l = SourceL10n::fromAppLanguage('de');
         $this->assertSame('de', $l->getLanguageCode());
-        $this->assertSame('Geburtsdatum „31.13.2026“ ist kein Datum (TT.MM.JJJJ)',
-            $l->t('%1$s "%2$s" is not a date (DD.MM.YYYY)', [$l->t('Birth date'), '31.13.2026']));
+        $this->assertSame('Geburtsdatum „31.13.2026“ ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT)',
+            $l->t('%1$s “%2$s” is not a valid date (use DD.MM.YYYY or YYYY-MM-DD)', [$l->t('Date of birth'), '31.13.2026']));
         // a scalar parameter is allowed like in Nextcloud
-        $this->assertSame('Eintritt erst nach 2027', $l->t('joins only after %s', 2027));
+        $this->assertSame('Eintritt erst nach 2027', $l->t('joins after %s', 2027));
     }
 
     public function testPluralFormsAndCount(): void {
@@ -38,7 +38,7 @@ class SourceL10nTest extends TestCase {
 
     public function testAServiceWithoutInjectedL10nSpeaksEnglish(): void {
         $errors = (new ValidationService())->validateMember(['name' => 'Muster', 'email' => 'no-mail'])['errors'];
-        $this->assertSame(['E-mail is invalid'], $errors);
+        $this->assertSame(['Email is invalid'], $errors);
         $errors = (new ValidationService(SourceL10n::fromAppLanguage('de')))->validateMember(['name' => 'Muster', 'email' => 'no-mail'])['errors'];
         $this->assertSame(['E-Mail ist ungültig'], $errors);
     }

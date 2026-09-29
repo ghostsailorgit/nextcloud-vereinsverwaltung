@@ -30,7 +30,7 @@ class AuditLogCleanupJob extends TimedJob {
         try {
             $this->auditLog->prune();
         } catch (\Throwable $e) {
-            $this->logger->error('Verein: Aufräumen des Änderungsprotokolls fehlgeschlagen', ['exception' => $e]);
+            $this->logger->error('Verein: audit log cleanup failed', ['exception' => $e]);
         }
     }
 }

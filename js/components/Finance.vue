@@ -10,7 +10,7 @@
 
     <!-- Form für neue Gebühr -->
     <div class="form-section">
-      <h2>{{ t('verein', 'Add new fee') }}</h2>
+      <h2>{{ t('verein', 'Add fee') }}</h2>
       <form @submit.prevent="addFee" class="fee-form">
         <NcSelect
           v-model="formData.memberId"
@@ -18,7 +18,7 @@
           :reduce="member => member.id"
           label="fullName"
           :input-label="t('verein', 'Member')"
-          :placeholder="t('verein', '-- choose member --')"
+          :placeholder="t('verein', 'Select member…')"
         />
         <NcTextField
           :model-value="formData.amount"
@@ -46,7 +46,7 @@
           :clearable="false"
         />
         <NcButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? t('verein', 'Saving...') : t('verein', 'Add') }}
+          {{ loading ? t('verein', 'Saving…') : t('verein', 'Add') }}
         </NcButton>
       </form>
     </div>
@@ -55,11 +55,11 @@
     <div class="stats-section">
       <div class="stat-card">
         <div class="stat-label">{{ t('verein', 'Total outstanding') }}</div>
-        <div class="stat-value">{{ totalOutstanding.toFixed(2) }} €</div>
+        <div class="stat-value">{{ formatMoney(totalOutstanding) }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">{{ t('verein', 'Paid') }}</div>
-        <div class="stat-value">{{ totalPaid.toFixed(2) }} €</div>
+        <div class="stat-value">{{ formatMoney(totalPaid) }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">{{ t('verein', 'Number of fees') }}</div>
@@ -91,7 +91,7 @@
             <tr v-for="fee in fees" :key="fee.id" :class="{ editing: editingId === fee.id, [fee.status]: true }">
               <td>{{ getMemberName(fee.memberId) }}</td>
 
-              <td v-if="editingId !== fee.id">{{ fee.amount.toFixed(2) }} €</td>
+              <td v-if="editingId !== fee.id">{{ formatMoney(fee.amount) }}</td>
               <td v-if="editingId === fee.id" class="cell-field">
                 <NcTextField :model-value="editData.amount" @update:model-value="editData.amount = Number($event)" type="number" :label="t('verein', 'Amount')" />
               </td>
@@ -101,7 +101,7 @@
                 <span
                   v-if="fee.dunningLevel > 0"
                   class="dunning-badge"
-                  :title="fee.lastDunnedAt ? t('verein', 'last dunned on {date}', { date: formatDay(fee.lastDunnedAt) }) : ''"
+                  :title="fee.lastDunnedAt ? t('verein', 'last reminder on {date}', { date: formatDay(fee.lastDunnedAt) }) : ''"
                 >{{ dunningLabel(fee.dunningLevel) }}</span>
               </td>
               <td v-if="editingId === fee.id" class="cell-field">
@@ -172,6 +172,7 @@ import { confirmAction } from '../confirm'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
+import { formatMoney, formatDate } from '../format'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -194,10 +195,10 @@ export default {
 
     // backend (ValidationService::validateFeeStatus) only accepts these 4 values
     const statusOptions = [
-      { id: 'open', label: t('verein', 'Open') },
+      { id: 'open', label: t('verein', 'Unpaid') },
       { id: 'paid', label: t('verein', 'Paid') },
       { id: 'overdue', label: t('verein', 'Overdue') },
-      { id: 'cancelled', label: t('verein', 'Cancelled') }
+      { id: 'cancelled', label: t('verein', 'Canceled') }
     ]
 
     const formData = ref({
@@ -278,7 +279,7 @@ export default {
     }
 
     const deleteFee = async (id) => {
-      if (!(await confirmAction(t('verein', 'Delete fee'), t('verein', 'Really delete this fee?'), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete fee'), t('verein', 'Delete this fee?'), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
 
       loading.value = true
       try {
@@ -302,20 +303,9 @@ export default {
       return statusOptions.find(o => o.id === status)?.label || status
     }
 
-    const dunningLabel = (level) => DUNNING_LEVELS[level] || t('verein', 'Dunning level {level}', { level })
-    const formatDay = (v) => {
-      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || '')
-      return m ? `${m[3]}.${m[2]}.${m[1]}` : v
-    }
-
-    const formatDate = (dateString) => {
-      if (!dateString) return '-'
-      return new Date(dateString).toLocaleDateString('de-DE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      })
-    }
+    const dunningLabel = (level) => DUNNING_LEVELS[level] || t('verein', 'Reminder level {level}', { level })
+    // a stored timestamp: only its calendar day
+    const formatDay = (v) => formatDate(String(v || '').slice(0, 10))
 
     const sortedMembers = computed(() => {
       return [...members.value].sort((a, b) => {
@@ -360,7 +350,8 @@ export default {
       getStatusLabel,
       dunningLabel,
       formatDay,
-      formatDate
+      formatDate,
+      formatMoney
     }
   }
 }

@@ -89,7 +89,7 @@ class FeeRateService {
     public function delete(int $clubId, int $id): void {
         $rate = $this->ownRate($clubId, $id);
         if ($this->memberships->countByFeeRate($id) > 0) {
-            throw new ValidationException($this->l->t('The fee rate is still used by members'));
+            throw new ValidationException($this->l->t('The fee category is still used by members'));
         }
         $wasDefault = $rate->getIsDefault();
         $this->rates->delete($rate);
@@ -109,7 +109,7 @@ class FeeRateService {
     private function ownRate(int $clubId, int $id): FeeRate {
         $rate = $this->rates->find($id);
         if ($rate->getClubId() !== $clubId) {
-            throw new DoesNotExistException($this->l->t('Fee rate not found'));
+            throw new DoesNotExistException($this->l->t('Fee category not found'));
         }
         return $rate;
     }
@@ -129,11 +129,11 @@ class FeeRateService {
     private function apply(FeeRate $rate, array $data, int $clubId, ?int $existingId): void {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '') {
-            throw new ValidationException($this->l->t('The name of the fee rate is required'));
+            throw new ValidationException($this->l->t('The name of the fee category is required'));
         }
         foreach ($this->rates->findByClub($clubId) as $other) {
             if ($other->getId() !== $existingId && mb_strtolower($other->getName()) === mb_strtolower($name)) {
-                throw new ValidationException($this->l->t('This fee rate already exists'));
+                throw new ValidationException($this->l->t('This fee category already exists'));
             }
         }
 
@@ -143,7 +143,7 @@ class FeeRateService {
         }
         $amount = round((float)$raw, 2);
         if ($amount < 0 || $amount > 100000) {
-            throw new ValidationException($this->l->t('Amount must be between 0 and 100,000 (0 = fee-free)'));
+            throw new ValidationException($this->l->t('Amount must be between 0 and 100,000 (0 = fee-exempt)'));
         }
 
         $rate->setName($name);

@@ -61,18 +61,6 @@ class RoleService {
         'verein.audit.view',
     ];
 
-    private const ENFORCED_PERMISSION_DESCRIPTIONS = [
-        'verein.member.view' => 'Mitglieder einsehen',
-        'verein.member.manage' => 'Mitglieder anlegen, bearbeiten, löschen',
-        'verein.finance.read' => 'Finanzdaten einsehen',
-        'verein.finance.write' => 'Finanzdaten anlegen und bearbeiten',
-        'verein.finance.delete' => 'Finanzdaten löschen',
-        'verein.finance.export' => 'Finanzdaten exportieren',
-        'verein.role.manage' => 'Rollen und Berechtigungen verwalten',
-        'verein.sepa.export' => 'SEPA-Export erstellen',
-        'verein.club.manage' => 'Vereinsdaten, Bankkonten und Kalender verwalten',
-        'verein.audit.view' => 'Änderungsprotokoll einsehen',
-    ];
 
     private IUserSession $userSession;
     private RoleMapper $roleMapper;
@@ -434,7 +422,7 @@ class RoleService {
         $this->roleMapper->find($roleId);
 
         if ($this->userRoleMapper->existsForUserAndRole($userId, $roleId, $clubId)) {
-            throw new ValidationException($this->l->t('The role is already assigned to this user'));
+            throw new ValidationException($this->l->t('The role is already assigned to this account'));
         }
 
         $userRole = new UserRole();

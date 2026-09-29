@@ -135,7 +135,12 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 
 21. **Translations:** all text is English source - `t('verein', '...')` / `n('verein', ...)` (`@nextcloud/l10n`) in the frontend,
     `$this->l->t()` in PHP - plain string literals with placeholders (`{name}` in JS; `%s`/`%1$s` in PHP), no template
-    literals or concatenation inside `t()`; inside an HTML attribute no `"` (use “…”). Add the German text to `l10n/de.json`
+    literals or concatenation inside `t()`; inside an HTML attribute no `"` (use “…”). **English follows `docs/GLOSSARY.md`**
+    (club, position, fee category, payment reminders, audit log, account, Email, US spelling, … not ...) - `L10nTest` reads
+    its "Not" column and fails on those words. Dates and amounts are never formatted into a text: `js/format.js`
+    (formatMoney/formatDate, the account's locale) in the browser, `L10n\Formats` in PHP (documents in the DocumentL10n
+    language); stored values stay internal ids (salutation `Herr`…, role `admin`…), the UI/CSV show labels, the import
+    accepts both. PDFs use `PdfExporter::FONT` (DejaVu Sans; `scripts/build-archive.sh` keeps exactly its files). Add the German text to `l10n/de.json`
     (the only hand-edited file) and run `php scripts/l10n.php build`; `L10nTest` fails on a missing translation or outdated
     generated files. PHP classes take `?IL10N $l10n = null` as their last constructor argument and fall back to
     `L10n\SourceL10n` (English); a manual DI factory in `Application.php` must pass `IL10N::class`, and unit tests pass
