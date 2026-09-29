@@ -31,7 +31,7 @@ class DailyBackupJob extends TimedJob {
             $this->backups->createBackup();
         } catch (\Throwable $e) {
             // keep old backups if a new one could not be written
-            $this->logger->error('Verein: automatische Sicherung fehlgeschlagen', ['exception' => $e]);
+            $this->logger->error('Verein: automatic backup failed', ['exception' => $e]);
             return;
         }
         $this->backups->prune();

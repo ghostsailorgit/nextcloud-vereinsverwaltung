@@ -383,10 +383,10 @@ class MemberService {
         try {
             $rate = $this->feeRates->find((int)$raw);
         } catch (DoesNotExistException $e) {
-            throw new ValidationException($this->l->t('The fee rate does not exist'));
+            throw new ValidationException($this->l->t('The fee category does not exist'));
         }
         if ($rate->getClubId() !== $membership->getClubId()) {
-            throw new ValidationException($this->l->t('The fee rate belongs to another club'));
+            throw new ValidationException($this->l->t('The fee category belongs to another club'));
         }
         $membership->setFeeRateId($rate->getId());
     }

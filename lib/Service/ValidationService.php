@@ -54,7 +54,7 @@ class ValidationService {
 
         // E-Mail ist optional (nicht jedes Mitglied hat eine), aber wenn angegeben, muss sie gültig sein
         if (trim($email) !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = $this->l->t('E-mail is invalid');
+            $errors[] = $this->l->t('Email is invalid');
         }
 
         // IBAN validieren (wenn angegeben)
@@ -63,27 +63,27 @@ class ValidationService {
         }
 
         if (!empty($salutation) && !in_array($salutation, self::SALUTATIONS, true)) {
-            $errors[] = $this->l->t('Salutation is invalid');
+            $errors[] = $this->l->t('Title is invalid');
         }
 
         if (!empty($postalCode) && strlen((string)$postalCode) > 10) {
             $errors[] = $this->l->t('Postal code must not be longer than 10 characters');
         }
 
-        $birthDateObj = $this->validateOptionalDate($birthDate, $this->l->t('Birth date'), $errors);
+        $birthDateObj = $this->validateOptionalDate($birthDate, $this->l->t('Date of birth'), $errors);
         if ($birthDateObj !== null && $birthDateObj > new \DateTime()) {
-            $errors[] = $this->l->t('Birth date must not be in the future');
+            $errors[] = $this->l->t('Date of birth must not be in the future');
         }
 
-        $joinDateObj = $this->validateOptionalDate($joinDate, $this->l->t('Join date'), $errors);
-        $leaveDateObj = $this->validateOptionalDate($leaveDate, $this->l->t('Leave date'), $errors);
-        $this->validateOptionalDate($data['mandateDate'] ?? null, $this->l->t('Signature date of the mandate'), $errors);
+        $joinDateObj = $this->validateOptionalDate($joinDate, $this->l->t('Date joined'), $errors);
+        $leaveDateObj = $this->validateOptionalDate($leaveDate, $this->l->t('Date left'), $errors);
+        $this->validateOptionalDate($data['mandateDate'] ?? null, $this->l->t('Date of signature of the mandate'), $errors);
         $mandateRef = (string)($data['mandateReference'] ?? '');
         if ($mandateRef !== '' && !preg_match('/^[A-Za-z0-9+?\/\-:().,\' ]{1,35}$/', $mandateRef)) {
-            $errors[] = $this->l->t('Mandate reference may only contain letters, digits and simple special characters (max. 35 characters)');
+            $errors[] = $this->l->t('Mandate reference may only contain letters, digits and simple special characters (at most 35 characters)');
         }
         if ($joinDateObj !== null && $leaveDateObj !== null && $leaveDateObj < $joinDateObj) {
-            $errors[] = $this->l->t('Leave date must not be before the join date');
+            $errors[] = $this->l->t('The date left must not be before the date joined');
         }
 
         return [
@@ -126,7 +126,7 @@ class ValidationService {
         if ($amount <= 0) {
             $errors[] = $this->l->t('Amount must be greater than 0');
         } elseif ($amount > 100000) {
-            $errors[] = $this->l->t('Amount is too high (max. 100,000)');
+            $errors[] = $this->l->t('Amount is too high (at most 100,000)');
         }
 
         if (empty(trim($dueDate))) {

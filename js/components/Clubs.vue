@@ -17,16 +17,16 @@
         <NcTextField
           :model-value="form.documentsPath"
           @update:model-value="form.documentsPath = $event"
-          :label="t('verein', 'Team folder in Nextcloud Files')"
+          :label="t('verein', 'Team folder in Files')"
           placeholder="/Mein-Verein"
-          :helper-text="t('verein', 'Path of the club folder; documents and the signed SEPA mandates are stored here.')"
+          :helper-text="t('verein', 'Path of the club\'s folder, where documents and the signed SEPA mandates are stored.')"
         />
         <NcTextField
           :model-value="form.calendarGroups"
           @update:model-value="form.calendarGroups = $event"
           :label="t('verein', 'Nextcloud groups for the club calendar')"
           placeholder="vorstand, mitglieder"
-          :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and club anniversaries in their calendar app and on their phone (read-only). Birthdays are personal data – only enter groups that should see them.')"
+          :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and membership anniversaries in their Calendar app and on their phones (read-only). Birthdays are personal data – only enter groups that should see them.')"
         />
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>
@@ -39,7 +39,7 @@
     <div v-if="club && canManage" class="card">
       <h3>{{ t('verein', 'Bank accounts') }}</h3>
       <p class="hint">
-        {{ t('verein', 'A club can have several accounts. Label, BIC and creditor ID are used for the SEPA export.') }}
+        {{ t('verein', 'A club can have several bank accounts. The label, BIC and creditor ID are used for the SEPA export.') }}
       </p>
       <table v-if="club.accounts.length" class="accounts">
         <thead>
@@ -60,12 +60,12 @@
       </table>
       <p v-else class="hint">{{ t('verein', 'No account yet.') }}</p>
 
-      <h4>{{ accountForm.id ? t('verein', 'Edit account') : t('verein', 'Add account') }}</h4>
+      <h4>{{ accountForm.id ? t('verein', 'Edit bank account') : t('verein', 'Add bank account') }}</h4>
       <form class="grid" @submit.prevent="saveAccount">
         <NcTextField :model-value="accountForm.label" @update:model-value="accountForm.label = $event" :label="t('verein', 'Label')" :placeholder="t('verein', 'e.g. club account')" />
         <NcTextField :model-value="accountForm.iban" @update:model-value="accountForm.iban = $event" label="IBAN" required />
         <NcTextField :model-value="accountForm.bic" @update:model-value="accountForm.bic = $event" label="BIC" />
-        <NcTextField :model-value="accountForm.creditorId" @update:model-value="accountForm.creditorId = $event" :label="t('verein', 'Creditor ID (SEPA)')" placeholder="DE98ZZZ09999999999" />
+        <NcTextField :model-value="accountForm.creditorId" @update:model-value="accountForm.creditorId = $event" :label="t('verein', 'Creditor identifier (SEPA)')" placeholder="DE98ZZZ09999999999" />
         <label class="checkbox-field">
           <input v-model="accountForm.isDefault" type="checkbox" />
           <span>{{ t('verein', 'Default account') }}</span>
@@ -79,16 +79,16 @@
 
     <!-- Fee categories -->
     <div v-if="club && canManage" class="card">
-      <h3>{{ t('verein', 'Fee rates') }}</h3>
+      <h3>{{ t('verein', 'Fee categories') }}</h3>
       <p class="hint">
-        {{ t('verein', 'Each category has an annual fee. The default category applies to members without a category of their own (member form). 0 € = fee-free (e.g. honorary members). They are used in the fee run ("Finance" tab).') }}
+        {{ t('verein', 'Each fee category has an annual fee. The default category applies to members without a category of their own (member form). An amount of 0 means fee-exempt (e.g. honorary members). The categories are used by the annual fee run (“Finances” tab).') }}
       </p>
       <table v-if="club.feeRates && club.feeRates.length" class="accounts">
-        <thead><tr><th>{{ t('verein', 'Category') }}</th><th>{{ t('verein', 'Annual fee') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
+        <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Annual fee') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
         <tbody>
           <tr v-for="r in club.feeRates" :key="r.id">
             <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
-            <td>{{ Number(r.amount).toFixed(2).replace('.', ',') }} €</td>
+            <td>{{ formatMoney(r.amount) }}</td>
             <td class="row-actions">
               <NcButton variant="secondary" @click="editRate(r)">{{ t('verein', 'Edit') }}</NcButton>
               <NcButton variant="error" @click="removeRate(r)">{{ t('verein', 'Delete') }}</NcButton>
@@ -98,10 +98,10 @@
       </table>
       <p v-else class="hint">{{ t('verein', 'No category yet.') }}</p>
 
-      <h4>{{ rateForm.id ? t('verein', 'Edit category') : t('verein', 'Add category') }}</h4>
+      <h4>{{ rateForm.id ? t('verein', 'Edit fee category') : t('verein', 'Add fee category') }}</h4>
       <form class="grid" @submit.prevent="saveRate">
         <NcTextField :model-value="rateForm.name" @update:model-value="rateForm.name = $event" :label="t('verein', 'Name')" :placeholder="t('verein', 'e.g. adults')" required />
-        <NcTextField :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" :label="t('verein', 'Annual fee in €')" placeholder="24,00" required />
+        <NcTextField :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" placeholder="24" required />
         <label class="checkbox-field">
           <input v-model="rateForm.isDefault" type="checkbox" />
           <span>{{ t('verein', 'Default category') }}</span>
@@ -115,9 +115,9 @@
 
     <!-- Automatic rights -->
     <div v-if="club && canManageRoles" class="card">
-      <h3>{{ t('verein', 'Automatic rights') }}</h3>
+      <h3>{{ t('verein', 'Automatic permissions') }}</h3>
       <p class="hint">
-        {{ t('verein', 'Members with a linked Nextcloud account (member form) automatically get an app role for this club depending on their club role. The rights end by themselves as soon as someone leaves or dies. Empty = no automatic rights. Roles assigned additionally under "Roles" remain.') }}
+        {{ t('verein', 'Members with a linked Nextcloud account (member form) automatically get a role in this club according to their position. These permissions end automatically when someone leaves or dies. Empty = no automatic permissions. Roles assigned in the “Roles” tab are kept.') }}
       </p>
       <form class="grid" @submit.prevent="saveMapping">
         <NcSelect
@@ -148,7 +148,7 @@
         </div>
       </form>
       <p v-if="club" class="delete-row">
-        <NcButton variant="error" :disabled="busy" @click="deleteClub">{{ t('verein', 'Delete "{name}"', { name: club.name }) }}</NcButton>
+        <NcButton variant="error" :disabled="busy" @click="deleteClub">{{ t('verein', 'Delete “{name}”', { name: club.name }) }}</NcButton>
         <span class="hint">{{ t('verein', 'Only possible when the club has no members left.') }}</span>
       </p>
     </div>
@@ -166,6 +166,7 @@ import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
+import { formatMoney } from '../format'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
 
 const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId: '', isDefault: false })
@@ -188,9 +189,9 @@ export default {
     const roleOptions = ref([])
     const mapping = reactive({ member: null, treasurer: null, admin: null })
     const mappingRows = [
-      { key: 'admin', label: t('verein', 'Board gets the role') },
-      { key: 'treasurer', label: t('verein', 'Treasurer gets the role') },
-      { key: 'member', label: t('verein', 'Member gets the role') }
+      { key: 'admin', label: t('verein', 'Role for the board') },
+      { key: 'treasurer', label: t('verein', 'Role for the treasurer') },
+      { key: 'member', label: t('verein', 'Role for members') }
     ]
     const fillMapping = () => {
       const m = club.value?.roleMapping || {}
@@ -247,7 +248,7 @@ export default {
         admin: mapping.admin ?? ''
       })
       await loadClubs()
-    }, t('verein', 'Automatic rights saved'))
+    }, t('verein', 'Automatic permissions saved'))
 
     const createClub = async () => {
       let createdId = null
@@ -263,7 +264,7 @@ export default {
     }
 
     const deleteClub = async () => {
-      if (!(await confirmAction(t('verein', 'Delete club'), t('verein', 'Really delete club "{name}"? Bank accounts and role assignments will be lost.', { name: club.value.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete club'), t('verein', 'Delete club “{name}”? Its bank accounts and role assignments will be lost.', { name: club.value.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
       const ok = await run(async () => {
         await api.deleteClub(club.value.id)
         clubState.currentId = null
@@ -275,7 +276,7 @@ export default {
     // fee categories
     const rateForm = reactive({ id: null, name: '', amount: '', isDefault: false })
     const resetRateForm = () => Object.assign(rateForm, { id: null, name: '', amount: '', isDefault: false })
-    const editRate = (r) => Object.assign(rateForm, { id: r.id, name: r.name, amount: String(r.amount).replace('.', ','), isDefault: r.isDefault })
+    const editRate = (r) => Object.assign(rateForm, { id: r.id, name: r.name, amount: String(r.amount), isDefault: r.isDefault })
     const saveRate = async () => {
       const ok = await run(async () => {
         const payload = { name: rateForm.name, amount: rateForm.amount, isDefault: rateForm.isDefault }
@@ -285,15 +286,15 @@ export default {
           await api.post(`clubs/${club.value.id}/fee-rates`, payload)
         }
         await loadClubs()
-      }, t('verein', 'Fee rate saved'))
+      }, t('verein', 'Fee category saved'))
       if (ok) resetRateForm()
     }
     const removeRate = async (r) => {
-      if (!(await confirmAction(t('verein', 'Delete fee rate'), t('verein', 'Really delete category "{name}"?', { name: r.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete fee category'), t('verein', 'Delete fee category “{name}”?', { name: r.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
       await run(async () => {
         await api.delete(`clubs/${club.value.id}/fee-rates/${r.id}`)
         await loadClubs()
-      }, t('verein', 'Fee rate deleted'))
+      }, t('verein', 'Fee category deleted'))
     }
 
     const resetAccountForm = () => Object.assign(accountForm, emptyAccount())
@@ -308,20 +309,21 @@ export default {
           await api.createClubAccount(club.value.id, payload)
         }
         await loadClubs()
-      }, t('verein', 'Account saved'))
+      }, t('verein', 'Bank account saved'))
       if (ok) resetAccountForm()
     }
 
     const removeAccount = async (a) => {
-      if (!(await confirmAction(t('verein', 'Delete bank account'), t('verein', 'Really delete account {iban}?', { iban: a.iban }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete bank account'), t('verein', 'Delete bank account {iban}?', { iban: a.iban }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
       await run(async () => {
         await api.deleteClubAccount(club.value.id, a.id)
         await loadClubs()
-      }, t('verein', 'Account deleted'))
+      }, t('verein', 'Bank account deleted'))
     }
 
     return {
       t,
+      formatMoney,
       rateForm, saveRate, editRate, removeRate, resetRateForm,
       busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm

@@ -4,9 +4,9 @@
 -->
 <template>
   <div class="fee-run">
-    <h2>{{ t('verein', 'Fee run') }}</h2>
+    <h2>{{ t('verein', 'Annual fee run') }}</h2>
     <p class="hint">
-      {{ t('verein', 'Creates the annual fee for all active members according to their fee rate (tab "Club"). Anyone who already has a fee for the year is skipped, so a run can safely be repeated. Look at the preview first.') }}
+      {{ t('verein', 'Creates the annual fee for all active members according to their fee category (“Club” tab). Members who already have a fee for the year are skipped, so the run can safely be repeated. Check the preview first.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
@@ -21,7 +21,7 @@
       <NcTextField
         :model-value="description"
         @update:model-value="description = $event"
-        :label="t('verein', 'Remark (optional)')"
+        :label="t('verein', 'Comment (optional)')"
         :placeholder="t('verein', 'Membership fee {year}', { year })"
       />
       <NcCheckboxRadioSwitch
@@ -30,7 +30,7 @@
         :model-value="prorata"
         @update:model-value="prorata = $event; plan = null"
       >
-        {{ t('verein', 'Pro rata for members joining in the fee year (from the join month)') }}
+        {{ t('verein', 'Pro rata for members who joined during the fee year (from the month they joined)') }}
       </NcCheckboxRadioSwitch>
       <div class="buttons">
         <NcButton type="submit" variant="secondary" :disabled="busy">{{ t('verein', 'Preview') }}</NcButton>
@@ -43,21 +43,21 @@
           {{ plan ? n('verein', 'Create %n fee', 'Create %n fees', plan.included.length) : t('verein', 'Create fees') }}
         </NcButton>
         <NcButton type="button" variant="tertiary" :disabled="busy" @click="flagOverdue">
-          {{ t('verein', 'Mark overdue') }}
+          {{ t('verein', 'Flag overdue fees') }}
         </NcButton>
       </div>
     </form>
 
     <div v-if="plan" class="result">
       <p class="summary">
-        {{ n('verein', '%n fee totalling {total} for {year}, due on {date}', '%n fees totalling {total} for {year}, due on {date}', plan.included.length, { total: formatMoney(plan.total), year: plan.year, date: formatDate(plan.dueDate) }) }}
+        {{ n('verein', '%n fee totaling {total} for {year}, due on {date}', '%n fees totaling {total} for {year}, due on {date}', plan.included.length, { total: formatMoney(plan.total), year: plan.year, date: formatDate(plan.dueDate) }) }}
         <span v-if="plan.skipped.length"> · {{ n('verein', '%n skipped', '%n skipped', plan.skipped.length) }}</span>
       </p>
 
       <details v-if="plan.included.length" open>
         <summary>{{ t('verein', 'Who gets a fee') }}</summary>
         <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
           <tbody>
             <tr v-for="e in plan.included" :key="e.memberId">
               <td>{{ e.name }}</td>
@@ -93,6 +93,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney, formatDate } from '../format'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
@@ -153,11 +154,6 @@ export default {
       }
     }
 
-    const formatMoney = (v) => Number(v).toFixed(2).replace('.', ',') + ' €'
-    const formatDate = (v) => {
-      const d = new Date(v)
-      return isNaN(d) ? v : d.toLocaleDateString('de-DE')
-    }
 
     return { t, n, year, dueDate, description, prorata, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
   }

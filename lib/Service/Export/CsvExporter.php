@@ -91,21 +91,21 @@ class CsvExporter {
     public function formatMembers(array $members): array {
         $headers = [
             'ID',
-            $this->l->t('Salutation'),
+            $this->l->t('Title'),
             $this->l->t('First name'),
             $this->l->t('Name'),
             $this->l->t('Street'),
             $this->l->t('Postal code'),
             $this->l->t('City'),
             $this->l->t('Email'),
-            $this->l->t('Role'),
+            $this->l->t('Position'),
             'IBAN',
             'BIC',
-            $this->l->t('Birth date'),
+            $this->l->t('Date of birth'),
             $this->l->t('Age'),
-            $this->l->t('Join date'),
+            $this->l->t('Date joined'),
             $this->l->t('Member since (years)'),
-            $this->l->t('Leave date'),
+            $this->l->t('Date left'),
             $this->l->t('Founding member'),
             $this->l->t('Deceased'),
             $this->l->t('Created on'),
@@ -113,20 +113,23 @@ class CsvExporter {
 
         $yes = $this->l->t('Yes');
         $no = $this->l->t('No');
+        // stored values are internal ids; the export shows (and the import accepts) the labels
+        $salutations = ['Herr' => $this->l->t('Mr'), 'Frau' => $this->l->t('Ms'), 'Divers' => $this->l->t('Mx'), 'Firma' => $this->l->t('Company')];
+        $roles = ['member' => $this->l->t('Member'), 'treasurer' => $this->l->t('Treasurer'), 'admin' => $this->l->t('Board')];
         $data = [];
         foreach ($members as $member) {
             $m = is_array($member) ? $member : $member->jsonSerialize();
 
             $data[] = [
                 $m['id'] ?? '',
-                $m['salutation'] ?? '',
+                $salutations[$m['salutation'] ?? ''] ?? ($m['salutation'] ?? ''),
                 $m['firstName'] ?? '',
                 $m['name'] ?? '',
                 $m['street'] ?? '',
                 $m['postalCode'] ?? '',
                 $m['city'] ?? '',
                 $m['email'] ?? '',
-                $m['role'] ?? '',
+                $roles[$m['role'] ?? ''] ?? ($m['role'] ?? ''),
                 $m['iban'] ?? '',
                 $m['bic'] ?? '',
                 $m['birthDate'] ?? '',

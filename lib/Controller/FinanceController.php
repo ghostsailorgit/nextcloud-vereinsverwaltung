@@ -86,7 +86,7 @@ class FinanceController extends Controller {
                 return new JSONResponse([
                     'status' => 'error',
                     'message' => $this->l->t('Invalid status'),
-                    'errors' => [$this->l->t('Status must be open, paid, overdue or cancelled')]
+                    'errors' => [$this->l->t('Status must be unpaid, paid, overdue or canceled')]
                 ], 400);
             }
 
@@ -127,7 +127,7 @@ class FinanceController extends Controller {
                 return new JSONResponse([
                     'status' => 'error',
                     'message' => $this->l->t('Invalid status'),
-                    'errors' => [$this->l->t('Status must be open, paid, overdue or cancelled')]
+                    'errors' => [$this->l->t('Status must be unpaid, paid, overdue or canceled')]
                 ], 400);
             }
 

@@ -67,7 +67,7 @@ class ClubCalendarProvider implements ICalendarProvider {
             return $calendars;
         } catch (Throwable $e) {
             // never break a user's whole calendar list because of this app
-            $this->logger->warning('Verein: Vereinskalender konnten nicht bereitgestellt werden', ['exception' => $e]);
+            $this->logger->warning('Verein: could not provide the club calendars', ['exception' => $e]);
             return [];
         }
     }

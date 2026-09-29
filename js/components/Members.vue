@@ -15,11 +15,11 @@
 
     <!-- Form für neues/zu bearbeitendes Mitglied -->
     <div v-if="canManage" class="form-section">
-      <h2>{{ editingId ? t('verein', 'Edit member') : t('verein', 'Add new member') }}</h2>
+      <h2>{{ editingId ? t('verein', 'Edit member') : t('verein', 'Add member') }}</h2>
 
       <!-- Add a person who is already a member of another club (no duplicate) -->
       <div v-if="!editingId" class="lookup-box">
-        <h3 class="form-subheader">{{ t('verein', 'Take over a person from another club') }}</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Add a person from another club') }}</h3>
         <NcTextField
           :model-value="lookupQuery"
           @update:model-value="onLookupInput"
@@ -28,13 +28,13 @@
           :placeholder="t('verein', 'Last name or first name')"
         />
         <label class="date-field">
-          <span>{{ t('verein', 'Join date in this club') }}</span>
+          <span>{{ t('verein', 'Date joined (this club)') }}</span>
           <input v-model="lookupJoinDate" type="date" class="form-input" />
         </label>
         <ul v-if="lookupResults.length" class="lookup-results">
           <li v-for="r in lookupResults" :key="r.id">
-            <span>{{ r.fullName }} <small>({{ r.birthDate || t('verein', 'no birth date') }}, {{ r.city || t('verein', 'no city') }})</small></span>
-            <NcButton variant="secondary" :disabled="loading" @click="attachExisting(r)">{{ t('verein', 'Take over') }}</NcButton>
+            <span>{{ r.fullName }} <small>({{ r.birthDate ? formatDate(r.birthDate) : t('verein', 'no date of birth') }}, {{ r.city || t('verein', 'no city') }})</small></span>
+            <NcButton variant="secondary" :disabled="loading" @click="attachExisting(r)">{{ t('verein', 'Add to this club') }}</NcButton>
           </li>
         </ul>
         <p v-else-if="lookupQuery.trim().length >= 2 && lookupDone" class="hint">
@@ -49,8 +49,8 @@
           :options="salutationOptions"
           :reduce="option => option.id"
           label="label"
-          :input-label="t('verein', 'Salutation')"
-          :placeholder="t('verein', '-- choose --')"
+          :input-label="t('verein', 'Title')"
+          :placeholder="t('verein', 'Select…')"
         />
         <NcTextField
           :model-value="formData.firstName"
@@ -68,7 +68,7 @@
           required
         />
         <label class="date-field">
-          <span>{{ t('verein', 'Birth date') }}</span>
+          <span>{{ t('verein', 'Date of birth') }}</span>
           <input v-model="formData.birthDate" type="date" class="form-input" />
         </label>
 
@@ -95,7 +95,7 @@
           :model-value="formData.email"
           @update:model-value="formData.email = $event"
           type="email"
-          :label="t('verein', 'E-mail')"
+          :label="t('verein', 'Email')"
           :placeholder="t('verein', 'max@example.com (optional)')"
         />
 
@@ -105,24 +105,24 @@
             :options="userOptions"
             :input-label="t('verein', 'Linked Nextcloud account')"
             :disabled="!canManageRoles"
-            :placeholder="t('verein', 'Enter name or user name')"
+            :placeholder="t('verein', 'Enter a name or account name')"
             @search="onUserSearch"
             @update:model-value="onUserPicked"
           />
           <p class="hint">
-            {{ t('verein', 'Optional. Links this member to their Nextcloud login (e.g. board members). They can then view their data under "My data"; club role and account together determine the automatic rights.') }}
-            <strong v-if="!canManageRoles">{{ t('verein', 'Only those who may manage roles can change role and account.') }}</strong>
-            <span v-if="!formData.userId && userOptions.length">{{ t('verein', 'Suggestions by name are in the dropdown.') }}</span>
+            {{ t('verein', 'Optional. Links this member to their Nextcloud account (e.g. for board members). They can then see their data under “My data”; the position and the linked account determine the automatic permissions.') }}
+            <strong v-if="!canManageRoles">{{ t('verein', 'Only people allowed to manage roles can change the position and the linked account.') }}</strong>
+            <span v-if="!formData.userId && userOptions.length">{{ t('verein', 'Matching names are suggested in the list.') }}</span>
           </p>
         </div>
 
         <h3 class="form-subheader">{{ t('verein', 'Membership') }}</h3>
         <label class="date-field">
-          <span>{{ t('verein', 'Join date') }}</span>
+          <span>{{ t('verein', 'Date joined') }}</span>
           <input v-model="formData.joinDate" type="date" class="form-input" />
         </label>
         <label class="date-field">
-          <span>{{ t('verein', 'Leave date') }}</span>
+          <span>{{ t('verein', 'Date left') }}</span>
           <input v-model="formData.leaveDate" type="date" class="form-input" />
         </label>
         <NcSelect
@@ -130,7 +130,7 @@
           :options="roleOptions"
           :reduce="option => option.id"
           label="label"
-          :input-label="t('verein', 'Role')"
+          :input-label="t('verein', 'Position')"
           :clearable="false"
           :disabled="!canManageRoles"
         />
@@ -139,7 +139,7 @@
           :options="feeRateOptions"
           :reduce="r => r.id"
           label="label"
-          :input-label="t('verein', 'Fee rate')"
+          :input-label="t('verein', 'Fee category')"
           :placeholder="t('verein', 'Club default')"
         />
         <label class="checkbox-field">
@@ -151,7 +151,7 @@
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
 
-        <h3 class="form-subheader">{{ t('verein', 'Bank account') }}</h3>
+        <h3 class="form-subheader">{{ t('verein', 'Bank details') }}</h3>
         <NcTextField
           :model-value="formData.iban"
           @update:model-value="formData.iban = $event"
@@ -174,7 +174,7 @@
           :placeholder="t('verein', 'empty = automatic')"
         />
         <label class="date-field">
-          <span>{{ t('verein', 'Signature date') }}</span>
+          <span>{{ t('verein', 'Date of signature') }}</span>
           <input v-model="formData.mandateDate" type="date" class="form-input" />
         </label>
         <div class="mandate-file">
@@ -189,7 +189,7 @@
 
         <div class="form-actions">
           <NcButton type="submit" variant="primary" :disabled="loading">
-            {{ loading ? t('verein', 'Saving...') : (editingId ? t('verein', 'Save') : t('verein', 'Add')) }}
+            {{ loading ? t('verein', 'Saving…') : (editingId ? t('verein', 'Save') : t('verein', 'Add')) }}
           </NcButton>
           <NcButton v-if="editingId" type="button" variant="tertiary" @click="cancelEdit">
             {{ t('verein', 'Cancel') }}
@@ -228,14 +228,14 @@
         <table class="members-table">
           <thead>
             <tr>
-              <th>{{ t('verein', 'No.') }}</th>
+              <th>{{ t('verein', '#') }}</th>
               <th>{{ t('verein', 'Name') }}</th>
-              <th>{{ t('verein', 'E-mail') }}</th>
+              <th>{{ t('verein', 'Email') }}</th>
               <th>{{ t('verein', 'City') }}</th>
-              <th>{{ t('verein', 'NC account') }}</th>
+              <th>{{ t('verein', 'Nextcloud account') }}</th>
               <th>{{ t('verein', 'Age') }}</th>
               <th>{{ t('verein', 'Member since') }}</th>
-              <th>{{ t('verein', 'Role') }}</th>
+              <th>{{ t('verein', 'Position') }}</th>
               <th>{{ t('verein', 'Status') }}</th>
               <th>{{ t('verein', 'Actions') }}</th>
             </tr>
@@ -247,22 +247,22 @@
               <td>{{ member.email }}</td>
               <td>{{ member.city || '-' }}</td>
               <td>
-                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'account missing') }})</span></span>
+                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'bank account missing') }})</span></span>
                 <span v-else class="hint">–</span>
               </td>
-              <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n yr.', '%n yrs.', member.age) : '-' }}</td>
-              <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n yr.', '%n yrs.', member.membershipYears) : '-' }}</td>
+              <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n year', '%n years', member.age) : '-' }}</td>
+              <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n year', '%n years', member.membershipYears) : '-' }}</td>
               <td>
                 <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
               </td>
               <td class="status-cell">
                 <span v-if="member.deceased" class="status-badge deceased">{{ t('verein', 'Deceased') }}</span>
-                <span v-if="member.anonymizedAt" class="status-badge anonymized" :title="t('verein', 'Personal data was removed irreversibly')">{{ t('verein', 'Anonymized') }}</span>
+                <span v-if="member.anonymizedAt" class="status-badge anonymized" :title="t('verein', 'Personal data was permanently removed')">{{ t('verein', 'Anonymized') }}</span>
                 <span v-else-if="member.isFormer" class="status-badge former">{{ t('verein', 'Former') }}</span>
                 <span
                   v-else-if="member.deactivated"
                   class="status-badge deactivated"
-                  :title="t('verein', 'No fees, no birthday events and no automatic rights until the member is activated again')"
+                  :title="t('verein', 'No fees, no calendar events and no automatic permissions until the member is activated again')"
                 >{{ t('verein', 'Deactivated') }}</span>
                 <span v-else class="status-badge active">{{ t('verein', 'Active') }}</span>
                 <span v-if="member.foundingMember" class="status-badge founding" :title="t('verein', 'Founding member')">★</span>
@@ -298,16 +298,16 @@
                 <NcButton
                   variant="tertiary"
                   :disabled="loading"
-                  :title="t('verein', 'All stored data of this person in this club as a JSON file (information under Art. 15 GDPR)')"
+                  :title="t('verein', 'All data stored about this person in this club, as a JSON file (right of access, Art. 15 GDPR)')"
                   @click="exportMember(member)"
                 >
-                  {{ t('verein', 'Data information') }}
+                  {{ t('verein', 'Personal data export') }}
                 </NcButton>
                 <NcButton
                   v-if="canManageRoles && member.isFormer && !member.anonymizedAt"
                   variant="error"
                   :disabled="loading"
-                  :title="t('verein', 'Remove personal data irreversibly (only if the person has left everywhere or is deceased)')"
+                  :title="t('verein', 'Remove personal data irreversibly (only once the person has left every club or is deceased)')"
                   @click="anonymizeTarget = member"
                 >
                   {{ t('verein', 'Anonymize') }}
@@ -335,6 +335,7 @@ import { confirmAction } from '../confirm'
 import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney, formatDate, salutationLabel } from '../format'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -400,7 +401,7 @@ export default {
     const salutationOptions = [
       { id: 'Herr', label: t('verein', 'Mr') },
       { id: 'Frau', label: t('verein', 'Ms') },
-      { id: 'Divers', label: t('verein', 'Diverse') },
+      { id: 'Divers', label: t('verein', 'Mx') },
       { id: 'Firma', label: t('verein', 'Company') }
     ]
 
@@ -412,7 +413,7 @@ export default {
     const feeRateOptions = computed(() =>
       (currentClub.value?.feeRates || []).map(r => ({
         id: r.id,
-        label: r.name + ' (' + Number(r.amount).toFixed(2).replace('.', ',') + ' €)' + (r.isDefault ? ' – ' + t('verein', 'default') : '')
+        label: r.name + ' (' + formatMoney(r.amount) + ')' + (r.isDefault ? ' – ' + t('verein', 'default') : '')
       }))
     )
 
@@ -559,7 +560,7 @@ export default {
     })
 
     const displayName = (member) => {
-      const prefix = member.salutation ? member.salutation + ' ' : ''
+      const prefix = member.salutation ? salutationLabel(member.salutation) + ' ' : ''
       return prefix + (member.firstName ? member.firstName + ' ' : '') + member.name
     }
 
@@ -638,7 +639,7 @@ export default {
     }
 
     const deactivateMember = async (id) => {
-      if (!(await confirmAction(t('verein', 'Deactivate member'), t('verein', 'Deactivate this member? They are no longer included in fees and SEPA collection, the birthday and anniversary events are dropped and automatically derived rights (from the club role) are suspended. Nothing is deleted; "Activate" brings everything back.'), { labelConfirm: t('verein', 'Deactivate'), severity: 'warning' }))) return
+      if (!(await confirmAction(t('verein', 'Deactivate member'), t('verein', 'Deactivate this member? They are no longer included in fees and SEPA collections, their birthday and anniversary events are hidden and the permissions derived from their position are suspended. Nothing is deleted; “Activate” restores everything.'), { labelConfirm: t('verein', 'Deactivate'), severity: 'warning' }))) return
 
       loading.value = true
       try {
@@ -686,7 +687,7 @@ export default {
         setTimeout(() => URL.revokeObjectURL(url), 1000)
       } catch (error) {
         // the error body arrives as a Blob because of responseType
-        let message = t('verein', 'Data information failed')
+        let message = t('verein', 'Personal data export failed')
         try {
           message = JSON.parse(await error.response.data.text()).message || message
         } catch (e) {
@@ -703,6 +704,8 @@ export default {
     return {
       t,
       n,
+      formatMoney,
+      formatDate,
       members,
       loading,
       editingId,

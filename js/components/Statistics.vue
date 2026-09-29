@@ -7,7 +7,7 @@
   <div class="statistics-container">
     <header class="section-header">
       <h1>📊 {{ t('verein', 'Dashboard') }}</h1>
-      <p class="section-subtitle">{{ t('verein', 'Overview and statistics of the club management') }}</p>
+      <p class="section-subtitle">{{ t('verein', 'Overview and statistics of the club') }}</p>
     </header>
 
     <!-- Alert für Fehler -->
@@ -22,7 +22,7 @@
     <!-- Loading State -->
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
-      <p>{{ t('verein', 'Loading data...') }}</p>
+      <p>{{ t('verein', 'Loading data…') }}</p>
     </div>
 
     <!-- Statistik-Widgets -->
@@ -40,7 +40,7 @@
       <!-- Widget: Offene Gebühren -->
       <div class="stat-widget warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">📋 {{ t('verein', 'Open fees') }}</h3>
+          <h3 class="stat-title">📋 {{ t('verein', 'Unpaid fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalOpen) }}</p>
@@ -116,21 +116,21 @@
 
       <!-- Nächste Jubiläen -->
       <div class="chart-container">
-        <h3 class="chart-title">🎉 {{ t('verein', 'Upcoming anniversaries') }}</h3>
+        <h3 class="chart-title">🎉 {{ t('verein', 'Upcoming membership anniversaries') }}</h3>
         <ul v-if="upcomingAnniversaries.length" class="upcoming-list">
           <li v-for="entry in upcomingAnniversaries" :key="entry.memberId" class="upcoming-item">
             <span class="upcoming-name">{{ entry.name }}</span>
             <span class="upcoming-detail">{{ formatDay(entry.nextDate) }} · {{ n('verein', '%n year a member', '%n years a member', entry.years) }}</span>
           </li>
         </ul>
-        <p v-else class="upcoming-empty">{{ t('verein', 'No join dates recorded') }}</p>
+        <p v-else class="upcoming-empty">{{ t('verein', 'No membership dates recorded') }}</p>
       </div>
 
       <!-- Vereinskalender -->
       <div class="chart-container">
         <h3 class="chart-title">📅 {{ t('verein', 'Club calendar') }}</h3>
         <p class="subscribe-hint">
-          {{ t('verein', 'Birthdays and anniversaries appear automatically in the read-only calendar "Club events" in the Calendar app – for the Nextcloud groups entered under "Club". There is no public link.') }}
+          {{ t('verein', 'Birthdays and membership anniversaries appear automatically in the read-only calendar “Club events” in the Calendar app – for the Nextcloud groups entered in the “Club” tab. There is no public link.') }}
         </p>
         <NcButton variant="secondary" @click="openCalendarApp">{{ t('verein', 'Open the Calendar app') }}</NcButton>
       </div>
@@ -157,6 +157,7 @@ import {
 import api from '../api'
 import Alert from './Alert.vue'
 import { t, n } from '@nextcloud/l10n'
+import { formatMoney, formatDate } from '../format'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { extractErrorMessage } from '../errorMessage'
 import { absoluteUrl } from '../absoluteUrl'
@@ -226,7 +227,7 @@ const upcomingAnniversaries = ref<UpcomingAnniversary[]>([])
 
 // Chart Daten und Optionen
 const feeStatusChartData = ref({
-  labels: [t('verein', 'Open'), t('verein', 'Paid'), t('verein', 'Overdue')],
+  labels: [t('verein', 'Unpaid'), t('verein', 'Paid'), t('verein', 'Overdue')],
   datasets: [
     {
       label: t('verein', 'Amount (€)'),
@@ -275,7 +276,7 @@ const chartOptions = reactive({
         beginAtZero: true,
         ticks: {
           callback: function (value: unknown) {
-            return '€' + value
+            return formatMoney(value)
           },
         },
       },
@@ -305,20 +306,9 @@ const chartOptions = reactive({
 })
 
 // Funktionen
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
+const formatCurrency = (amount: number): string => formatMoney(amount)
 
-const formatDay = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: 'long',
-  })
-}
+const formatDay = (dateString: string): string => formatDate(dateString, { day: 'numeric', month: 'long' })
 
 const openCalendarApp = () => {
   window.location.href = absoluteUrl('/apps/calendar/')

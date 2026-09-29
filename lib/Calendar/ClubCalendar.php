@@ -118,7 +118,7 @@ class ClubCalendar implements ICalendar {
                 continue;
             }
             $this->addEvent($member, 'birthday', $member->getBirthDate(), '🎂 ' . $this->l->t('Birthday: %s', [$member->getFullName()]));
-            $this->addEvent($member, 'anniversary', $member->getJoinDate(), '🎉 ' . $this->l->t('Club anniversary: %s', [$member->getFullName()]));
+            $this->addEvent($member, 'anniversary', $member->getJoinDate(), '🎉 ' . $this->l->t('Membership anniversary: %s', [$member->getFullName()]));
         }
         return $this->events;
     }

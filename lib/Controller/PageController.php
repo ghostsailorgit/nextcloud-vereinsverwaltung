@@ -40,7 +40,6 @@ class PageController extends Controller {
         return new TemplateResponse('verein', 'main', [
             'id-app-content' => '#app-content-vue',
             'id-app-navigation' => '#app-navigation-vue',
-            'pageTitle' => 'Verein',
         ], TemplateResponse::RENDER_AS_USER);
     }
 }

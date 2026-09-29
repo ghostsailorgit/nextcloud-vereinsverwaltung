@@ -29,10 +29,12 @@ npm run build
 cp -r appinfo lib templates img l10n vendor LICENSE LICENSES REUSE.toml AUTHORS.md README.md CHANGELOG.md SECURITY.md "$tmp/verein/"
 cp -r js/dist "$tmp/verein/js/"
 
-# TCPDF ships examples, tests and 25 MB of fonts; the app only uses the built-in Helvetica.
+# TCPDF ships examples, tests and 25 MB of fonts; the app only uses DejaVu Sans regular and bold
+# (PdfExporter::FONT) - keep exactly those, or the PDF export fails - plus the tiny Helvetica metrics, TCPDF's default.
 tcpdf="$tmp/verein/vendor/tecnickcom/tcpdf"
 rm -rf "$tcpdf/examples" "$tcpdf/tests" "$tcpdf/tools" "$tcpdf/.git"
-find "$tcpdf/fonts" -mindepth 1 ! -name 'helvetica*' -exec rm -rf {} +
+find "$tcpdf/fonts" -mindepth 1 -type f ! -name 'dejavusans.*' ! -name 'dejavusansb.*' ! -name 'helvetica*' -delete
+find "$tcpdf/fonts" -mindepth 1 -type d -exec rm -rf {} +
 
 # nothing that only belongs to development may end up in the archive
 for dev in vendor/phpunit vendor/nextcloud/ocp node_modules tests js/main.js; do

@@ -55,7 +55,7 @@ class FeeService {
     ): Fee {
         $membership = $this->assertMemberOfClub($clubId, $memberId);
         if ($membership->getDeactivated()) {
-            throw new ValidationException($this->l->t('The member is deactivated - no fees are created for deactivated members'));
+            throw new ValidationException($this->l->t('The member is deactivated – no fees are created for deactivated members'));
         }
 
         $fee = new Fee();

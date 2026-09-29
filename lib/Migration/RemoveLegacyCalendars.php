@@ -73,7 +73,7 @@ class RemoveLegacyCalendars implements IRepairStep {
             }
             $this->appConfig->deleteKey('verein', 'calendar_owner_user');
         } catch (Throwable $e) {
-            $this->logger->warning('Verein: alte Vereinskalender konnten nicht entfernt werden', ['exception' => $e]);
+            $this->logger->warning('Verein: could not remove the old club calendars', ['exception' => $e]);
             $output->warning('Old club calendars could not be removed (see log): ' . get_class($e));
         }
     }

@@ -71,7 +71,7 @@ class DunningController extends Controller {
             $deadline = (int)$this->request->getParam('deadlineDays', 14);
             $data = $this->dunning->letters($this->clubId(), $ids, $deadline);
             if ($data['letters'] === []) {
-                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('There are no dunning letters for these fees (paid, cancelled or not dunned yet)')], 400);
+                return new JSONResponse(['status' => 'error', 'message' => $this->l->t('There are no reminder letters for these fees (paid, canceled or no reminder sent yet)')], 400);
             }
             $file = $this->pdf->exportDunningLetters($data);
             return new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);

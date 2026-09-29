@@ -42,7 +42,7 @@ trait RespondsWithErrors {
         }
 
         try {
-            \OCP\Server::get(LoggerInterface::class)->error('Verein: unerwarteter Fehler', ['exception' => $e]);
+            \OCP\Server::get(LoggerInterface::class)->error('Verein: unexpected error', ['exception' => $e]);
         } catch (\Throwable $ignored) {
             // no logger available (e.g. in a unit test) - still answer safely
         }

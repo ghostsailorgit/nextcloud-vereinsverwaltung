@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace OCA\Verein\Service;
 
+use OCA\Verein\L10n\Formats;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
@@ -101,7 +102,7 @@ class DunningService {
                 continue;
             }
             if ($member->getDeactivated()) {
-                $skip($this->l->t('deactivated (no payment transactions)'));
+                $skip($this->l->t('deactivated (no payments)'));
                 continue;
             }
 
@@ -116,11 +117,11 @@ class DunningService {
             }
             $allAtMax = array_reduce($fees, fn ($carry, Fee $f) => $carry && (int)$f->getDunningLevel() >= self::MAX_LEVEL, true);
             if ($allAtMax) {
-                $skip($this->l->t('highest dunning level reached (%s)', [$this->l->t('Second and final dunning letter')]));
+                $skip($this->l->t('highest reminder level reached (%s)', [$this->l->t('Final notice')]));
                 continue;
             }
             if ($lastDunned !== null && $lastDunned > $lastLetterBefore) {
-                $skip($this->l->t('last dunned on %s', [$this->formatDate($lastDunned)]));
+                $skip($this->l->t('last reminder on %s', [Formats::date($this->l, $lastDunned)]));
                 continue;
             }
 
@@ -259,7 +260,7 @@ class DunningService {
                 $sum += (float)$fee->getAmount();
                 $rows[] = [
                     'text' => $fee->getDescription() ?: $this->doc->t('Fee %s', [$fee->getPeriod() ?? '']),
-                    'dueDate' => $this->formatDate(substr((string)$fee->getDueDate(), 0, 10)),
+                    'dueDate' => Formats::date($this->doc, (string)$fee->getDueDate()),
                     'amount' => (float)$fee->getAmount(),
                 ];
             }
@@ -285,8 +286,8 @@ class DunningService {
                 'address' => array_values(array_filter([$club->getStreet(), trim(($club->getPostalCode() ?? '') . ' ' . ($club->getCity() ?? ''))])),
             ],
             'account' => $account,
-            'date' => $this->formatDate($today),
-            'deadline' => $this->formatDate(date('Y-m-d', strtotime($today . ' +' . $deadlineDays . ' days'))),
+            'date' => Formats::date($this->doc, $today),
+            'deadline' => Formats::date($this->doc, date('Y-m-d', strtotime($today . ' +' . $deadlineDays . ' days'))),
             'letters' => $letters,
         ];
     }
@@ -341,7 +342,7 @@ class DunningService {
         return match ($member->getSalutation()) {
             'Herr' => $this->doc->t('Dear Mr %s,', [$member->getName()]),
             'Frau' => $this->doc->t('Dear Ms %s,', [$member->getName()]),
-            default => $this->doc->t('Hello %s,', [trim(($member->getFirstName() ?? '') . ' ' . $member->getName())]),
+            default => $this->doc->t('Dear %s,', [trim(($member->getFirstName() ?? '') . ' ' . $member->getName())]),
         };
     }
 
@@ -349,13 +350,8 @@ class DunningService {
     public static function levelLabel(int $level, IL10N $l): string {
         return match ($level) {
             1 => $l->t('Payment reminder'),
-            2 => $l->t('First dunning letter'),
-            default => $l->t('Second and final dunning letter'),
+            2 => $l->t('Second reminder'),
+            default => $l->t('Final notice'),
         };
-    }
-
-    private function formatDate(string $ymd): string {
-        $d = \DateTime::createFromFormat('Y-m-d', substr($ymd, 0, 10));
-        return $d === false ? $ymd : $d->format('d.m.Y');
     }
 }

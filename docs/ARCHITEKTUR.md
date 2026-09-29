@@ -195,7 +195,7 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
   antwortet der Export mit 503 und einem Hinweis. Hat eine andere App schon eine `TCPDF`-Klasse geladen, wird diese
   benutzt statt die eigene ein zweites Mal zu deklarieren (sonst PHP-Fatal-Error).
 - Release-Archiv: `scripts/build-archive.sh` (von `release.yml` und dem CI-Job `archive` benutzt) - gebautes Frontend,
-  Produktions-Abhängigkeiten, TCPDF ohne Beispiele und ohne die ungenutzten Schriften (nur Helvetica), keine Dev-Dateien.
+  Produktions-Abhängigkeiten, TCPDF ohne Beispiele und ohne die ungenutzten Schriften (nur DejaVu Sans normal/fett und Helvetica), keine Dev-Dateien.
   Der CI-Job entpackt genau dieses Archiv in ein separates `custom_apps/` einer frischen Nextcloud, aktiviert es und lässt
   Smoke-Test und Hintergrundjobs über Webcron laufen.
 - Übersetzungen: englische Quelltexte, Deutsch in `l10n/de.json` (einzige von Hand gepflegte Datei, `php scripts/l10n.php build`
@@ -204,6 +204,15 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
   Dokumente (PDF, Mahnschreiben, SEPA-Verwendungszweck, der gespeicherte Standardtext eines Beitrags) kommen in der
   Sprache der Instanz, wenn in der config.php `default_language` oder `force_language` gesetzt ist, sonst in der Sprache
   dessen, der sie erstellt (`L10n\DocumentL10n`) - so sehen die Briefe gleich aus, egal wer sie druckt.
+- Englisch ist die Quelle aller Übersetzungen: ein Begriff je Fachbegriff nach `docs/GLOSSARY.md` (Verein = club, Funktion =
+  position, Beitragskategorie = fee category, Mahnwesen = payment reminders, …). `L10nTest` liest die verbotenen Wörter aus
+  dem Glossar und prüft Stilregeln (… statt ..., typografische Anführungszeichen, keine fest formatierten Beträge/Daten).
+- Datum und Beträge stehen nie formatiert im Text, sondern werden nach der Spracheinstellung formatiert: im Browser
+  `js/format.js` (Nextclouds Gebietsschema des Kontos), in PHP `L10n\Formats` (mit der Erweiterung intl nach ICU, sonst
+  deutsch bzw. englisch). Gespeicherte Werte bleiben intern (Anrede `Herr`/`Frau`/`Divers`/`Firma`, Funktion
+  `member`/`treasurer`/`admin`); Oberfläche und CSV-Export zeigen die Bezeichnung, der Import nimmt beides an.
+- PDFs nutzen DejaVu Sans (als Teilmenge eingebettet), damit auch Namen wie „Łukasz“ oder kyrillische korrekt erscheinen;
+  Tabellenzellen stauchen zu lange Texte, statt überzulaufen.
 - API-Übersicht: `docs/API.md` wird aus den Routen erzeugt (`php scripts/ApiDocs.php`), ein Test hält sie aktuell.
 
 ## Fehlerbehandlung

@@ -15,12 +15,12 @@
       </p>
       <p>{{ t('verein', 'Replaced or removed:') }}</p>
       <ul>
-        <li>{{ t('verein', 'Name, salutation, address, e-mail and date of birth') }}</li>
+        <li>{{ t('verein', 'Name, title, address, email and date of birth') }}</li>
         <li>{{ t('verein', 'IBAN, BIC and the link to a Nextcloud account') }}</li>
-        <li>{{ t('verein', 'the personal data in older entries of the change log') }}</li>
+        <li>{{ t('verein', 'the personal data in older entries of the audit log') }}</li>
       </ul>
       <p>
-        {{ t('verein', 'Fees and the SEPA history are kept (bookkeeping retention), as well as join and leave dates. This is only possible once the person has left all clubs or is deceased.') }}
+        {{ t('verein', 'Kept: the fees and the SEPA history (bookkeeping retention) as well as the dates joined and left. Only possible once the person has left every club or is deceased.') }}
       </p>
       <NcTextField
         :model-value="typed"

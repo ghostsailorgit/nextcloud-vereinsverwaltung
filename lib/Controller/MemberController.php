@@ -233,7 +233,7 @@ class MemberController extends Controller {
                 return new JSONResponse([
                     'status' => 'error',
                     'message' => $this->l->t('Invalid role'),
-                    'errors' => [$this->l->t('Role must be member, treasurer or board')]
+                    'errors' => [$this->l->t('Position must be member, treasurer or board')]
                 ], 400);
             }
 
@@ -305,7 +305,7 @@ class MemberController extends Controller {
                 return new JSONResponse([
                     'status' => 'error',
                     'message' => $this->l->t('Invalid role'),
-                    'errors' => [$this->l->t('Role must be member, treasurer or board')]
+                    'errors' => [$this->l->t('Position must be member, treasurer or board')]
                 ], 400);
             }
 
