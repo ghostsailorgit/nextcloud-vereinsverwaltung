@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.19.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.19.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -15,7 +15,7 @@ Stand: Version 0.19.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
 | Datenschutz | Person anonymisieren statt löschen (mit Bestätigung durch Eintippen des Namens), Datenauskunft einer Person, Änderungsprotokoll ohne Klartext bei personenbezogenen Feldern, Reiter „Protokoll“ |
 | Qualität | Automatische Tests und CI, Integrationstests gegen Nextcloud 33-35 mit SQLite, MySQL, MariaDB und PostgreSQL, API-Übersicht aus dem Code erzeugt |
-| Übersetzungen | Englisch nach festem Glossar (per Test geprüft), Deutsch mitgeliefert; Oberfläche, Meldungen und Dokumente übersetzbar; Datum und Beträge nach Spracheinstellung; PDFs mit Unicode-Schrift; Briefe in der Sprache der Instanz, sonst in der des Erstellers |
+| Übersetzungen | Englisch nach festem Glossar (per Test geprüft), Deutsch mitgeliefert (durchgehend „du“, auch in den Mahnschreiben); Oberfläche, Meldungen und Dokumente übersetzbar; Datum und Beträge nach Spracheinstellung; PDFs mit Unicode-Schrift; Briefe in der Sprache der Instanz, sonst in der des Erstellers |
 | Installation | Release-Archiv ohne Kommandozeile installierbar (entpacken, hochladen, aktivieren), keine zusätzlichen PHP-Erweiterungen, Programme oder System-Cron nötig; in der CI aus dem Archiv in eine frische Nextcloud installiert und getestet |
 | Lizenz | SPDX-Kopf in jeder Datei, REUSE-konform (per CI geprüft), Urheber des Ursprungsprojekts in `AUTHORS.md` |
 
@@ -23,7 +23,6 @@ Stand: Version 0.19.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 - **Veröffentlichung im App Store:** Bildschirmfotos, App signieren und Archiv aus `release.yml` hochladen (englische
   `info.xml` mit Beschreibung und Doku-Links ist fertig).
-- Deutsche Übersetzung vereinheitlichen: Sie mischt „du“ und „Sie“; Nextcloud trennt das über `de` (du) und `de_DE` (Sie).
 - Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).
 
 ## Ideen ohne Termin

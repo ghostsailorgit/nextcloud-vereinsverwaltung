@@ -5,6 +5,9 @@
   "license": "AGPL-3.0-or-later",
   "description": "Nextcloud app for managing clubs (members, fees, SEPA direct debit, roles)",
   "main": "js/main.js",
+  "engines": {
+    "node": "^24.0.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

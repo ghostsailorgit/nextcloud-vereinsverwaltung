@@ -10,7 +10,7 @@ Bitte ein [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/
 
 ## Entwicklung
 
-Voraussetzungen: PHP 8.1+, Composer, Node.js 20+.
+Voraussetzungen: PHP 8.2+, Composer, Node.js 24 (LTS; 26 wird in der CI mitgebaut).
 
 ```bash
 composer install                       # PHPUnit und die Nextcloud-OCP-Stubs (Dev-Abhängigkeiten)

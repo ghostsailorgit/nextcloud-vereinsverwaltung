@@ -4,6 +4,20 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.19.1-beta] - 2026-09-29
+
+### 🌐 Übersetzungen
+- Die deutsche Übersetzung duzt jetzt durchgehend; bisher mischte sie „du“ und „Sie“. Das gilt auch für die
+  Mahnschreiben: Anrede mit Vornamen („Liebe Erika,“, „Lieber Max,“, ohne Vornamen „Hallo Mustermann,“), Gruß „Viele
+  Grüße“. Englische Schreiben bleiben bei „Dear Ms Mustermann,“.
+
+### 🔧 Technik
+- CI und Release bauen das Frontend mit Node 24 (LTS) statt 22; die Nextcloud-Bibliotheken verlangen inzwischen
+  Node 24. Ein zusätzlicher CI-Job baut schon mit Node 26, das am 28.10.2026 LTS wird (Node 25 bekommt seit Juni 2026
+  keine Updates mehr und wird übersprungen). `package.json` nennt die unterstützten Node-Versionen.
+
+---
+
 ## [0.19.0-beta] - 2026-09-29
 
 Englisch auf Veröffentlichungsniveau, Datum und Beträge nach Spracheinstellung, PDFs mit allen Schriftzeichen.
