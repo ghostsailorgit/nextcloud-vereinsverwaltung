@@ -24,6 +24,8 @@ SEPA-Datei gegen das offizielle Schema und die Regeln der Banken geprüft.
   gemeldet: Betrag 0 oder negativ, ungültige IBAN oder BIC, Unterschriftsdatum ungültig oder in der Zukunft,
   Mandatsreferenz mit unzulässigen Zeichen. Ein einziger solcher Datensatz ließ bisher die ganze Datei scheitern.
 - Die Datei enthält jetzt die Entgeltregelung `SLEV`, wie es das SEPA-Regelwerk vorsieht.
+- Die IBAN-Prüfung braucht die PHP-Erweiterung bcmath nicht mehr (Nextcloud setzt sie nicht voraus; ohne sie brach die
+  Prüfung mit einem Fehler ab).
 
 ### 🧪 Tests
 - Die erzeugte Datei wird in der CI gegen das offizielle ISO-20022-Schema pain.008.001.02 geprüft, mit absichtlich
