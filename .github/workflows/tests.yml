@@ -209,6 +209,95 @@ jobs:
         if: failure()
         run: tail -n 60 server/data/nextcloud.log || true; tail -n 30 /tmp/php-server.log || true
 
+  # What an administrator without a shell gets: the release archive (scripts/build-archive.sh, the same script as
+  # release.yml), unpacked into a separate custom_apps/ folder of a fresh Nextcloud and enabled - no composer or npm
+  # on the server, nothing from the git checkout. Then the smoke test (incl. PDF with the pruned TCPDF) and the
+  # background jobs through Nextcloud's webcron (cron.php over HTTP, one job per request - no system cron).
+  archive:
+    name: Release archive on Nextcloud ${{ matrix.server }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { server: stable33, php: '8.2' }
+          - { server: stable35, php: '8.5' }
+    steps:
+      - name: The app (only to build the archive)
+        uses: actions/checkout@v4
+        with:
+          path: app
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, iconv, fileinfo, intl, gd, zip, curl, xml, pdo_sqlite
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Build the archive
+        run: app/scripts/build-archive.sh verein.tar.gz
+
+      - name: Nextcloud server
+        uses: actions/checkout@v4
+        with:
+          repository: nextcloud/server
+          ref: ${{ matrix.server }}
+          submodules: true
+          path: server
+
+      - name: Install Nextcloud with a separate, writable custom_apps folder
+        working-directory: server
+        run: |
+          php occ maintenance:install --admin-user=admin --admin-pass=admin --database=sqlite
+          mkdir custom_apps
+          php occ config:system:set apps_paths 0 path --value="$PWD/apps"
+          php occ config:system:set apps_paths 0 url --value=/apps
+          php occ config:system:set apps_paths 0 writable --type=boolean --value=false
+          php occ config:system:set apps_paths 1 path --value="$PWD/custom_apps"
+          php occ config:system:set apps_paths 1 url --value=/custom_apps
+          php occ config:system:set apps_paths 1 writable --type=boolean --value=true
+
+      - name: Unpack the archive and enable the app
+        working-directory: server
+        run: |
+          tar -xzf ../verein.tar.gz -C custom_apps
+          php occ app:enable verein
+          test "$(php occ app:getpath verein)" = "$PWD/custom_apps/verein" || { echo "FAIL app not loaded from custom_apps"; exit 1; }
+          test "$(php occ config:app:get verein enabled)" = "yes"
+          echo "ok   enabled from custom_apps ($(du -sh custom_apps/verein | cut -f1) unpacked)"
+
+      - name: Smoke test against the installed archive
+        working-directory: server
+        run: |
+          # the archive has no tests; put the smoke test next to the installed app for this run only
+          cp -r ../app/tests custom_apps/verein/tests
+          OC_PASS=ci-user-password php occ user:add --password-from-env ci-user
+          php custom_apps/verein/tests/Integration/smoke.php run
+
+      - name: Background jobs through webcron (no system cron)
+        working-directory: server
+        run: |
+          php occ background:webcron
+          php -S 127.0.0.1:8082 > /tmp/php-server-cron.log 2>&1 &
+          sleep 3
+          before=$(php occ verein:backup:list | grep -c '^verein-backup' || true)
+          for i in $(seq 1 200); do
+            curl -s -o /dev/null "http://127.0.0.1:8082/cron.php"
+            now=$(php occ verein:backup:list | grep -c '^verein-backup' || true)
+            if [ "$now" -gt "$before" ]; then echo "ok   daily backup ran through webcron after $i requests"; exit 0; fi
+          done
+          echo "FAIL the daily backup job did not run through webcron"; exit 1
+
+      - name: Nextcloud log on failure
+        if: failure()
+        run: tail -n 60 server/data/nextcloud.log || true; tail -n 30 /tmp/php-server-cron.log || true
+
   reuse:
     name: REUSE (licence of every file)
     runs-on: ubuntu-latest

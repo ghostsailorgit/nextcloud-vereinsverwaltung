@@ -19,7 +19,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.2'  # lowest supported: composer then only picks dependencies that run on all versions
           extensions: mbstring, intl, bcmath, dom, xml, zip
           coverage: none
 
@@ -36,21 +36,8 @@ jobs:
             exit 1
           fi
 
-      - name: Production PHP dependencies
-        run: composer update --no-dev --no-interaction --no-progress --optimize-autoloader
-
-      - name: Build the frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Assemble the archive
-        run: |
-          mkdir -p dist-release/verein
-          cp -r appinfo lib templates img l10n vendor LICENSE LICENSES REUSE.toml AUTHORS.md README.md CHANGELOG.md SECURITY.md dist-release/verein/
-          mkdir -p dist-release/verein/js
-          cp -r js/dist dist-release/verein/js/
-          tar -czf "verein-${GITHUB_REF_NAME}.tar.gz" -C dist-release verein
+      - name: Build the archive (frontend, production PHP dependencies)
+        run: scripts/build-archive.sh "verein-${GITHUB_REF_NAME}.tar.gz"
 
       - name: Publish the release
         uses: softprops/action-gh-release@v2

@@ -11,9 +11,10 @@ use OCA\Verein\L10n\DocumentL10n;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 
-// Require TCPDF if available (lib/Service/Export -> 3 levels up to app root)
+// Require the bundled TCPDF (lib/Service/Export -> 3 levels up to app root) - unless another app already loaded one:
+// declaring the class a second time would be a fatal error on every PDF export.
 $tcpdf_file = __DIR__ . '/../../../vendor/tecnickcom/tcpdf/tcpdf.php';
-if (file_exists($tcpdf_file)) {
+if (!class_exists('TCPDF', false) && file_exists($tcpdf_file)) {
     require_once $tcpdf_file;
 }
 

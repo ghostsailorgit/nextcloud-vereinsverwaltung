@@ -4,6 +4,30 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.12-beta] - 2026-09-29
+
+Installation ohne Kommandozeile und ohne Hürden durch die Server-Umgebung.
+
+### ✨ Neu
+- Das Release-Archiv `verein-v….tar.gz` lässt sich ohne Kommandozeile installieren: entpacken, per SFTP/FTP nach
+  `custom_apps/` hochladen, unter „Apps“ aktivieren. Die Anleitung (`docs/INSTALLATION.md`, README) beschreibt diesen Weg,
+  die Ordner für Docker und Snap, das Aktualisieren und typische Fehler (z. B. „Source code“ statt Archiv hochgeladen).
+- Das Archiv ist mit 1,4 MB deutlich kleiner: TCPDF ohne Beispiele und ohne die ungenutzten Schriften.
+
+### 🐛 Korrigiert
+- Hat eine andere installierte App ebenfalls die PDF-Bibliothek TCPDF geladen, brach der PDF-Export mit einem PHP-Fehler
+  ab; jetzt wird die schon geladene benutzt.
+- `composer.json` verlangte PHP 8.1, unterstützt ist 8.2 bis 8.5; das Archiv wird jetzt mit PHP 8.2 gebaut, damit keine
+  Abhängigkeit hineinkommt, die nur mit neuerem PHP läuft.
+
+### 🧪 Tests
+- Neuer CI-Job: Das Release-Archiv wird mit demselben Skript wie beim Release gebaut (`scripts/build-archive.sh`), in einen
+  separaten `custom_apps`-Ordner einer frischen Nextcloud 33 und 35 entpackt und aktiviert - ohne Composer, npm oder
+  Quellcode auf dem Server. Danach laufen der Smoke-Test (inkl. PDF) und die Hintergrundjobs über Webcron statt
+  System-Cron.
+
+---
+
 ## [0.18.11-beta] - 2026-09-29
 
 SEPA-Datei gegen das offizielle Schema und die Regeln der Banken geprüft; Einzug nie vor der Fälligkeit.

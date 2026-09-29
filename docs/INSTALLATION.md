@@ -4,36 +4,58 @@ Diese Anleitung geht davon aus, dass eine Nextcloud bereits läuft. Unterstützt
 
 ## 1. App installieren
 
-Die App liegt in `custom_apps/verein` (der Ordnername muss `verein` lauten, das ist die App-ID).
+Es gibt drei Wege. Für die ersten beiden braucht es **keine Kommandozeile** und keine Werkzeuge auf dem Server; die App
+benötigt nichts, was Nextcloud nicht ohnehin voraussetzt (keine zusätzlichen PHP-Erweiterungen, keine Programme, kein
+System-Cron).
+
+### a) Aus dem Nextcloud App Store (sobald veröffentlicht)
+
+Als Administrator in Nextcloud **Apps** öffnen, nach „Verein“ suchen, **Herunterladen und aktivieren**. Updates erscheinen
+dann wie bei jeder anderen App unter „Aktualisierungen“.
+
+### b) Fertiges Archiv, ohne Kommandozeile
+
+1. Von der [Release-Seite](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/releases) die Datei
+   `verein-v….tar.gz` herunterladen (nicht „Source code“ - dem fehlen das gebaute Frontend und die PDF-Bibliothek) und auf
+   dem eigenen Rechner entpacken. Es entsteht ein Ordner `verein`.
+2. Diesen Ordner per SFTP/FTP oder mit dem Dateimanager des Hosters in den App-Ordner der Nextcloud hochladen, so dass es
+   `…/nextcloud/custom_apps/verein/appinfo/info.xml` gibt. Der Ordner muss `verein` heißen (das ist die App-ID). Wo der
+   App-Ordner liegt:
+
+   | Installation | Ordner |
+   |---|---|
+   | Normale Installation / Webhosting | `custom_apps/` im Nextcloud-Ordner; gibt es ihn nicht, `apps/` |
+   | Offizielles Docker-Image (`nextcloud`) | `/var/www/html/custom_apps/` im Container (meist ein Volume) |
+   | Snap | `/var/snap/nextcloud/current/nextcloud/extra-apps/` |
+   | Nextcloud AIO | nur über den App Store (Weg a) |
+
+3. In Nextcloud **Apps → Deaktivierte Apps** öffnen und bei „Verein“ **Aktivieren** klicken. Dabei legt Nextcloud die
+   Datenbanktabellen an (`oc_verein_*`).
+
+Die Dateien müssen dem Benutzer gehören, unter dem PHP läuft. Beim Webhosting ist das in der Regel der FTP-Benutzer, dann
+ist nichts zu tun; auf einem eigenen Server ggf. `chown -R www-data:www-data custom_apps/verein`.
+
+Genau dieses Archiv wird in der CI in eine frische Nextcloud 33 und 35 entpackt, aktiviert und getestet - ohne Composer,
+npm oder System-Cron.
+
+### c) Aus dem Quellcode (für Entwickler)
 
 ```bash
 cd /pfad/zu/nextcloud/custom_apps
 git clone https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung.git verein
 cd verein
-```
-
-Dann die Abhängigkeiten holen und das Frontend bauen:
-
-```bash
-composer install --no-dev      # nur nötig für den PDF-Export (TCPDF)
-npm ci
-npm run build                  # erzeugt js/dist/
-```
-
-`composer` und `npm` sind nur zum Bauen nötig, nicht im laufenden Betrieb. Wer die App auf einen Server ohne Build-Werkzeuge bringen will, baut sie auf einem anderen Rechner und kopiert den Ordner (ohne `node_modules/` und `.git/`, aber mit `js/dist/` und `vendor/`).
-
-Zum Schluss Dateibesitzer setzen und die App aktivieren:
-
-```bash
-sudo chown -R www-data:www-data /pfad/zu/nextcloud/custom_apps/verein
+composer install --no-dev      # PDF-Bibliothek (TCPDF)
+npm ci && npm run build        # erzeugt js/dist/
 sudo -u www-data php /pfad/zu/nextcloud/occ app:enable verein
 ```
 
-Beim Aktivieren legt Nextcloud die Datenbanktabellen an (`oc_verein_*`).
+Das Archiv aus Weg b baut `scripts/build-archive.sh` (braucht git, Composer, npm).
 
 ## 2. Nextcloud-Cron einrichten
 
-Die tägliche Sicherung und das Aufräumen des Änderungsprotokolls laufen als Nextcloud-Hintergrundjobs. Nextcloud sollte dafür auf **Cron** stehen (Verwaltungseinstellungen → Grundeinstellungen → Hintergrundaufgaben). Ohne Cron laufen die Jobs nur, wenn Nutzer die Oberfläche öffnen.
+Die tägliche Sicherung und das Aufräumen des Änderungsprotokolls laufen als Nextcloud-Hintergrundjobs. Am zuverlässigsten ist **Cron** (Verwaltungseinstellungen → Grundeinstellungen → Hintergrundaufgaben). Wo das nicht geht
+(Webhosting), funktionieren auch **Webcron** (ein externer Dienst ruft `cron.php` auf; in der CI getestet) und **AJAX** -
+dann laufen die Jobs nur, wenn jemand die Oberfläche öffnet.
 
 ## 3. Rechte einrichten
 
@@ -43,17 +65,17 @@ Die App muss nicht auf Gruppen beschränkt werden; wer keine Rolle und keine Mit
 
 ## 4. Aktualisieren
 
-```bash
-cd /pfad/zu/nextcloud/custom_apps/verein
-git pull
-composer install --no-dev
-npm ci && npm run build
-sudo -u www-data php /pfad/zu/nextcloud/occ upgrade
-```
-
-`occ upgrade` führt neue Datenbank-Migrationen aus. Das Frontend wird vom Browser stark zwischengespeichert; die Version in `appinfo/info.xml` ändert die Adresse der Dateien, ein neu geladenes Fenster genügt. PHP-Änderungen werden je nach OPcache-Einstellung erst nach einer Minute oder einem PHP-Neustart wirksam.
-
 **Vor jedem Update eine Sicherung anlegen** (siehe unten).
+
+- **App Store:** wie jede andere App unter „Apps → Aktualisierungen“.
+- **Archiv:** das neue Archiv entpacken, den alten Ordner `verein` im App-Ordner **löschen** und den neuen hochladen (nicht
+  darüberkopieren - sonst bleiben alte Dateien liegen). Beim nächsten Aufruf zeigt Nextcloud eine Seite „Aktualisierung
+  erforderlich“; nach dem Klick auf „Aktualisieren“ laufen die neuen Datenbank-Migrationen.
+- **Quellcode:** `git pull`, `composer install --no-dev`, `npm ci && npm run build`, dann `occ upgrade`.
+
+Das Frontend wird vom Browser stark zwischengespeichert; die Version in `appinfo/info.xml` ändert die Adresse der Dateien,
+ein neu geladenes Fenster genügt. PHP-Änderungen werden je nach OPcache-Einstellung erst nach einer Minute oder einem
+PHP-Neustart wirksam.
 
 ## 5. Sicherung und Wiederherstellung
 
@@ -80,9 +102,10 @@ Hinweise: Die Sicherung enthält personenbezogene Daten, sie ist wie die Datenba
 
 | Beobachtung | Ursache und Abhilfe |
 |---|---|
-| PDF-Export zeigt „TCPDF fehlt“ | Im App-Ordner `composer install --no-dev` ausführen. Alle anderen Funktionen laufen auch ohne. |
-| Nach einem Update sieht man noch die alte Oberfläche | Seite hart neu laden (Strg+F5). Prüfen, ob `npm run build` gelaufen ist und `js/dist/` aktuell ist. |
+| PDF-Export zeigt „TCPDF fehlt“ | Das Archiv `verein-v….tar.gz` verwenden (nicht „Source code“), es enthält die Bibliothek; bei Installation aus dem Quellcode im App-Ordner `composer install --no-dev` ausführen. Alle anderen Funktionen laufen auch ohne. |
+| Nach einem Update sieht man noch die alte Oberfläche | Seite hart neu laden (Strg+F5). Beim Archiv: Wurde der alte Ordner vorher gelöscht? Aus dem Quellcode: Ist `npm run build` gelaufen und `js/dist/` aktuell? |
 | „Interner Fehler. Einzelheiten stehen im Nextcloud-Log.“ | Unerwartete Fehler zeigt die App bewusst nicht im Detail. Die Ursache steht in `nextcloud.log` (Verwaltungseinstellungen → Protokoll), Einträge beginnen mit „Verein:“. |
+| Die App lässt sich nicht aktivieren / eine leere Seite erscheint | Wurde „Source code“ statt `verein-v….tar.gz` hochgeladen? Heißt der Ordner genau `verein` (nicht `verein-v0.18…` oder `verein/verein`)? |
 | Die App erscheint nicht im Menü | App aktiviert? `occ app:list \| grep verein`. Hat der Benutzer eine Rolle oder eine verknüpfte Mitgliedschaft? Ohne beides sieht er nichts. |
 | Tägliche Sicherung fehlt | Läuft der Nextcloud-Cron? `occ background-job:list --class='OCA\Verein\BackgroundJob\DailyBackupJob'` zeigt den letzten Lauf. |
 | Kalendertermine fehlen | Der Kalender „Vereinstermine …“ erscheint automatisch bei Nutzern, die in einer der im Verein hinterlegten Kalendergruppen sind (Reiter „Verein“). Nach dem Update auf 0.18 verschwindet der alte, geteilte Kalender gleichen Namens; bleibt er stehen, stand der Grund im Update-Protokoll, und der Besitzer kann ihn in der Kalender-App löschen. |
