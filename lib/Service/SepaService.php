@@ -10,9 +10,7 @@ use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\MemberMapper;
-use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Exception\ValidationException;
-use OCP\AppFramework\Db\DoesNotExistException;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 use OCA\Verein\L10n\DocumentL10n;
@@ -33,7 +31,6 @@ class SepaService {
     public function __construct(
         private FeeMapper $feeMapper,
         private MemberMapper $memberMapper,
-        private MembershipMapper $membershipMapper,
         private ClubMapper $clubMapper,
         private ClubService $clubService,
         private ?Clock $clock = null,
@@ -162,13 +159,18 @@ class SepaService {
         $earliest = $this->collectionDate();
         $latestDue = (new \DateTimeImmutable($earliest))->modify('+' . self::MAX_DAYS_AHEAD . ' days')->format('Y-m-d');
 
-        foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
-            $member = $this->memberMapper->find($fee->getMemberId());
+        // the club's members with their membership in two queries, instead of two queries per fee
+        $clubMembers = [];
+        foreach ($this->memberMapper->findByClub($clubId) as $m) {
+            $clubMembers[$m->getId()] = $m;
+        }
 
-            try {
-                $membership = $this->membershipMapper->findByMemberAndClub($fee->getMemberId(), $clubId);
-            } catch (DoesNotExistException $e) {
-                $membership = null;
+        foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
+            $member = $clubMembers[$fee->getMemberId()] ?? null;
+            $membership = $member?->getMembership();
+            if ($member === null) {
+                // a fee of someone no longer in the club (membership removed): reported below as without mandate
+                $member = $this->memberMapper->find($fee->getMemberId());
             }
 
             $iban = self::compact($member->getIban());

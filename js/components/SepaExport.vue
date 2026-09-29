@@ -32,7 +32,7 @@
           <p><strong>IBAN:</strong> {{ selectedAccount.iban }}</p>
           <p><strong>BIC:</strong> {{ selectedAccount.bic || '–' }}</p>
           <p>
-            <strong>{{ t('verein', 'Creditor ID:') }}</strong>
+            <strong>{{ t('verein', 'Creditor ID:') }}</strong>{{ ' ' }}
             <span v-if="selectedAccount.creditorId">{{ selectedAccount.creditorId }}</span>
             <span v-else class="missing">{{ t('verein', 'missing – enter it in the “Club” tab') }}</span>
           </p>

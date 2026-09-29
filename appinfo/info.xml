@@ -35,7 +35,7 @@ No extra PHP extensions, tools or system cron are needed. **Beta:** check the fi
 - **Datenschutz:** Änderungsprotokoll ohne personenbezogene Daten im Klartext, Datenauskunft, Anonymisieren, tägliche Sicherung mit Wiederherstellung.
 
 Es werden keine zusätzlichen PHP-Erweiterungen, Programme oder System-Cron benötigt. **Beta:** Die erste SEPA-Datei vor dem ersten echten Einzug mit dem Prüfwerkzeug der eigenen Bank kontrollieren.]]></description>
-    <version>0.19.1-beta</version>
+    <version>0.19.2-beta</version>
     <licence>agpl</licence>
     <author>Vereinsverwaltung</author>
     <namespace>Verein</namespace>
