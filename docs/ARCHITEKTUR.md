@@ -150,7 +150,10 @@ Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protoko
   ungültige IBAN/BIC, Unterschriftsdatum ungültig oder in der Zukunft, Mandatsreferenz außerhalb des Zeichensatzes.
   Ein ungültiges Vereinskonto (IBAN, BIC, Gläubiger-ID) bricht den Export ab.
 - Beträge und Kontrollsumme in Cent (keine Float-Summe), Nachrichten-ID je Datei eindeutig (Verein, Zeitstempel, Zufall),
-  Einzugsdatum fünf TARGET2-Bankarbeitstage nach heute (lokales Datum).
+  frühestes Einzugsdatum fünf TARGET2-Bankarbeitstage nach heute (lokales Datum).
+- Nie vor Fälligkeit: Beiträge mit Fälligkeit bis zum frühesten Datum (oder ohne lesbare Fälligkeit) werden zu diesem
+  eingezogen, Beiträge mit Fälligkeit bis 14 Kalendertage danach an ihrem Fälligkeitstag (nächster TARGET2-Tag), je Datum
+  ein eigener `PmtInf`-Block; später fällige werden als „noch nicht fällig“ gemeldet und bleiben offen.
 - `SepaServiceTest` prüft die Datei gegen das offizielle Schema pain.008.001.02; die XSD wird wegen der ISO-Lizenz nicht
   eingecheckt, sondern in der CI geladen (Commit und Prüfsumme fest, siehe `.github/workflows/tests.yml`).
 

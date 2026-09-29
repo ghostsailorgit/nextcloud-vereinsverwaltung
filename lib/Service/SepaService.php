@@ -52,6 +52,11 @@ class SepaService {
     private const BIC_PATTERN = '/^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?$/';
     /** Business days (TARGET2) between today and the requested collection date: CORE needs D-1, banks often more. */
     private const LEAD_DAYS = 5;
+    /**
+     * Fees due up to this many calendar days after the earliest collection date are collected on their due date
+     * (own payment block); later ones stay open for a later export - banks do not take collections far ahead.
+     */
+    private const MAX_DAYS_AHEAD = 14;
 
     private ValidationService $validation;
 
@@ -118,7 +123,7 @@ class SepaService {
             'creditorIban' => $account->getIban(),
             'creditorBic' => $account->getBic(),
             'creditorId' => $account->getCreditorId(),
-            'collectionDate' => $this->collectionDate(),
+            'collectionDate' => $collected['earliestDate'],
             'totalAmount' => $collected['totalCents'] / 100,
             'transactionCount' => count($collected['transactions']),
             'transactions' => array_map(function (array $t) {
@@ -142,13 +147,20 @@ class SepaService {
      * them - a single bad record would otherwise make the bank reject the
      * whole file.
      *
-     * @return array{transactions: array, skipped: array, totalCents: int}
+     * A fee is never collected before it is due: if its due date is after the
+     * earliest possible collection date, it is collected on its due date (or the
+     * next TARGET2 day), as long as that is at most MAX_DAYS_AHEAD days later;
+     * fees due even later are skipped as "not due yet".
+     *
+     * @return array{transactions: array, skipped: array, totalCents: int, earliestDate: string}
      */
     private function collectFees(int $clubId): array {
         $totalCents = 0;
         $transactions = [];
         $skipped = [];
         $today = Clock::todayOf($this->clock);
+        $earliest = $this->collectionDate();
+        $latestDue = (new \DateTimeImmutable($earliest))->modify('+' . self::MAX_DAYS_AHEAD . ' days')->format('Y-m-d');
 
         foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
             $member = $this->memberMapper->find($fee->getMemberId());
@@ -163,6 +175,9 @@ class SepaService {
             $bic = self::compact($member->getBic());
             $cents = (int)round(((float)$fee->getAmount()) * 100);
             $mandateDate = $membership !== null ? substr(trim((string)$membership->getMandateDate()), 0, 10) : '';
+            // missing or unreadable due date: collect as soon as possible, as before
+            $due = substr(trim((string)$fee->getDueDate()), 0, 10);
+            $collectionDate = (self::isDate($due) && $due > $earliest) ? self::targetDayFrom($due) : $earliest;
 
             $reason = null;
             if ($membership !== null && $membership->getDeactivated()) {
@@ -183,6 +198,8 @@ class SepaService {
                 $reason = $this->l->t('signature date of the mandate is in the future');
             } elseif (!preg_match(self::ID_PATTERN, $membership->getEffectiveMandateReference())) {
                 $reason = $this->l->t('mandate reference contains characters not allowed in SEPA (max. 35 letters, digits and simple special characters)');
+            } elseif ($due > $latestDue && self::isDate($due)) {
+                $reason = $this->l->t('not due yet');
             }
 
             if ($reason !== null) {
@@ -204,6 +221,7 @@ class SepaService {
                 'amount' => $cents / 100,
                 'cents' => $cents,
                 'dueDate' => $fee->getDueDate(),
+                'collectionDate' => $collectionDate,
                 'mandateReference' => $membership->getEffectiveMandateReference(),
                 'mandateDate' => $mandateDate,
                 'reference' => $this->paymentReference($fee->getDescription(), $fee->getDueDate()),
@@ -211,7 +229,7 @@ class SepaService {
             ];
         }
 
-        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalCents' => $totalCents];
+        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalCents' => $totalCents, 'earliestDate' => $earliest];
     }
 
     private function paymentReference(?string $description, string $dueDate): string {
@@ -247,6 +265,15 @@ class SepaService {
             if (self::isTargetDay($day)) {
                 $left--;
             }
+        }
+        return $day->format('Y-m-d');
+    }
+
+    /** The given date if it is a TARGET2 business day, otherwise the next one. */
+    private static function targetDayFrom(string $date): string {
+        $day = new \DateTimeImmutable($date);
+        while (!self::isTargetDay($day)) {
+            $day = $day->modify('+1 day');
         }
         return $day->format('Y-m-d');
     }
@@ -334,7 +361,6 @@ class SepaService {
         // unique per file: banks reject a message id they have already seen
         $msgId = substr('VEREIN-' . $clubId . '-' . $now->format('YmdHis') . '-' . bin2hex(random_bytes(2)), 0, 32);
         $creationDateTime = $now->format('Y-m-d\TH:i:s');
-        $collectionDate = $this->collectionDate();
         $count = count($transactions);
         $total = self::amount($totalCents);
 
@@ -351,39 +377,46 @@ class SepaService {
         $xml .= '      <InitgPty><Nm>' . $this->text($creditorName) . '</Nm></InitgPty>' . "\n";
         $xml .= '    </GrpHdr>' . "\n";
 
-        // Payment Information
-        $xml .= '    <PmtInf>' . "\n";
-        $xml .= '      <PmtInfId>' . $msgId . '-1</PmtInfId>' . "\n";
-        $xml .= '      <PmtMtd>DD</PmtMtd>' . "\n";
-        $xml .= '      <BtchBookg>true</BtchBookg>' . "\n";
-        $xml .= '      <NbOfTxs>' . $count . '</NbOfTxs>' . "\n";
-        $xml .= '      <CtrlSum>' . $total . '</CtrlSum>' . "\n";
-        // RCUR for all: since the SEPA Core rulebook 2016 the FRST marker is optional
-        $xml .= '      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl><LclInstrm><Cd>CORE</Cd></LclInstrm><SeqTp>RCUR</SeqTp></PmtTpInf>' . "\n";
-        $xml .= '      <ReqdColltnDt>' . $collectionDate . '</ReqdColltnDt>' . "\n";
-
-        // Creditor
-        $xml .= '      <Cdtr><Nm>' . $this->text($creditorName) . '</Nm></Cdtr>' . "\n";
-        $xml .= '      <CdtrAcct><Id><IBAN>' . htmlspecialchars(self::compact($account->getIban()), ENT_XML1) . '</IBAN></Id></CdtrAcct>' . "\n";
-        $xml .= '      <CdtrAgt>' . $this->agentXml(self::compact($account->getBic())) . '</CdtrAgt>' . "\n";
-        // charges shared, the only value the SEPA rulebooks allow
-        $xml .= '      <ChrgBr>SLEV</ChrgBr>' . "\n";
-        $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . htmlspecialchars(self::compact($account->getCreditorId()), ENT_XML1) . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
-
-        // Transactions
+        // One payment block per collection date (fees due later are collected on their due date)
+        $groups = [];
         foreach ($transactions as $txn) {
-            $xml .= '      <DrctDbtTxInf>' . "\n";
-            $xml .= '        <PmtId><EndToEndId>FEE-' . (int)$txn['feeId'] . '</EndToEndId></PmtId>' . "\n";
-            $xml .= '        <InstdAmt Ccy="EUR">' . self::amount($txn['cents']) . '</InstdAmt>' . "\n";
-            $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>' . htmlspecialchars($txn['mandateReference'], ENT_XML1) . '</MndtId><DtOfSgntr>' . $txn['mandateDate'] . '</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
-            $xml .= '        <DbtrAgt>' . $this->agentXml($txn['bic']) . '</DbtrAgt>' . "\n";
-            $xml .= '        <Dbtr><Nm>' . $this->text($txn['name']) . '</Nm></Dbtr>' . "\n";
-            $xml .= '        <DbtrAcct><Id><IBAN>' . htmlspecialchars($txn['iban'], ENT_XML1) . '</IBAN></Id></DbtrAcct>' . "\n";
-            $xml .= '        <RmtInf><Ustrd>' . $this->text($txn['reference'], 140) . '</Ustrd></RmtInf>' . "\n";
-            $xml .= '      </DrctDbtTxInf>' . "\n";
+            $groups[$txn['collectionDate']][] = $txn;
         }
+        ksort($groups);
+        $n = 0;
+        foreach ($groups as $collectionDate => $group) {
+            $groupCents = array_sum(array_column($group, 'cents'));
+            $xml .= '    <PmtInf>' . "\n";
+            $xml .= '      <PmtInfId>' . $msgId . '-' . (++$n) . '</PmtInfId>' . "\n";
+            $xml .= '      <PmtMtd>DD</PmtMtd>' . "\n";
+            $xml .= '      <BtchBookg>true</BtchBookg>' . "\n";
+            $xml .= '      <NbOfTxs>' . count($group) . '</NbOfTxs>' . "\n";
+            $xml .= '      <CtrlSum>' . self::amount($groupCents) . '</CtrlSum>' . "\n";
+            // RCUR for all: since the SEPA Core rulebook 2016 the FRST marker is optional
+            $xml .= '      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl><LclInstrm><Cd>CORE</Cd></LclInstrm><SeqTp>RCUR</SeqTp></PmtTpInf>' . "\n";
+            $xml .= '      <ReqdColltnDt>' . $collectionDate . '</ReqdColltnDt>' . "\n";
 
-        $xml .= '    </PmtInf>' . "\n";
+            // Creditor
+            $xml .= '      <Cdtr><Nm>' . $this->text($creditorName) . '</Nm></Cdtr>' . "\n";
+            $xml .= '      <CdtrAcct><Id><IBAN>' . htmlspecialchars(self::compact($account->getIban()), ENT_XML1) . '</IBAN></Id></CdtrAcct>' . "\n";
+            $xml .= '      <CdtrAgt>' . $this->agentXml(self::compact($account->getBic())) . '</CdtrAgt>' . "\n";
+            // charges shared, the only value the SEPA rulebooks allow
+            $xml .= '      <ChrgBr>SLEV</ChrgBr>' . "\n";
+            $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . htmlspecialchars(self::compact($account->getCreditorId()), ENT_XML1) . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
+
+            foreach ($group as $txn) {
+                $xml .= '      <DrctDbtTxInf>' . "\n";
+                $xml .= '        <PmtId><EndToEndId>FEE-' . (int)$txn['feeId'] . '</EndToEndId></PmtId>' . "\n";
+                $xml .= '        <InstdAmt Ccy="EUR">' . self::amount($txn['cents']) . '</InstdAmt>' . "\n";
+                $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>' . htmlspecialchars($txn['mandateReference'], ENT_XML1) . '</MndtId><DtOfSgntr>' . $txn['mandateDate'] . '</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
+                $xml .= '        <DbtrAgt>' . $this->agentXml($txn['bic']) . '</DbtrAgt>' . "\n";
+                $xml .= '        <Dbtr><Nm>' . $this->text($txn['name']) . '</Nm></Dbtr>' . "\n";
+                $xml .= '        <DbtrAcct><Id><IBAN>' . htmlspecialchars($txn['iban'], ENT_XML1) . '</IBAN></Id></DbtrAcct>' . "\n";
+                $xml .= '        <RmtInf><Ustrd>' . $this->text($txn['reference'], 140) . '</Ustrd></RmtInf>' . "\n";
+                $xml .= '      </DrctDbtTxInf>' . "\n";
+            }
+            $xml .= '    </PmtInf>' . "\n";
+        }
         $xml .= '  </CstmrDrctDbtInitn>' . "\n";
         $xml .= '</Document>';
 

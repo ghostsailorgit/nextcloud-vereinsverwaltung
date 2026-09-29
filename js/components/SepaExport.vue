@@ -64,7 +64,8 @@
         <p><strong>IBAN:</strong> {{ previewData.creditorIban }}</p>
         <p><strong>{{ t('verein', 'Number of transactions:') }}</strong> {{ previewData.transactionCount }}</p>
         <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
-        <p><strong>{{ t('verein', 'Collection date:') }}</strong> {{ previewData.collectionDate }}</p>
+        <p><strong>{{ t('verein', 'Earliest collection date:') }}</strong> {{ previewData.collectionDate }}</p>
+        <p>{{ t('verein', 'Fees are never collected before their due date: fees due up to 14 days after the earliest collection date are collected on their due date, later ones stay open for a later export.') }}</p>
         <p>{{ t('verein', 'Names and texts are converted to the SEPA character set (ä → ae, & → +).') }}</p>
       </div>
 
@@ -87,6 +88,7 @@
             <th>{{ t('verein', 'Mandate') }}</th>
             <th>{{ t('verein', 'Amount') }}</th>
             <th>{{ t('verein', 'Due date') }}</th>
+            <th>{{ t('verein', 'Collection date') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -96,6 +98,7 @@
             <td>{{ txn.mandateReference }} ({{ txn.mandateDate }})</td>
             <td>{{ txn.amount.toFixed(2) }} €</td>
             <td>{{ txn.dueDate }}</td>
+            <td>{{ txn.collectionDate }}</td>
           </tr>
         </tbody>
       </table>

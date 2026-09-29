@@ -6,7 +6,14 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ## [0.18.11-beta] - 2026-09-29
 
-SEPA-Datei gegen das offizielle Schema und die Regeln der Banken geprüft.
+SEPA-Datei gegen das offizielle Schema und die Regeln der Banken geprüft; Einzug nie vor der Fälligkeit.
+
+### ✨ Neu
+- Beiträge werden nie vor ihrer Fälligkeit eingezogen. Bisher gingen alle offenen Beiträge zum selben Datum an die Bank,
+  auch ein Jahresbeitrag, der erst im Dezember fällig ist. Jetzt: Schon fällige Beiträge werden zum frühesten
+  Einzugsdatum eingezogen, Beiträge, die bis 14 Tage danach fällig werden, an ihrem Fälligkeitstag (bzw. dem nächsten
+  Bankarbeitstag, in der Datei als eigener Block). Später fällige bleiben mit dem Grund „noch nicht fällig“ offen und
+  kommen mit einem späteren Export. Die Vorschau zeigt das Einzugsdatum je Beitrag.
 
 ### 🐛 Korrigiert
 - Namen und Verwendungszweck stehen jetzt im SEPA-Zeichensatz: Umlaute werden ausgeschrieben (ä → ae, ß → ss), „&“ wird

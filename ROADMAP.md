@@ -10,7 +10,7 @@ Stand: Version 0.18.11-beta. Die Reihenfolge ist keine Zusage, sondern die aktue
 | Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung |
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
 | Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben als PDF), Mitglieder deaktivieren |
-| SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, in der CI gegen das offizielle Schema geprüft, SEPA-Zeichensatz, Einzugsdatum nach Bankarbeitstagen, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge mit Grund, „bezahlt“-Markierung nach dem Export |
+| SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, in der CI gegen das offizielle Schema geprüft, SEPA-Zeichensatz, Einzug nie vor Fälligkeit, Einzugsdatum nach Bankarbeitstagen, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge mit Grund, „bezahlt“-Markierung nach dem Export |
 | Kalender | Geburtstage und Jubiläen je Verein als App-Kalender über Nextclouds öffentliche Schnittstelle, sichtbar nur für ausgewählte Gruppen |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
 | Datenschutz | Person anonymisieren statt löschen (mit Bestätigung durch Eintippen des Namens), Datenauskunft einer Person, Änderungsprotokoll ohne Klartext bei personenbezogenen Feldern, Reiter „Protokoll“ |
@@ -31,7 +31,7 @@ Stand: Version 0.18.11-beta. Die Reihenfolge ist keine Zusage, sondern die aktue
 ## Bekannte Einschränkungen
 
 - Die SEPA-Datei wird gegen das offizielle ISO-20022-Schema geprüft, aber noch nicht mit der Software einer Bank; vor dem ersten Einzug bitte mit dem Prüfwerkzeug der eigenen Bank kontrollieren.
-- Alle offenen Beiträge werden zum selben Datum eingezogen, auch solche, deren Fälligkeit später liegt. Die Vorabankündigung (Pre-Notification) an die Mitglieder verschickt die App nicht.
+- Die Vorabankündigung (Pre-Notification) an die Mitglieder verschickt die App nicht; sie muss (z. B. mit der Beitragsrechnung oder in der Satzung) selbst erfolgen.
 - Alle Einzüge werden als Folgelastschrift (RCUR) gekennzeichnet; Erst- und Einmallastschriften gibt es nicht.
 - Unterstützt werden Nextcloud 33 bis 35 und PHP 8.2 bis 8.5, in der CI mit echten Nextcloud-Installationen 33, 34 und 35 auf SQLite, MySQL 8.4, MariaDB 11.4 und PostgreSQL 17 mit PHP 8.2 bis 8.5 getestet (Installation, Migrationen, Kernfunktionen, HTTP-Rechteprüfung, Wiederherstellung einer Sicherung). Im echten Betrieb erprobt ist bisher nur Nextcloud 34 mit MySQL.
 - Zahlen und Datumsangaben in Mahnschreiben und PDF-Exporten stehen immer im deutschen Format (1.234,56 €, 31.12.2026), auch wenn die Texte übersetzt sind. Beträge und Datumsangaben auf dem Bildschirm sind teils ebenfalls fest deutsch formatiert.
