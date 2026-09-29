@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace OCA\Verein\Service;
 
 use OCA\Verein\L10n\Formats;
+use OCA\Verein\L10n\Greeting;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
@@ -273,7 +274,7 @@ class DunningService {
                 'level' => $level,
                 'title' => self::levelLabel($level, $this->doc),
                 'address' => $this->addressLines($member),
-                'greeting' => $this->greeting($member),
+                'greeting' => Greeting::of($member, $this->doc),
                 'fees' => $rows,
                 'total' => round($sum, 2),
                 'reference' => $this->reference($memberId, $fees),
@@ -340,20 +341,6 @@ class DunningService {
             $lines[] = $city;
         }
         return $lines;
-    }
-
-    /**
-     * Last name and first name are both passed: English addresses by last name ("Dear Ms Mustermann,"), the German
-     * translation (informal "du") by first name ("Liebe Erika,") - positional placeholders pick the one they need.
-     */
-    private function greeting(Member $member): string {
-        $first = trim((string)$member->getFirstName());
-        $params = [$member->getName(), $first];
-        return match (true) {
-            $first !== '' && $member->getSalutation() === 'Herr' => $this->doc->t('Dear Mr %1$s,', $params),
-            $first !== '' && $member->getSalutation() === 'Frau' => $this->doc->t('Dear Ms %1$s,', $params),
-            default => $this->doc->t('Dear %s,', [trim($first . ' ' . $member->getName())]),
-        };
     }
 
     /** name of a dunning level, in the language of the given l10n (the preview: the user's, the letter: the document's) */

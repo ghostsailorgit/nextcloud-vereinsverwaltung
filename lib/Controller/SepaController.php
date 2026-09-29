@@ -12,6 +12,7 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\ApiController;
+use OCA\Verein\Service\SepaPrenotificationService;
 use OCA\Verein\Service\SepaService;
 
 /**
@@ -26,6 +27,7 @@ class SepaController extends ApiController {
         string $appName,
         IRequest $request,
         SepaService $service,
+        private SepaPrenotificationService $notice,
         private ?\OCA\Verein\Service\Clock $clock = null
     ) {
         parent::__construct($appName, $request);
@@ -43,9 +45,9 @@ class SepaController extends ApiController {
      * @return StreamResponse
      */
     #[RequirePermission('verein.sepa.export')]
-    public function export(int $clubId, ?int $accountId = null): Response {
+    public function export(int $clubId, ?int $accountId = null, ?string $collectionDate = null): Response {
         try {
-            $result = $this->service->generateSepaXml($clubId, $accountId);
+            $result = $this->service->generateSepaXml($clubId, $accountId, $collectionDate);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
@@ -73,13 +75,28 @@ class SepaController extends ApiController {
      * Preview SEPA export (without downloading)
      */
     #[RequirePermission('verein.sepa.export')]
-    public function preview(int $clubId, ?int $accountId = null): JSONResponse {
+    public function preview(int $clubId, ?int $accountId = null, ?string $collectionDate = null): JSONResponse {
         try {
-            $preview = $this->service->previewSepaExport($clubId, $accountId);
+            $preview = $this->service->previewSepaExport($clubId, $accountId, $collectionDate);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
 
         return new JSONResponse($preview);
+    }
+
+    /**
+     * @NoAdminRequired
+     *
+     * Optional: advance notice of the coming collection by email to the members in it (same account and collection
+     * date as preview/export). The export does not depend on it.
+     */
+    #[RequirePermission('verein.sepa.export')]
+    public function notice(int $clubId, ?int $accountId = null, ?string $collectionDate = null): JSONResponse {
+        try {
+            return new JSONResponse(['status' => 'ok'] + $this->notice->send($clubId, $accountId, $collectionDate));
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
     }
 }

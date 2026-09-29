@@ -55,6 +55,7 @@ This list fixes one English term per concept. German is the shipped translation 
 | Einzugsdatum | **collection date** | |
 | Lastschriftmandat / Mandatsreferenz | **direct debit mandate** (**mandate**) / **mandate reference** | |
 | Unterschriftsdatum (Mandat) | **date of signature** | `mandate date`, `signature date` |
+| Vorabankündigung (Pre-Notification) | **advance notice** (of the direct debit) | `pre-notification`, `prenotification` |
 | Gläubiger-ID | **creditor identifier** (short: **creditor ID**) | |
 | Verwendungszweck | **payment reference** | `remittance information` |
 | Bankkonto / Bankverbindung / Kontoinhaber | **bank account** / **bank details** / **account holder** | |

@@ -13,10 +13,6 @@ use OCA\Verein\L10n\Formats;
 use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Service\Export\PdfExporter;
 use OCP\IL10N;
-use OCP\Mail\IMailer;
-use OCP\Mail\IMessage;
-use OCP\Util;
-use Psr\Log\LoggerInterface;
 
 /**
  * Sends reminder letters by email: one message per person with a short text and the letter as PDF - the same letter
@@ -36,9 +32,8 @@ class DunningMailService {
     public function __construct(
         private DunningService $dunning,
         private PdfExporter $pdf,
-        private IMailer $mailer,
+        private ClubMailer $mail,
         private ClubMapper $clubs,
-        private LoggerInterface $logger,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
         ?DocumentL10n $documentL10n = null
@@ -62,20 +57,29 @@ class DunningMailService {
         $printFeeIds = [];
         foreach ($data['letters'] as $letter) {
             $who = ['memberId' => $letter['memberId'], 'name' => $letter['name']];
-            if ($letter['email'] === '' || !$this->mailer->validateMailAddress($letter['email'])) {
+            if (!$this->mail->isUsable($letter['email'])) {
                 $withoutEmail[] = $who;
                 array_push($printFeeIds, ...$letter['feeIds']);
                 continue;
             }
-            try {
-                $failedRecipients = $this->mailer->send($this->message($club->getName(), $club->getMailSenderName(), $club->getMailReplyTo(), $data, $letter));
-                if ($failedRecipients !== []) {
-                    throw new \RuntimeException('recipient refused');
-                }
+            $texts = $this->pdf->dunningLetterTexts($data, $letter);
+            // the intro speaks of "the following fees": one line per fee, as in the letter's table
+            $feeLines = array_map(fn (array $fee) => $fee['text'] . ' – ' . $this->doc->t('due since') . ' ' . $fee['dueDate']
+                . ': ' . Formats::money($this->doc, (float)$fee['amount']), $letter['fees']);
+            $pdf = $this->pdf->exportDunningLetters(array_merge($data, ['letters' => [$letter]]));
+            $ok = $this->mail->send($club, $letter['email'], $letter['name'], 'verein.dunning', $letter['title'] . ' – ' . $club->getName(), [
+                $letter['greeting'],
+                $texts['intro'],
+                implode("\n", $feeLines),
+                $this->doc->t('Amount outstanding') . ': ' . Formats::money($this->doc, (float)$letter['total']),
+                $texts['pay'],
+                $this->doc->t('The letter with all details is attached as a PDF.'),
+                $texts['closing'],
+                $texts['regards'],
+            ], ['content' => $pdf['content'], 'name' => $this->fileName($letter['title']), 'type' => 'application/pdf']);
+            if ($ok) {
                 $sent[] = $who;
-            } catch (\Throwable $e) {
-                // the reason (SMTP answer, host names) goes to the Nextcloud log for the administrator, not to the UI
-                $this->logger->warning('Reminder letter email could not be sent', ['app' => 'verein', 'exception' => $e]);
+            } else {
                 $failed[] = $who;
                 array_push($printFeeIds, ...$letter['feeIds']);
             }
@@ -89,52 +93,6 @@ class DunningMailService {
             ]);
         }
         return ['sent' => $sent, 'withoutEmail' => $withoutEmail, 'failed' => $failed, 'printFeeIds' => $printFeeIds];
-    }
-
-    private function message(string $clubName, ?string $senderName, ?string $replyTo, array $data, array $letter): IMessage {
-        $texts = $this->pdf->dunningLetterTexts($data, $letter);
-        $subject = $letter['title'] . ' – ' . $clubName;
-
-        $template = $this->mailer->createEMailTemplate('verein.dunning', ['club' => $clubName, 'level' => $letter['level']]);
-        $template->setSubject($subject);
-        $template->addHeader();
-        $template->addHeading($subject);
-        // the intro speaks of "the following fees": one line per fee, as in the letter's table
-        $feeLines = array_map(fn (array $fee) => $fee['text'] . ' – ' . $this->doc->t('due since') . ' ' . $fee['dueDate']
-            . ': ' . Formats::money($this->doc, (float)$fee['amount']), $letter['fees']);
-        foreach ([
-            $letter['greeting'],
-            $texts['intro'],
-            implode("\n", $feeLines),
-            $this->doc->t('Amount outstanding') . ': ' . Formats::money($this->doc, (float)$letter['total']),
-            $texts['pay'],
-            $this->doc->t('The letter with all details is attached as a PDF.'),
-            $texts['closing'],
-            $texts['regards'],
-        ] as $paragraph) {
-            if ($paragraph === '') {
-                continue;
-            }
-            // the text is escaped here; the line breaks (bank details, closing) are kept in the HTML part too
-            $template->addBodyText(nl2br(htmlspecialchars($paragraph, ENT_QUOTES)), $paragraph);
-        }
-        $template->addFooter($clubName);
-
-        $pdf = $this->pdf->exportDunningLetters(array_merge($data, ['letters' => [$letter]]));
-        $message = $this->mailer->createMessage();
-        $message->setFrom([$this->senderAddress() => $senderName ?: $clubName]);
-        if ($replyTo !== null && $replyTo !== '') {
-            $message->setReplyTo([$replyTo]);
-        }
-        $message->setTo([$letter['email'] => $letter['name']]);
-        $message->useTemplate($template);
-        $message->attach($this->mailer->createAttachment($pdf['content'], $this->fileName($letter['title']), 'application/pdf'));
-        return $message;
-    }
-
-    /** Nextcloud's own sender address (mail_from_address@mail_domain), the one its mail server is set up to send as */
-    protected function senderAddress(): string {
-        return Util::getDefaultEmailAddress('noreply');
     }
 
     /** "Payment reminder.pdf" / "Zahlungserinnerung.pdf": the title, reduced to characters every mail program keeps */

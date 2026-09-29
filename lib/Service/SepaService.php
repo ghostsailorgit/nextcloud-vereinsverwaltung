@@ -11,6 +11,7 @@ use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
+use OCA\Verein\L10n\Formats;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 use OCA\Verein\L10n\DocumentL10n;
@@ -61,10 +62,11 @@ class SepaService {
      * Generate SEPA-XML for all open fees of a club
      *
      * @param int|null $accountId Club bank account to collect on (default account if null)
+     * @param string|null $collectionDate requested collection date (Y-m-d), see collectFees(); null = the earliest possible
      * @return array{xml: string, skippedCount: int, feeIds: int[]} XML, number of fees left out and ids of the fees in the file
      *   (no IBAN / no signed mandate / invalid data) - see previewSepaExport() for who and why
      */
-    public function generateSepaXml(int $clubId, ?int $accountId = null): array {
+    public function generateSepaXml(int $clubId, ?int $accountId = null, ?string $collectionDate = null): array {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
         if (trim((string)$account->getCreditorId()) === '') {
@@ -81,7 +83,7 @@ class SepaService {
             throw new ValidationException($this->l->t('The BIC of the bank account is invalid (“Club” tab)'));
         }
 
-        $collected = $this->collectFees($clubId);
+        $collected = $this->collectFees($clubId, $collectionDate);
 
         if (empty($collected['transactions'])) {
             if (!empty($collected['skipped'])) {
@@ -110,10 +112,10 @@ class SepaService {
     /**
      * Preview SEPA export without generating XML
      */
-    public function previewSepaExport(int $clubId, ?int $accountId = null): array {
+    public function previewSepaExport(int $clubId, ?int $accountId = null, ?string $collectionDate = null): array {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
-        $collected = $this->collectFees($clubId);
+        $collected = $this->collectFees($clubId, $collectionDate);
 
         return [
             'creditorName' => $club->getName(),
@@ -121,6 +123,8 @@ class SepaService {
             'creditorBic' => $account->getBic(),
             'creditorId' => $account->getCreditorId(),
             'collectionDate' => $collected['earliestDate'],
+            // the earliest date the club could ask for (the default when none is chosen)
+            'earliestPossibleDate' => $this->collectionDate(),
             'totalAmount' => $collected['totalCents'] / 100,
             'transactionCount' => count($collected['transactions']),
             'transactions' => array_map(function (array $t) {
@@ -149,14 +153,31 @@ class SepaService {
      * next TARGET2 day), as long as that is at most MAX_DAYS_AHEAD days later;
      * fees due even later are skipped as "not due yet".
      *
+     * A requested collection date (e.g. the one an advance notice to the members named) replaces the earliest possible
+     * one; it may not be earlier than that and is moved to the next TARGET2 day if needed.
+     *
      * @return array{transactions: array, skipped: array, totalCents: int, earliestDate: string}
+     * @throws ValidationException for a requested date that is unreadable, too early or more than a year ahead
      */
-    private function collectFees(int $clubId): array {
+    private function collectFees(int $clubId, ?string $requestedDate = null): array {
         $totalCents = 0;
         $transactions = [];
         $skipped = [];
         $today = Clock::todayOf($this->clock);
         $earliest = $this->collectionDate();
+        $requestedDate = trim((string)$requestedDate);
+        if ($requestedDate !== '') {
+            if (!self::isDate($requestedDate)) {
+                throw new ValidationException($this->l->t('The collection date is invalid'));
+            }
+            if ($requestedDate < $earliest) {
+                throw new ValidationException($this->l->t('The collection date must be on or after %s (banks need a few business days)', [Formats::date($this->l, $earliest)]));
+            }
+            if ($requestedDate > (new \DateTimeImmutable($today))->modify('+1 year')->format('Y-m-d')) {
+                throw new ValidationException($this->l->t('The collection date may be at most one year ahead'));
+            }
+            $earliest = self::targetDayFrom($requestedDate);
+        }
         $latestDue = (new \DateTimeImmutable($earliest))->modify('+' . self::MAX_DAYS_AHEAD . ' days')->format('Y-m-d');
 
         // the club's members with their membership in two queries, instead of two queries per fee
@@ -226,6 +247,8 @@ class SepaService {
                 'collectionDate' => $collectionDate,
                 'mandateReference' => $membership->getEffectiveMandateReference(),
                 'mandateDate' => $mandateDate,
+                'memberId' => $member->getId(),
+                'hasEmail' => filter_var(trim((string)$member->getEmail()), FILTER_VALIDATE_EMAIL) !== false,
                 'reference' => $this->paymentReference($fee->getDescription(), $fee->getDueDate()),
                 'feeId' => $fee->getId()
             ];

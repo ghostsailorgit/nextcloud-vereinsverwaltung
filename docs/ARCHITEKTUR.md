@@ -134,6 +134,8 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   gültige Adresse hat oder wessen E-Mail scheitert, geht nicht verloren: deren Beitrags-IDs kommen als `printFeeIds` zurück,
   die Oberfläche lädt genau diese Schreiben als PDF. Der Grund eines Fehlers (SMTP-Antwort) steht nur im Nextcloud-Log, das
   Protokoll zählt verschickt/gescheitert/ohne Adresse (Aktion `dunning_email`, keine Adressen).
+- Alle E-Mails an Mitglieder (Mahnschreiben, Vorabankündigung) laufen über `ClubMailer`: Absender, Antwortadresse,
+  Nextclouds Vorlage mit maskiertem Text, Fehler ins Log und als `false` zurück. Neue E-Mail-Arten nutzen ihn ebenfalls.
 
 ## Mitgliederimport
 CSV-Import (`MemberImportService`, Knopf „CSV importieren“ im Reiter „Mitglieder“, Recht „Mitglieder verwalten“). Die Oberfläche
@@ -159,7 +161,16 @@ Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protoko
   ungültige IBAN/BIC, Unterschriftsdatum ungültig oder in der Zukunft, Mandatsreferenz außerhalb des Zeichensatzes.
   Ein ungültiges Vereinskonto (IBAN, BIC, Gläubiger-ID) bricht den Export ab.
 - Beträge und Kontrollsumme in Cent (keine Float-Summe), Nachrichten-ID je Datei eindeutig (Verein, Zeitstempel, Zufall),
-  frühestes Einzugsdatum fünf TARGET2-Bankarbeitstage nach heute (lokales Datum).
+  frühestes Einzugsdatum fünf TARGET2-Bankarbeitstage nach heute (lokales Datum). Optional wählt man im Reiter ein späteres
+  Einzugsdatum (höchstens ein Jahr voraus, früher als möglich wird mit dem frühesten Datum abgelehnt, Wochenende/Feiertag
+  → nächster TARGET2-Tag); Vorschau, Vorabankündigung und Datei nutzen dann dasselbe Datum.
+- **Vorabankündigung (freiwillig)** (`SepaPrenotificationService`, `POST /sepa/notice`, Recht „SEPA-Export“): je Mitglied
+  eine E-Mail mit genau den Buchungen, die der Export für dasselbe Konto und Datum enthielte - Betrag und Verwendungszweck je
+  Buchung, Einzugsdatum, Gläubiger-ID, Mandatsreferenz, nur die letzten vier Stellen der IBAN. Der Export hängt nie davon ab:
+  Vereine können ebenso mit der Beitragsrechnung, der Satzung oder auf Papier ankündigen. Die Oberfläche warnt (ohne zu
+  sperren), wenn bis zum Einzug weniger als 14 Tage bleiben, und übernimmt nach dem Versand das angekündigte Datum für den
+  Export; wer keine Adresse hat oder wessen E-Mail scheiterte, wird mit Namen genannt. Protokoll: Aktion `sepa_notice` mit
+  Zahlen und Datum, ohne Namen.
 - Nie vor Fälligkeit: Beiträge mit Fälligkeit bis zum frühesten Datum (oder ohne lesbare Fälligkeit) werden zu diesem
   eingezogen, Beiträge mit Fälligkeit bis 14 Kalendertage danach an ihrem Fälligkeitstag (nächster TARGET2-Tag), je Datum
   ein eigener `PmtInf`-Block; später fällige werden als „noch nicht fällig“ gemeldet und bleiben offen.

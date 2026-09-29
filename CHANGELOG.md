@@ -4,6 +4,28 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.21.0-beta] - 2026-09-29
+
+### ✨ Neu
+- **Vorabankündigung der SEPA-Lastschrift per E-Mail – freiwillig.** In der Vorschau des SEPA-Exports gibt es einen
+  eigenen Abschnitt „Vorabankündigung (freiwillig)“. Ein Klick schickt jedem Mitglied im Einzug eine E-Mail mit
+  Betrag, Verwendungszweck und Datum je Buchung, Gläubiger-ID, Mandatsreferenz und den letzten vier Stellen der IBAN.
+  Der Export funktioniert genauso ohne: Wer lieber mit der Beitragsrechnung, in der Satzung oder auf Papier ankündigt,
+  muss nichts ändern.
+- **Einzugsdatum wählbar (optional):** Leer bleibt alles wie bisher (frühestmögliches Datum). Ein gewähltes Datum gilt
+  für Vorschau, Vorabankündigung und Datei gleichermaßen; nach dem Versand der Ankündigung übernimmt der Export dieses
+  Datum automatisch. Zu frühe Daten lehnt die App mit dem frühestmöglichen Termin ab.
+- Hinweis (ohne Sperre), wenn bis zum Einzug weniger als 14 Tage bleiben – kürzere Fristen können im Mandat oder in der
+  Satzung vereinbart sein. Mitglieder ohne E-Mail-Adresse oder mit gescheiterter E-Mail werden mit Namen genannt.
+- Versand wie bei den Mahnschreiben über den Nextcloud-Mailserver mit Absendername und Antwortadresse des Vereins; das
+  Protokoll hält Datum und Anzahl fest.
+
+### 🔧 Technik
+- Gemeinsamer `ClubMailer` für alle E-Mails an Mitglieder, gemeinsame Anrede (`L10n\Greeting`). Glossar: „advance
+  notice“ für Vorabankündigung.
+
+---
+
 ## [0.20.0-beta] - 2026-09-29
 
 ### ✨ Neu
