@@ -256,12 +256,13 @@ jobs:
         run: |
           php occ maintenance:install --admin-user=admin --admin-pass=admin --database=sqlite
           mkdir custom_apps
-          php occ config:system:set apps_paths 0 path --value="$PWD/apps"
-          php occ config:system:set apps_paths 0 url --value=/apps
-          php occ config:system:set apps_paths 0 writable --type=boolean --value=false
-          php occ config:system:set apps_paths 1 path --value="$PWD/custom_apps"
-          php occ config:system:set apps_paths 1 url --value=/custom_apps
-          php occ config:system:set apps_paths 1 writable --type=boolean --value=true
+          # as the official Docker image does it: both entries at once (occ config:system:set one key at a time
+          # leaves a half entry without "url" in between, and Nextcloud then finds no apps folder at all)
+          printf '%s\n' '<?php' '$CONFIG = ["apps_paths" => [' \
+            '  ["path" => OC::$SERVERROOT . "/apps", "url" => "/apps", "writable" => false],' \
+            '  ["path" => OC::$SERVERROOT . "/custom_apps", "url" => "/custom_apps", "writable" => true],' \
+            ']];' > config/apps.config.php
+          php occ status
 
       - name: Unpack the archive and enable the app
         working-directory: server
