@@ -7,6 +7,7 @@
 
 namespace OCA\Verein\Service;
 
+use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\L10n\SourceL10n;
@@ -46,7 +47,8 @@ class StatisticsService {
         return [
             'total' => $total,
             'byRole' => $byRole,
-            'active' => $total, // Assuming all are active for now
+            // what the member list calls "active": not left, not deceased (the dashboard shows this one)
+            'active' => count(array_filter($members, fn ($m) => !$m->isFormer())),
             'newThisMonth' => $this->countNewMembersThisMonth($members),
             'growthByMonth' => $this->computeMemberGrowth($members),
             'upcomingBirthdays' => $this->getUpcomingBirthdays($members),
@@ -137,37 +139,53 @@ class StatisticsService {
     }
 
     /**
-     * Cumulative member count at the end of each of the last 6 months, based on
-     * each member's actual createdAt date (members without a parseable date are
-     * excluded from the curve, but still counted in the overall total above).
+     * When the person became a member of the club: the join date, or - if none was entered - the day the
+     * record was created. The creation date alone made the curve jump from 0 to everyone in the month a club
+     * entered or imported its members.
+     */
+    private function memberSince(Member $member): ?string {
+        foreach ([$member->getJoinDate(), $member->getCreatedAt()] as $date) {
+            $day = $this->day($date);
+            if ($day !== null) {
+                return $day;
+            }
+        }
+        return null;
+    }
+
+    /** A stored date or timestamp as its calendar day "Y-m-d" (compared as text: no time zone can shift it). */
+    private function day(?string $date): ?string {
+        $day = substr((string)$date, 0, 10);
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $day) === 1 ? $day : null;
+    }
+
+    /**
+     * Number of members at the end of each of the last 6 months: joined by then (see memberSince()) and not
+     * left by then. A deceased person without a leave date is not counted (the date of death is unknown).
      */
     private function computeMemberGrowth(array $members): array {
-        $createdDates = [];
+        $periods = [];
         foreach ($members as $member) {
-            $createdAt = $member->getCreatedAt();
-            if (!$createdAt) {
+            $since = $this->memberSince($member);
+            if ($since === null || ($member->getDeceased() && empty($member->getLeaveDate()))) {
                 continue;
             }
-            try {
-                $createdDates[] = new \DateTime($createdAt);
-            } catch (\Exception $e) {
-                // Invalid date format, skip
-            }
+            $periods[] = [$since, $this->day($member->getLeaveDate())];
         }
 
         $labels = [];
         $data = [];
         $monthFormatter = [$this->l->t('Jan'), $this->l->t('Feb'), $this->l->t('Mar'), $this->l->t('Apr'), $this->l->t('May'), $this->l->t('Jun'), $this->l->t('Jul'), $this->l->t('Aug'), $this->l->t('Sep'), $this->l->t('Oct'), $this->l->t('Nov'), $this->l->t('Dec')];
+        $firstOfThisMonth = Clock::nowOf($this->clock)->modify('first day of this month')->setTime(0, 0);
 
         for ($i = 5; $i >= 0; $i--) {
-            $monthEnd = new \DateTime('first day of this month');
-            $monthEnd->modify("-$i months");
-            $monthEnd->modify('last day of this month')->setTime(23, 59, 59);
-
-            $labels[] = $monthFormatter[(int)$monthEnd->format('n') - 1];
+            $monthEndDate = $firstOfThisMonth->modify("-$i months")->modify('last day of this month');
+            $monthEnd = $monthEndDate->format('Y-m-d');
+            $labels[] = $monthFormatter[(int)$monthEndDate->format('n') - 1];
             $count = 0;
-            foreach ($createdDates as $createdDate) {
-                if ($createdDate <= $monthEnd) {
+            foreach ($periods as [$since, $until]) {
+                // the leave date is the last day of the membership
+                if ($since <= $monthEnd && ($until === null || $until >= $monthEnd)) {
                     $count++;
                 }
             }
@@ -242,16 +260,13 @@ class StatisticsService {
     }
 
     private function countNewMembersThisMonth(array $members): int {
-        $count = 0;
         $currentMonth = Clock::nowOf($this->clock)->format('Y-m');
-        
+        $count = 0;
         foreach ($members as $member) {
-            $createdAt = $member->getCreatedAt();
-            if ($createdAt && strpos($createdAt, $currentMonth) === 0) {
+            if (substr((string)$this->memberSince($member), 0, 7) === $currentMonth) {
                 $count++;
             }
         }
-        
         return $count;
     }
 }

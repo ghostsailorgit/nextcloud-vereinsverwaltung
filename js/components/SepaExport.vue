@@ -80,28 +80,30 @@
       </div>
 
       <h4>{{ t('verein', 'Transactions:') }}</h4>
-      <table>
-        <thead>
-          <tr>
-            <th>{{ t('verein', 'Member') }}</th>
-            <th>IBAN</th>
-            <th>{{ t('verein', 'Mandate') }}</th>
-            <th>{{ t('verein', 'Amount') }}</th>
-            <th>{{ t('verein', 'Due date') }}</th>
-            <th>{{ t('verein', 'Collection date') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(txn, idx) in previewData.transactions" :key="idx">
-            <td>{{ txn.memberName }}</td>
-            <td>{{ txn.iban }}</td>
-            <td>{{ txn.mandateReference }} ({{ formatDate(txn.mandateDate) }})</td>
-            <td>{{ formatMoney(txn.amount) }}</td>
-            <td>{{ formatDate(txn.dueDate) }}</td>
-            <td>{{ formatDate(txn.collectionDate) }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ t('verein', 'Member') }}</th>
+              <th>IBAN</th>
+              <th>{{ t('verein', 'Mandate') }}</th>
+              <th>{{ t('verein', 'Amount') }}</th>
+              <th>{{ t('verein', 'Due date') }}</th>
+              <th>{{ t('verein', 'Collection date') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(txn, idx) in previewData.transactions" :key="idx">
+              <td>{{ txn.memberName }}</td>
+              <td>{{ txn.iban }}</td>
+              <td>{{ txn.mandateReference }} ({{ formatDate(txn.mandateDate) }})</td>
+              <td>{{ formatMoney(txn.amount) }}</td>
+              <td>{{ formatDate(txn.dueDate) }}</td>
+              <td>{{ formatDate(txn.collectionDate) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -254,6 +256,7 @@ export default {
 .form-buttons {
   margin-top: 15px;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

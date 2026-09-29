@@ -20,7 +20,7 @@
     />
 
     <!-- Loading State -->
-    <div v-if="loading" class="loading">
+    <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
       <p>{{ t('verein', 'Loading data…') }}</p>
     </div>
@@ -30,17 +30,17 @@
       <!-- Widget: Mitglieder -->
       <div class="stat-widget" role="button" tabindex="0" @click="emit('navigate','members')" @keydown.enter="emit('navigate','members')">
         <div class="stat-header">
-          <h3 class="stat-title">👥 {{ t('verein', 'Members') }}</h3>
+          <h3 class="stat-title">{{ t('verein', 'Members') }}</h3>
           <span class="stat-icon primary">👥</span>
         </div>
         <p class="stat-value">{{ statistics.memberCount }}</p>
-        <p class="stat-label">{{ t('verein', 'Registered members') }}</p>
+        <p class="stat-label">{{ t('verein', 'Active members') }}</p>
       </div>
 
       <!-- Widget: Offene Gebühren -->
-      <div class="stat-widget warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">📋 {{ t('verein', 'Unpaid fees') }}</h3>
+          <h3 class="stat-title">{{ t('verein', 'Unpaid fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalOpen) }}</p>
@@ -48,9 +48,9 @@
       </div>
 
       <!-- Widget: Bezahlte Gebühren -->
-      <div class="stat-widget success" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div class="stat-widget is-success" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">✓ {{ t('verein', 'Paid fees') }}</h3>
+          <h3 class="stat-title">{{ t('verein', 'Paid fees') }}</h3>
           <span class="stat-icon success-icon">✓</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalPaid) }}</p>
@@ -58,9 +58,9 @@
       </div>
 
       <!-- Widget: Fällige Gebühren -->
-      <div class="stat-widget warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">📋 {{ t('verein', 'Due fees') }}</h3>
+          <h3 class="stat-title">{{ t('verein', 'Due fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalDue) }}</p>
@@ -68,9 +68,9 @@
       </div>
 
       <!-- Widget: Überfällige Gebühren -->
-      <div class="stat-widget error" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div class="stat-widget is-error" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
-          <h3 class="stat-title">⚠️ {{ t('verein', 'Overdue fees') }}</h3>
+          <h3 class="stat-title">{{ t('verein', 'Overdue fees') }}</h3>
           <span class="stat-icon error-icon">⚠️</span>
         </div>
         <p class="stat-value">{{ formatCurrency(statistics.totalOverdue) }}</p>
@@ -323,7 +323,7 @@ const loadStatistics = async () => {
     // Lade Mitglieder-Statistiken
     const memberStatsResponse = await api.getMemberStatistics()
     if (memberStatsResponse.data.status === 'ok') {
-      statistics.memberCount = memberStatsResponse.data.data.total || 0
+      statistics.memberCount = memberStatsResponse.data.data.active ?? memberStatsResponse.data.data.total ?? 0
       const growth = memberStatsResponse.data.data.growthByMonth
       if (growth) {
         memberGrowthChartData.value.labels = growth.labels
@@ -375,25 +375,13 @@ onMounted(() => {
 $breakpoint-tablet: 768px;
 $breakpoint-mobile: 480px;
 
+/* heading, a row of key figures, then the charts and lists: each over the full width. The former
+   three-column grid gave the heading a whole column and squeezed the charts until they overflowed. */
 .statistics-container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   width: 100%;
-
-  @media (min-width: 1200px) {
-    /* three-column layout on large screens */
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    align-items: start;
-  }
-
-  @media (min-width: 768px) and (max-width: 1199px) {
-    /* two-column layout on tablets */
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-  }
 }
 
 .section-header {
@@ -401,13 +389,9 @@ $breakpoint-mobile: 480px;
 
   h1 {
     margin: 0 0 0.5rem 0;
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 600;
     color: var(--color-text);
-
-    @media (max-width: $breakpoint-tablet) {
-      font-size: 24px;
-    }
 
     @media (max-width: $breakpoint-mobile) {
       font-size: 20px;
@@ -425,7 +409,7 @@ $breakpoint-mobile: 480px;
   }
 }
 
-.loading {
+.loading-state {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -458,19 +442,9 @@ $breakpoint-mobile: 480px;
 /* Statistik-Widgets */
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
   width: 100%;
-
-  @media (min-width: 1100px) {
-    /* stack stat cards vertically in the left column on wide screens */
-    grid-auto-flow: row;
-  }
-
-  @media (max-width: $breakpoint-tablet) {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
 }
 
 .stat-widget {
@@ -498,15 +472,16 @@ $breakpoint-mobile: 480px;
     border-color: var(--color-primary);
   }
 
-  &.success {
+  /* not .warning/.success/.error: those are global Nextcloud classes (yellow background, other padding) */
+  &.is-success {
     border-left: 4px solid var(--color-success, #4caf50);
   }
 
-  &.warning {
+  &.is-warning {
     border-left: 4px solid var(--color-warning, #ffc107);
   }
 
-  &.error {
+  &.is-error {
     border-left: 4px solid var(--color-error, #f44336);
   }
 }
@@ -584,24 +559,12 @@ $breakpoint-mobile: 480px;
 /* Charts Grid */
 .charts-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
   gap: 20px;
   width: 100%;
   align-items: start;
 
-  @media (min-width: 1100px) {
-    /* allow two charts side-by-side in the right column */
-    grid-template-columns: repeat(2, minmax(320px, 1fr));
-  }
-
-  @media (max-width: $breakpoint-tablet) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  @media (max-width: $breakpoint-mobile) {
-    gap: 12px;
-  }
+  > * { min-width: 0; }
 }
 
 .chart-container {
@@ -653,7 +616,10 @@ $breakpoint-mobile: 480px;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  /* in a narrow card the date/years drop below the name instead of running out of the card */
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
   padding: 10px 0;
   border-bottom: 1px solid var(--color-border);
 
@@ -671,7 +637,7 @@ $breakpoint-mobile: 480px;
 .upcoming-detail {
   color: var(--color-text-secondary);
   font-size: 13px;
-  white-space: nowrap;
+  margin-left: auto;
 }
 
 .upcoming-empty {

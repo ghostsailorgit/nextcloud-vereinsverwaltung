@@ -43,7 +43,7 @@
             :value="(perm.key || perm)"
             v-model="form.permissions"
           >
-            {{ (perm.label || perm.name || perm) }}
+            {{ permissionLabel(perm.key || perm) }} <small class="perm-id">{{ perm.key || perm }}</small>
           </NcCheckboxRadioSwitch>
         </div>
 
@@ -56,35 +56,39 @@
   </div>
 
     <div class="table-card">
-      <table>
-        <colgroup>
-          <col style="width: 15%">
-          <col style="width: 20%">
-          <col style="width: 45%">
-          <col style="width: 20%">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>{{ t('verein', 'Name') }}</th>
-            <th>{{ t('verein', 'Description') }}</th>
-            <th>{{ t('verein', 'Permissions') }}</th>
-            <th>{{ t('verein', 'Actions') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="role in roles" :key="role.id">
-            <td>{{ role.name }}</td>
-            <td>{{ role.description || '-' }}</td>
-            <td class="permissions"><small>{{ (role.permissions || []).join(', ') }}</small></td>
-            <td class="actions">
-              <template v-if="isAdmin">
-              <NcButton @click="editRole(role)" variant="secondary" :aria-label="t('verein', 'Edit role')">✏️</NcButton>
-              <NcButton @click="deleteRole(role.id)" variant="error" :aria-label="t('verein', 'Delete role')">🗑️</NcButton>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table>
+          <colgroup>
+            <col style="width: 15%">
+            <col style="width: 20%">
+            <col style="width: 45%">
+            <col style="width: 12rem">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>{{ t('verein', 'Name') }}</th>
+              <th>{{ t('verein', 'Description') }}</th>
+              <th>{{ t('verein', 'Permissions') }}</th>
+              <th>{{ t('verein', 'Actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="role in roles" :key="role.id">
+              <td>{{ role.name }}</td>
+              <td>{{ role.description || '-' }}</td>
+              <td class="permissions"><small>{{ (role.permissions || []).map(permissionLabel).join(', ') }}</small></td>
+              <td>
+                <div v-if="isAdmin" class="actions">
+                  <NcButton @click="editRole(role)" variant="secondary">{{ t('verein', 'Edit') }}</NcButton>
+                  <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: role.name })">
+                    <NcActionButton close-after-click @click="deleteRole(role.id)">{{ t('verein', 'Delete role') }}</NcActionButton>
+                  </NcActions>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Assign Role To User -->
@@ -117,29 +121,31 @@
     <!-- Who holds a role in this club -->
     <div class="table-card">
       <h3>{{ t('verein', 'Assigned roles – {club}', { club: clubName }) }}</h3>
-      <table class="assignments">
-        <thead>
-          <tr><th>{{ t('verein', 'Account') }}</th><th>{{ t('verein', 'Roles') }}</th><th>{{ t('verein', 'Actions') }}</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in assignments" :key="a.userId">
-            <td>{{ a.displayName }} <small>({{ a.userId }})</small></td>
-            <td>
-              {{ a.roles.join(', ') }}
-              <span v-if="a.automaticRoles && a.automaticRoles.length" class="auto" :title="t('verein', 'derived from the membership (“Club” tab)')">
-                <template v-if="a.roles.length"> · </template>{{ a.automaticRoles.join(', ') }} ({{ t('verein', 'automatic') }})
-              </span>
-            </td>
-            <td>
-              <NcButton v-if="a.roles.length" variant="error" @click="removeAssignments(a)">{{ t('verein', 'Revoke assigned roles') }}</NcButton>
-              <small v-else>{{ t('verein', 'ends with the membership') }}</small>
-            </td>
-          </tr>
-          <tr v-if="assignments.length === 0">
-            <td colspan="3">{{ t('verein', 'No roles have been assigned in this club yet.') }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="assignments">
+          <thead>
+            <tr><th>{{ t('verein', 'Account') }}</th><th>{{ t('verein', 'Roles') }}</th><th>{{ t('verein', 'Actions') }}</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in assignments" :key="a.userId">
+              <td>{{ a.displayName }} <small>({{ a.userId }})</small></td>
+              <td>
+                {{ a.roles.join(', ') }}
+                <span v-if="a.automaticRoles && a.automaticRoles.length" class="auto" :title="t('verein', 'derived from the membership (“Club” tab)')">
+                  <template v-if="a.roles.length"> · </template>{{ a.automaticRoles.join(', ') }} ({{ t('verein', 'automatic') }})
+                </span>
+              </td>
+              <td>
+                <NcButton v-if="a.roles.length" variant="error" @click="removeAssignments(a)">{{ t('verein', 'Revoke assigned roles') }}</NcButton>
+                <small v-else>{{ t('verein', 'ends with the membership') }}</small>
+              </td>
+            </tr>
+            <tr v-if="assignments.length === 0">
+              <td colspan="3">{{ t('verein', 'No roles have been assigned in this club yet.') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -150,17 +156,33 @@ import { absoluteUrl as generateUrl } from '../absoluteUrl'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { confirmAction } from '../confirm'
+import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcActions from '@nextcloud/vue/components/NcActions'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcSelectUsers from '@nextcloud/vue/components/NcSelectUsers'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import { t } from '@nextcloud/l10n'
+
+// readable names for the permission ids (RoleService::ENFORCED_PERMISSIONS); an unknown id is shown as it is
+const PERMISSION_LABELS = {
+  'verein.member.view': t('verein', 'View members'),
+  'verein.member.manage': t('verein', 'Manage members'),
+  'verein.finance.read': t('verein', 'View finances'),
+  'verein.finance.write': t('verein', 'Edit fees'),
+  'verein.finance.delete': t('verein', 'Delete fees'),
+  'verein.finance.export': t('verein', 'Export finances'),
+  'verein.role.manage': t('verein', 'Manage roles'),
+  'verein.sepa.export': t('verein', 'SEPA export'),
+  'verein.club.manage': t('verein', 'Manage the club'),
+  'verein.audit.view': t('verein', 'View the audit log'),
+}
 import { clubState, currentClub } from '../store/club'
 
 export default {
   name: 'Roles',
-  components: { NcButton, NcTextField, NcSelect, NcSelectUsers, NcCheckboxRadioSwitch },
+  components: { NcActionButton, NcActions, NcButton, NcTextField, NcSelect, NcSelectUsers, NcCheckboxRadioSwitch },
   computed: {
     isAdmin() { return clubState.isAdmin },
     clubName() { return currentClub.value?.name || '' }
@@ -195,6 +217,9 @@ export default {
     this.loadAssignments()
   },
   methods: {
+    permissionLabel(id) {
+      return PERMISSION_LABELS[id] || id
+    },
     t,
     async loadRoles() {
       try {
@@ -344,6 +369,7 @@ export default {
 .form-card, .table-card { background: var(--color-main-background); border: 1px solid var(--color-border); padding: 16px; border-radius: 6px; margin-bottom: 16px }
 .form-actions { display:flex; gap:8px }
 .assign-row { display: grid; gap: 12px; max-width: 480px }
+.perm-id { color: var(--color-text-maxcontrast); margin-left: 4px; }
 .permissions-label { display: block; margin-top: 8px; margin-bottom: 4px; font-weight: bold }
 
 /* table-layout: fixed + a <colgroup> pinning all 4 column widths (an
@@ -352,7 +378,7 @@ export default {
    wrap inside its own cell and visually bleeds into/under the Aktionen
    column's buttons */
 .table-card { overflow-x: auto }
-.table-card table { width: 100%; table-layout: fixed; border-collapse: collapse }
+.table-card table { width: 100%; min-width: 600px; table-layout: fixed; border-collapse: collapse }
 .table-card th, .table-card td { padding: 8px; text-align: left; vertical-align: top }
 /* Nextcloud core CSS sets white-space: nowrap on <small> with higher
    specificity than this scoped rule - without the override here,
@@ -360,7 +386,7 @@ export default {
    and the text paints straight over the Aktionen column instead */
 .permissions { word-break: break-word; overflow-wrap: break-word }
 .permissions small { white-space: normal !important }
-.actions { display: flex; gap: 8px; flex-wrap: wrap }
+.actions { display: flex; gap: 4px; align-items: center }
 
 /* modal */
 .modal-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); z-index: 1200 }

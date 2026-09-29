@@ -24,27 +24,29 @@
     <p v-if="loading && !entries.length">{{ t('verein', 'Loading audit log…') }}</p>
     <p v-else-if="!entries.length" class="empty-state">{{ t('verein', 'No entries.') }}</p>
 
-    <table v-else class="log-table">
-      <thead>
-        <tr><th>{{ t('verein', 'Time') }}</th><th>{{ t('verein', 'Who') }}</th><th>{{ t('verein', 'What') }}</th><th>{{ t('verein', 'Record') }}</th><th>{{ t('verein', 'Changes') }}</th></tr>
-      </thead>
-      <tbody>
-        <tr v-for="e in entries" :key="e.id">
-          <td class="nowrap">{{ formatTime(e.createdAt) }}</td>
-          <td>{{ e.actorDisplayName || e.actorUserId || t('verein', 'System') }}</td>
-          <td>{{ t('verein', '{area} {action}', { area: typeLabel(e.entityType), action: actionLabel(e) }) }}</td>
-          <td>{{ subject(e) }}</td>
-          <td>
-            <ul v-if="changeLines(e).length" class="changes">
-              <li v-for="(line, i) in changeLines(e)" :key="i" :class="{ redacted: line.redacted }">
-                <span v-if="line.field" class="field">{{ line.field }}:</span> {{ line.text }}
-              </li>
-            </ul>
-            <span v-else class="hint">–</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-else class="table-scroll">
+      <table class="log-table">
+        <thead>
+          <tr><th>{{ t('verein', 'Time') }}</th><th>{{ t('verein', 'Who') }}</th><th>{{ t('verein', 'What') }}</th><th>{{ t('verein', 'Record') }}</th><th>{{ t('verein', 'Changes') }}</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="e in entries" :key="e.id">
+            <td class="nowrap">{{ formatTime(e.createdAt) }}</td>
+            <td>{{ e.actorDisplayName || e.actorUserId || t('verein', 'System') }}</td>
+            <td>{{ t('verein', '{area} {action}', { area: typeLabel(e.entityType), action: actionLabel(e) }) }}</td>
+            <td>{{ subject(e) }}</td>
+            <td>
+              <ul v-if="changeLines(e).length" class="changes">
+                <li v-for="(line, i) in changeLines(e)" :key="i" :class="{ redacted: line.redacted }">
+                  <span v-if="line.field" class="field">{{ line.field }}:</span> {{ line.text }}
+                </li>
+              </ul>
+              <span v-else class="hint">–</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <div v-if="hasMore" class="more">
       <NcButton variant="secondary" :disabled="loading" @click="load(true)">{{ t('verein', 'Load older entries') }}</NcButton>
@@ -261,7 +263,7 @@ export default {
   padding: 20px 24px;
 }
 .audit-log h2 { margin-top: 0; }
-.hint { color: var(--color-text-maxcontrast); }
+.hint { color: var(--color-text-maxcontrast); margin-bottom: 16px; }
 .filters { max-width: 320px; margin-bottom: 12px; }
 .log-table { width: 100%; border-collapse: collapse; }
 .log-table th, .log-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }

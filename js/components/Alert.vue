@@ -8,10 +8,10 @@
     <div v-if="show" :class="['alert', `alert-${type}`]">
       <div class="alert-content">
         <span class="alert-icon">
-          <span v-if="type === 'error'" class="icon-error">⚠️</span>
-          <span v-else-if="type === 'success'" class="icon-success">✓</span>
-          <span v-else-if="type === 'info'" class="icon-info">ℹ️</span>
-          <span v-else class="icon-warning">⚡</span>
+          <span v-if="type === 'error'">⚠️</span>
+          <span v-else-if="type === 'success'">✓</span>
+          <span v-else-if="type === 'info'">ℹ️</span>
+          <span v-else>⚡</span>
         </span>
         <div class="alert-text">
           <p class="alert-title">{{ title }}</p>

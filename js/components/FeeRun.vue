@@ -40,7 +40,7 @@
           :disabled="busy || !plan || !plan.included.length"
           @click="run"
         >
-          {{ plan ? n('verein', 'Create %n fee', 'Create %n fees', plan.included.length) : t('verein', 'Create fees') }}
+          {{ plan && plan.included.length ? n('verein', 'Create %n fee', 'Create %n fees', plan.included.length) : t('verein', 'Create fees') }}
         </NcButton>
         <NcButton type="button" variant="tertiary" :disabled="busy" @click="flagOverdue">
           {{ t('verein', 'Flag overdue fees') }}
@@ -56,31 +56,35 @@
 
       <details v-if="plan.included.length" open>
         <summary>{{ t('verein', 'Who gets a fee') }}</summary>
-        <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="e in plan.included" :key="e.memberId">
-              <td>{{ e.name }}</td>
-              <td>
-                {{ e.category }}
-                <span v-if="e.months" class="prorata-note">
-                  · {{ t('verein', 'pro rata {months}/12 of {amount}', { months: e.months, amount: formatMoney(e.fullAmount) }) }}
-                </span>
-              </td>
-              <td class="num">{{ formatMoney(e.amount) }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="e in plan.included" :key="e.memberId">
+                <td>{{ e.name }}</td>
+                <td>
+                  {{ e.category }}
+                  <span v-if="e.months" class="prorata-note">
+                    · {{ t('verein', 'pro rata {months}/12 of {amount}', { months: e.months, amount: formatMoney(e.fullAmount) }) }}
+                  </span>
+                </td>
+                <td class="num">{{ formatMoney(e.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </details>
 
       <details v-if="plan.skipped.length">
         <summary>{{ t('verein', 'Skipped ({count})', { count: plan.skipped.length }) }}</summary>
-        <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
+            </tbody>
+          </table>
+        </div>
       </details>
     </div>
   </div>
@@ -168,8 +172,8 @@ export default {
   padding: 20px 24px;
   margin-bottom: 20px;
 }
-.fee-run h2 { margin-top: 0; }
-.hint { color: var(--color-text-maxcontrast); }
+.fee-run h2 { margin-top: 0; font-size: 18px; }
+.hint { color: var(--color-text-maxcontrast); margin-bottom: 12px; }
 .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .prorata { grid-column: 1 / -1; }
