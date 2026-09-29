@@ -198,6 +198,8 @@ class ClubController extends Controller {
             'city' => $this->request->getParam('city'),
             'documentsPath' => $this->request->getParam('documentsPath'),
             'calendarGroups' => $this->request->getParam('calendarGroups', ''),
+            'mailSenderName' => $this->request->getParam('mailSenderName'),
+            'mailReplyTo' => $this->request->getParam('mailReplyTo'),
         ];
     }
 

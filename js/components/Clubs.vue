@@ -30,6 +30,23 @@
           :placeholder="t('verein', 'board, members')"
           :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and membership anniversaries in their Calendar app and on their phones (read-only). Birthdays are personal data – only enter groups that should see them.')"
         />
+        <h4 class="wide">{{ t('verein', 'Emails from the club') }}</h4>
+        <p class="wide hint">
+          {{ t('verein', 'Reminder letters can be sent by email. They go out through the mail server the Nextcloud administrator has set up (Administration settings → Basic settings → Email server), from its sender address; here you set the name recipients see and the address their replies go to.') }}
+        </p>
+        <NcTextField
+          :model-value="form.mailSenderName"
+          @update:model-value="form.mailSenderName = $event"
+          :label="t('verein', 'Sender name')"
+          :placeholder="form.name"
+        />
+        <NcTextField
+          :model-value="form.mailReplyTo"
+          @update:model-value="form.mailReplyTo = $event"
+          type="email"
+          :label="t('verein', 'Reply-to address')"
+          :placeholder="t('verein', 'e.g. board@example.org')"
+        />
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>
         </div>
@@ -194,7 +211,7 @@ export default {
     const busy = ref(false)
     const newClubName = ref('')
     const accountForm = reactive(emptyAccount())
-    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '' })
+    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '' })
 
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
@@ -233,6 +250,8 @@ export default {
         postalCode: c?.postalCode || '',
         city: c?.city || '',
         documentsPath: c?.documentsPath || '',
+        mailSenderName: c?.mailSenderName || '',
+        mailReplyTo: c?.mailReplyTo || '',
         calendarGroups: (c?.calendarGroups || []).join(', ')
       })
     }

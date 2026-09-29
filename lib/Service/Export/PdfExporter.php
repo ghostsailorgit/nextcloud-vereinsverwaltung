@@ -273,7 +273,8 @@ class PdfExporter {
             $pdf->SetFont(self::FONT, '', 10);
             $pdf->MultiCell(0, 5, $letter['greeting'], 0, 'L', false, 1);
             $pdf->Ln(2);
-            $pdf->MultiCell(0, 5, $this->dunningText((int)$letter['level'], $data['deadline']), 0, 'L', false, 1);
+            $texts = $this->dunningLetterTexts($data, $letter);
+            $pdf->MultiCell(0, 5, $texts['intro'], 0, 'L', false, 1);
             $pdf->Ln(3);
 
             $pdf->SetFont(self::FONT, 'B', 10);
@@ -292,29 +293,46 @@ class PdfExporter {
             $pdf->Ln(4);
 
             $pdf->SetFont(self::FONT, '', 10);
-            if ($data['account'] !== null) {
-                $pay = $this->doc->t('Please transfer the amount by %s to the club\'s bank account:', [$data['deadline']]) . "\n"
-                    . $this->doc->t('Account holder: %s', [$data['club']['name']]) . "\n"
-                    . 'IBAN: ' . trim(chunk_split((string)$data['account']['iban'], 4, ' ')) . "\n"
-                    . ($data['account']['bic'] !== '' ? 'BIC: ' . $data['account']['bic'] . "\n" : '')
-                    . $this->doc->t('Payment reference: %s', [$letter['reference']]);
-            } else {
-                $pay = $this->doc->t('Please pay the amount by %s. The board can give you the bank details.', [$data['deadline']]);
-            }
-            $pdf->MultiCell(0, 5, $pay, 0, 'L', false, 1);
+            $pdf->MultiCell(0, 5, $texts['pay'], 0, 'L', false, 1);
             $pdf->Ln(3);
-            $pdf->MultiCell(0, 5, $this->doc->t('If you have transferred the amount in the meantime, please disregard this letter. If you have any questions, please contact the board.'), 0, 'L', false, 1);
+            $pdf->MultiCell(0, 5, $texts['closing'], 0, 'L', false, 1);
             $pdf->Ln(6);
-            $pdf->MultiCell(0, 5, $this->doc->t('Kind regards
-
-The board
-%s', [$data['club']['name']]), 0, 'L', false, 1);
+            $pdf->MultiCell(0, 5, $texts['regards'], 0, 'L', false, 1);
         }
 
         return [
             'content' => $pdf->Output('', 'S'),
             'filename' => $this->doc->t('reminder-letters_%s.pdf', [\OCA\Verein\Service\Clock::todayOf($this->clock)]),
             'mimeType' => 'application/pdf',
+        ];
+    }
+
+    /**
+     * The paragraphs of a reminder letter, in the document language - shared by the PDF and the email
+     * (DunningMailService), so both say exactly the same.
+     *
+     * @param array $data DunningService::letters()
+     * @param array $letter one of $data['letters']
+     * @return array{intro: string, pay: string, closing: string, regards: string}
+     */
+    public function dunningLetterTexts(array $data, array $letter): array {
+        if ($data['account'] !== null) {
+            $pay = $this->doc->t('Please transfer the amount by %s to the club\'s bank account:', [$data['deadline']]) . "\n"
+                . $this->doc->t('Account holder: %s', [$data['club']['name']]) . "\n"
+                . 'IBAN: ' . trim(chunk_split((string)$data['account']['iban'], 4, ' ')) . "\n"
+                . ((string)($data['account']['bic'] ?? '') !== '' ? 'BIC: ' . $data['account']['bic'] . "\n" : '')
+                . $this->doc->t('Payment reference: %s', [$letter['reference']]);
+        } else {
+            $pay = $this->doc->t('Please pay the amount by %s. The board can give you the bank details.', [$data['deadline']]);
+        }
+        return [
+            'intro' => $this->dunningText((int)$letter['level'], $data['deadline']),
+            'pay' => $pay,
+            'closing' => $this->doc->t('If you have transferred the amount in the meantime, please disregard this letter. If you have any questions, please contact the board.'),
+            'regards' => $this->doc->t('Kind regards
+
+The board
+%s', [$data['club']['name']]),
         ];
     }
 

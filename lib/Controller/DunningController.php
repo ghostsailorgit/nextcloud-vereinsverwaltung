@@ -6,6 +6,7 @@
 namespace OCA\Verein\Controller;
 
 use OCA\Verein\Attributes\RequirePermission;
+use OCA\Verein\Service\DunningMailService;
 use OCA\Verein\Service\DunningService;
 use OCA\Verein\Service\Export\PdfExporter;
 use OCP\AppFramework\Controller;
@@ -30,6 +31,7 @@ class DunningController extends Controller {
         IRequest $request,
         private DunningService $dunning,
         private PdfExporter $pdf,
+        private DunningMailService $mail,
         ?IL10N $l10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
@@ -61,13 +63,29 @@ class DunningController extends Controller {
     }
 
     /**
+     * Sends the letters for the given (just dunned) fees by email through Nextcloud's mail server. Letters that
+     * could not go out by email come back as 'printFeeIds', for the PDF.
+     *
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.finance.write')]
+    public function send(): JSONResponse {
+        try {
+            $result = $this->mail->send($this->clubId(), $this->feeIds(), (int)$this->request->getParam('deadlineDays', 14));
+            return new JSONResponse(['status' => 'ok'] + $result);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
      * @NoAdminRequired
      * @NoCSRFRequired
      */
     #[RequirePermission('verein.finance.write')]
     public function letters(): Response {
         try {
-            $ids = array_filter(array_map('intval', explode(',', (string)$this->request->getParam('feeIds', ''))));
+            $ids = $this->feeIds();
             $deadline = (int)$this->request->getParam('deadlineDays', 14);
             $data = $this->dunning->letters($this->clubId(), $ids, $deadline);
             if ($data['letters'] === []) {
@@ -82,6 +100,13 @@ class DunningController extends Controller {
 
     private function clubId(): int {
         return (int)$this->request->getParam('clubId', 0);
+    }
+
+    /** @return int[] from "1,2,3" or [1, 2, 3] */
+    private function feeIds(): array {
+        $raw = $this->request->getParam('feeIds', '');
+        $list = is_array($raw) ? $raw : explode(',', (string)$raw);
+        return array_values(array_filter(array_map('intval', $list)));
     }
 
     private function days(string $key): int {

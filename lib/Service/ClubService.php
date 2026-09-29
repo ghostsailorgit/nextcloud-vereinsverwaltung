@@ -283,6 +283,18 @@ class ClubService {
         $club->setCity($this->nullIfEmpty($data['city'] ?? null));
         $club->setDocumentsPath($this->nullIfEmpty($data['documentsPath'] ?? null));
 
+        // sender of the club's emails (reminder letters); the mail server is Nextcloud's own
+        $senderName = $this->nullIfEmpty($data['mailSenderName'] ?? null);
+        if ($senderName !== null && (mb_strlen($senderName) > 100 || preg_match('/[\r\n]/', $senderName))) {
+            throw new ValidationException($this->l->t('The sender name may have at most 100 characters and no line breaks'));
+        }
+        $replyTo = $this->nullIfEmpty($data['mailReplyTo'] ?? null);
+        if ($replyTo !== null && (strlen($replyTo) > 254 || filter_var($replyTo, FILTER_VALIDATE_EMAIL) === false)) {
+            throw new ValidationException($this->l->t('The reply-to address is not a valid email address'));
+        }
+        $club->setMailSenderName($senderName);
+        $club->setMailReplyTo($replyTo);
+
         $groups = $data['calendarGroups'] ?? [];
         if (is_string($groups)) {
             $groups = preg_split('/[\s,;]+/', $groups, -1, PREG_SPLIT_NO_EMPTY);

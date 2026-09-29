@@ -90,6 +90,7 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | POST | `/dunning/preview` | `verein.finance.write` |
 | POST | `/dunning` | `verein.finance.write` |
 | GET | `/dunning/letters` | `verein.finance.write` |
+| POST | `/dunning/send` | `verein.finance.write` |
 
 ## SEPA-Lastschrift
 

@@ -147,6 +147,7 @@ class DunningService {
                 'fees' => $feeRows,
                 'total' => round($sum, 2),
                 'hasAddress' => $this->hasPostalAddress($member),
+                'hasEmail' => filter_var(trim((string)$member->getEmail()), FILTER_VALIDATE_EMAIL) !== false,
             ];
             $total += $sum;
         }
@@ -266,6 +267,9 @@ class DunningService {
             }
             $letters[] = [
                 'memberId' => $memberId,
+                'name' => $member->getFullName(),
+                'email' => trim((string)$member->getEmail()),
+                'feeIds' => array_map(fn (Fee $f) => $f->getId(), $fees),
                 'level' => $level,
                 'title' => self::levelLabel($level, $this->doc),
                 'address' => $this->addressLines($member),
