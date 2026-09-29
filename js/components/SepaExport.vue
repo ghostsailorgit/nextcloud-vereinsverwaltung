@@ -64,6 +64,8 @@
         <p><strong>IBAN:</strong> {{ previewData.creditorIban }}</p>
         <p><strong>{{ t('verein', 'Number of transactions:') }}</strong> {{ previewData.transactionCount }}</p>
         <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ previewData.totalAmount.toFixed(2) }} €</p>
+        <p><strong>{{ t('verein', 'Collection date:') }}</strong> {{ previewData.collectionDate }}</p>
+        <p>{{ t('verein', 'Names and texts are converted to the SEPA character set (ä → ae, & → +).') }}</p>
       </div>
 
       <div v-if="previewData.skipped && previewData.skipped.length" class="skipped-warning">

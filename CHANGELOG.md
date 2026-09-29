@@ -4,6 +4,33 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.18.11-beta] - 2026-09-29
+
+SEPA-Datei gegen das offizielle Schema und die Regeln der Banken geprüft.
+
+### 🐛 Korrigiert
+- Namen und Verwendungszweck stehen jetzt im SEPA-Zeichensatz: Umlaute werden ausgeschrieben (ä → ae, ß → ss), „&“ wird
+  zu „+“, andere Sonderzeichen und Emojis entfallen. Bisher gingen sie unverändert in die Datei, was Banken je nach
+  Software ablehnen oder verstümmeln.
+- Die Kontrollsumme wird in Cent gerechnet; vorher konnte sie bei vielen Beiträgen durch Rundung von der Summe der
+  Einzelbeträge abweichen, und die Bank lehnt dann die ganze Datei ab.
+- Jede Datei hat eine eigene Nachrichten-ID (mit Verein und Zufallsanteil); zwei Exporte in derselben Sekunde hatten
+  dieselbe, die Bank weist eine schon bekannte ID als Duplikat ab.
+- Das Einzugsdatum liegt fünf Bankarbeitstage (TARGET2) in der Zukunft, nicht mehr fünf Kalendertage: Wochenenden,
+  Neujahr, Karfreitag, Ostermontag, 1. Mai und die Weihnachtstage werden übersprungen. Die Vorschau zeigt es an.
+- IBAN, BIC und Gläubiger-ID des Vereinskontos werden ohne Leerzeichen und in Großbuchstaben geschrieben (bisher nur die
+  IBAN des Mitglieds) und vor dem Export geprüft; eine ungültige Angabe bricht mit einer Meldung ab.
+- Beiträge, die die Bank ablehnen würde, werden nicht mehr in die Datei geschrieben, sondern wie fehlende Mandate mit Grund
+  gemeldet: Betrag 0 oder negativ, ungültige IBAN oder BIC, Unterschriftsdatum ungültig oder in der Zukunft,
+  Mandatsreferenz mit unzulässigen Zeichen. Ein einziger solcher Datensatz ließ bisher die ganze Datei scheitern.
+- Die Datei enthält jetzt die Entgeltregelung `SLEV`, wie es das SEPA-Regelwerk vorsieht.
+
+### 🧪 Tests
+- Die erzeugte Datei wird in der CI gegen das offizielle ISO-20022-Schema pain.008.001.02 geprüft, mit absichtlich
+  schwierigen Daten (Umlaute, Emojis, überlange Namen, Kleinbuchstaben und Leerzeichen in IBAN/BIC, Cent-Beträge).
+
+---
+
 ## [0.18.10-beta] - 2026-09-26
 
 Befunde aus dem Nachtest von SEPA-Export, Deaktivieren, Selbstauskunft und Sicherung.

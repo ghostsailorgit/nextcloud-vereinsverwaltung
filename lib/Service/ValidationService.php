@@ -218,8 +218,12 @@ class ValidationService {
             }
         }
 
-        // Mod-97 Check
-        return bcmod($numeric, '97') === '1';
+        // Mod-97 in chunks (no bcmath: Nextcloud does not require that extension)
+        $rest = 0;
+        foreach (str_split($numeric, 7) as $chunk) {
+            $rest = (int)($rest . $chunk) % 97;
+        }
+        return $rest === 1;
     }
 
     /**

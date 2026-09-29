@@ -31,6 +31,14 @@ jobs:
       - name: Install dependencies
         run: composer update --no-interaction --no-progress
 
+      # official ISO 20022 schema of the SEPA file (not committed: ISO licence); SepaServiceTest validates the
+      # generated XML against it and fails in CI without it. Pinned to a commit and a checksum.
+      - name: SEPA schema (pain.008.001.02)
+        run: |
+          curl -fsSL --retry 3 --create-dirs -o tests/fixtures/pain.008.001.02.xsd \
+            https://raw.githubusercontent.com/php-sepa-xml/php-sepa-xml/e5cfc5748cec9b02f7d3ca06012bf150ad3c8c2e/doc/ISO20022/pain/008/001/pain.008.001.02.xsd
+          echo "1ce9e574ad74f48e33d956d876bfe32c7aa9cd57aef95941cdbf251b0fc6d9ad  tests/fixtures/pain.008.001.02.xsd" | sha256sum -c -
+
       - name: Unit tests
         run: vendor/bin/phpunit
 

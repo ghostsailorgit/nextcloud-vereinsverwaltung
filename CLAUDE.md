@@ -62,7 +62,9 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    until `activate()`. No mapping configured = nothing derived.
 5. **SEPA export only includes fees whose member has an IBAN AND a mandate signature date**; the rest are
    reported with the reason, never dropped silently. Mandate reference falls back to `M<clubId>-<memberId>`.
-   Sequence type is always RCUR (allowed since 2016).
+   Sequence type is always RCUR (allowed since 2016). Data the bank would reject (amount <= 0, invalid IBAN/BIC, bad
+   mandate date/reference) is skipped with a reason too; text goes through `SepaService::text()` (SEPA character set).
+   `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing.
 6. **Self-service is read-only** on purpose (a member changing their own IBAN would be a SEPA fraud risk).
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the

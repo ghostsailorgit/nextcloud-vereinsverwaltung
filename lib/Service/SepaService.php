@@ -42,20 +42,41 @@ class SepaService {
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
+        $this->validation = new ValidationService($l10n);
     }
+
+    /** Characters the EPC allows in SEPA text fields (Latin character set of the SEPA rulebooks). */
+    private const TEXT_ALLOWED = "/[^A-Za-z0-9\\/\\-?:().,'+ ]/";
+    /** Identifiers (mandate reference) additionally must not start or end with "/" or contain "//". */
+    private const ID_PATTERN = "#^(?!/)(?!.*//)[A-Za-z0-9/\\-?:().,'+ ]{1,35}(?<!/)$#";
+    private const BIC_PATTERN = '/^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?$/';
+    /** Business days (TARGET2) between today and the requested collection date: CORE needs D-1, banks often more. */
+    private const LEAD_DAYS = 5;
+
+    private ValidationService $validation;
 
     /**
      * Generate SEPA-XML for all open fees of a club
      *
      * @param int|null $accountId Club bank account to collect on (default account if null)
      * @return array{xml: string, skippedCount: int, feeIds: int[]} XML, number of fees left out and ids of the fees in the file
-     *   (no IBAN / no signed mandate) - see previewSepaExport() for who and why
+     *   (no IBAN / no signed mandate / invalid data) - see previewSepaExport() for who and why
      */
     public function generateSepaXml(int $clubId, ?int $accountId = null): array {
         $club = $this->clubMapper->find($clubId);
         $account = $this->clubService->resolveAccount($clubId, $accountId);
-        if ($account->getCreditorId() === '') {
+        if (trim((string)$account->getCreditorId()) === '') {
             throw new ValidationException($this->l->t('No creditor ID is set for the bank account ("Club" tab)'));
+        }
+        if (!$this->validation->validateCreditorId(self::compact($account->getCreditorId()))) {
+            throw new ValidationException($this->l->t('The creditor ID of the bank account is invalid ("Club" tab)'));
+        }
+        if (!$this->validation->validateIBAN(self::compact($account->getIban()))) {
+            throw new ValidationException($this->l->t('The IBAN of the bank account is invalid ("Club" tab)'));
+        }
+        $bic = self::compact($account->getBic());
+        if ($bic !== '' && !preg_match(self::BIC_PATTERN, $bic)) {
+            throw new ValidationException($this->l->t('The BIC of the bank account is invalid ("Club" tab)'));
         }
 
         $collected = $this->collectFees($clubId);
@@ -73,9 +94,10 @@ class SepaService {
 
         return [
             'xml' => $this->buildSepaXml(
+                $clubId,
                 $club->getName(),
                 $account,
-                $collected['totalAmount'],
+                $collected['totalCents'],
                 $collected['transactions']
             ),
             'skippedCount' => count($collected['skipped']),
@@ -96,9 +118,13 @@ class SepaService {
             'creditorIban' => $account->getIban(),
             'creditorBic' => $account->getBic(),
             'creditorId' => $account->getCreditorId(),
-            'totalAmount' => $collected['totalAmount'],
+            'collectionDate' => $this->collectionDate(),
+            'totalAmount' => $collected['totalCents'] / 100,
             'transactionCount' => count($collected['transactions']),
-            'transactions' => $collected['transactions'],
+            'transactions' => array_map(function (array $t) {
+                unset($t['cents']);
+                return $t;
+            }, $collected['transactions']),
             'skipped' => $collected['skipped']
         ];
     }
@@ -109,17 +135,20 @@ class SepaService {
      * transition, so it still represents money owed that hasn't been
      * debited yet).
      *
-     * A fee can only be debited if the member has an IBAN and a signed
-     * mandate (signature date on their membership). The others are returned
-     * in 'skipped' with the reason, so callers can tell the user instead of
-     * silently dropping them.
+     * A fee can only be debited if the member has a valid IBAN and a signed
+     * mandate (signature date on their membership) and the data fits what
+     * the banks accept. The others are returned in 'skipped' with the
+     * reason, so callers can tell the user instead of silently dropping
+     * them - a single bad record would otherwise make the bank reject the
+     * whole file.
      *
-     * @return array{transactions: array, skipped: array, totalAmount: float}
+     * @return array{transactions: array, skipped: array, totalCents: int}
      */
     private function collectFees(int $clubId): array {
-        $totalAmount = 0;
+        $totalCents = 0;
         $transactions = [];
         $skipped = [];
+        $today = Clock::todayOf($this->clock);
 
         foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
             $member = $this->memberMapper->find($fee->getMemberId());
@@ -130,13 +159,30 @@ class SepaService {
                 $membership = null;
             }
 
+            $iban = self::compact($member->getIban());
+            $bic = self::compact($member->getBic());
+            $cents = (int)round(((float)$fee->getAmount()) * 100);
+            $mandateDate = $membership !== null ? substr(trim((string)$membership->getMandateDate()), 0, 10) : '';
+
             $reason = null;
             if ($membership !== null && $membership->getDeactivated()) {
                 $reason = $this->l->t('member deactivated');
-            } elseif (empty($member->getIban())) {
+            } elseif ($cents <= 0) {
+                $reason = $this->l->t('amount is zero or negative');
+            } elseif ($iban === '') {
                 $reason = $this->l->t('no IBAN recorded');
-            } elseif ($membership === null || empty($membership->getMandateDate())) {
+            } elseif (!$this->validation->validateIBAN($iban)) {
+                $reason = $this->l->t('IBAN is invalid');
+            } elseif ($bic !== '' && !preg_match(self::BIC_PATTERN, $bic)) {
+                $reason = $this->l->t('BIC is invalid');
+            } elseif ($membership === null || $mandateDate === '') {
                 $reason = $this->l->t('no signed SEPA mandate recorded');
+            } elseif (!self::isDate($mandateDate)) {
+                $reason = $this->l->t('signature date of the mandate is invalid');
+            } elseif ($mandateDate > $today) {
+                $reason = $this->l->t('signature date of the mandate is in the future');
+            } elseif (!preg_match(self::ID_PATTERN, $membership->getEffectiveMandateReference())) {
+                $reason = $this->l->t('mandate reference contains characters not allowed in SEPA (max. 35 letters, digits and simple special characters)');
             }
 
             if ($reason !== null) {
@@ -149,22 +195,23 @@ class SepaService {
                 continue;
             }
 
-            $totalAmount += $fee->getAmount();
+            $totalCents += $cents;
             $transactions[] = [
                 'name' => $member->getFullName(),
                 'memberName' => $member->getFullName(),
-                'iban' => $member->getIban(),
-                'bic' => $member->getBic(),
-                'amount' => $fee->getAmount(),
+                'iban' => $iban,
+                'bic' => $bic,
+                'amount' => $cents / 100,
+                'cents' => $cents,
                 'dueDate' => $fee->getDueDate(),
                 'mandateReference' => $membership->getEffectiveMandateReference(),
-                'mandateDate' => $membership->getMandateDate(),
+                'mandateDate' => $mandateDate,
                 'reference' => $this->paymentReference($fee->getDescription(), $fee->getDueDate()),
                 'feeId' => $fee->getId()
             ];
         }
 
-        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalAmount' => $totalAmount];
+        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalCents' => $totalCents];
     }
 
     private function paymentReference(?string $description, string $dueDate): string {
@@ -176,38 +223,120 @@ class SepaService {
         return $this->doc->t('Membership fee %s', [ctype_digit($year) ? $year : Clock::nowOf($this->clock)->format('Y')]);
     }
 
+    /** IBAN, BIC and creditor ID as the bank expects them: no spaces, upper case. */
+    private static function compact(?string $value): string {
+        return strtoupper((string)preg_replace('/\s+/', '', (string)$value));
+    }
+
+    private static function isDate(string $value): bool {
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+            return false;
+        }
+        return checkdate((int)$m[2], (int)$m[3], (int)$m[1]);
+    }
+
+    /**
+     * Requested collection date: LEAD_DAYS TARGET2 business days from today (no weekends,
+     * New Year, Good Friday, Easter Monday, 1 May, 25/26 December) - banks reject or
+     * shift a date on which no settlement takes place.
+     */
+    private function collectionDate(): string {
+        $day = new \DateTimeImmutable(Clock::todayOf($this->clock));
+        for ($left = self::LEAD_DAYS; $left > 0;) {
+            $day = $day->modify('+1 day');
+            if (self::isTargetDay($day)) {
+                $left--;
+            }
+        }
+        return $day->format('Y-m-d');
+    }
+
+    private static function isTargetDay(\DateTimeImmutable $day): bool {
+        if ((int)$day->format('N') >= 6) {
+            return false;
+        }
+        $md = $day->format('m-d');
+        if (in_array($md, ['01-01', '05-01', '12-25', '12-26'], true)) {
+            return false;
+        }
+        $easter = self::easterSunday((int)$day->format('Y'));
+        $date = $day->format('Y-m-d');
+        return $date !== $easter->modify('-2 days')->format('Y-m-d')
+            && $date !== $easter->modify('+1 day')->format('Y-m-d');
+    }
+
+    /** Gregorian Easter Sunday (anonymous Gregorian algorithm; no dependency on ext-calendar). */
+    private static function easterSunday(int $year): \DateTimeImmutable {
+        $a = $year % 19;
+        $b = intdiv($year, 100);
+        $c = $year % 100;
+        $d = intdiv($b, 4);
+        $e = $b % 4;
+        $f = intdiv($b + 8, 25);
+        $g = intdiv($b - $f + 1, 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = intdiv($c, 4);
+        $k = $c % 4;
+        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m = intdiv($a + 11 * $h + 22 * $l, 451);
+        $month = intdiv($h + $l - 7 * $m + 114, 31);
+        $dayOfMonth = (($h + $l - 7 * $m + 114) % 31) + 1;
+        return new \DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $dayOfMonth));
+    }
+
     /**
      * BIC element, or the SEPA-conformant "not provided" marker: within the
      * SEPA area the BIC is optional (IBAN-only).
      */
     private function agentXml(string $bic): string {
-        $bic = trim($bic);
         if ($bic === '') {
             return '<FinInstnId><Othr><Id>NOTPROVIDED</Id></Othr></FinInstnId>';
         }
-        return '<FinInstnId><BIC>' . htmlspecialchars($bic) . '</BIC></FinInstnId>';
+        return '<FinInstnId><BIC>' . htmlspecialchars($bic, ENT_XML1) . '</BIC></FinInstnId>';
     }
 
     /**
-     * SEPA restricts names/reference to 70 / 140 characters
+     * Free text (names, remittance information) in the Latin character set of the
+     * SEPA rulebooks, 70 / 140 characters: umlauts are written out (ä -> ae, ß -> ss),
+     * other accents dropped, "&" becomes "+", anything else a space. Banks reject
+     * files with other characters or convert them unpredictably.
      */
-    private function text(string $value, int $max = 70): string {
-        return htmlspecialchars(mb_substr($value, 0, $max), ENT_XML1);
+    private function text(string $value, int $max = 70, string $fallback = '-'): string {
+        $value = strtr($value, [
+            'Ä' => 'Ae', 'Ö' => 'Oe', 'Ü' => 'Ue', 'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', '&' => '+',
+        ]);
+        if (class_exists(\Transliterator::class)) {
+            $ascii = \Transliterator::create('Any-Latin; Latin-ASCII')?->transliterate($value);
+            if (is_string($ascii)) {
+                $value = $ascii;
+            }
+        }
+        $value = trim((string)preg_replace('/\s+/', ' ', (string)preg_replace(self::TEXT_ALLOWED, ' ', $value)));
+        $value = rtrim(substr($value, 0, $max));
+        return htmlspecialchars($value !== '' ? $value : $fallback, ENT_XML1);
+    }
+
+    private static function amount(int $cents): string {
+        return sprintf('%d.%02d', intdiv($cents, 100), $cents % 100);
     }
 
     /**
      * Build SEPA-XML content (pain.008.001.02 format)
      */
     private function buildSepaXml(
+        int $clubId,
         string $creditorName,
         ClubAccount $account,
-        float $totalAmount,
+        int $totalCents,
         array $transactions
     ): string {
         $now = Clock::nowOf($this->clock);
-        $msgId = 'VEREIN-' . $now->format('YmdHis');
+        // unique per file: banks reject a message id they have already seen
+        $msgId = substr('VEREIN-' . $clubId . '-' . $now->format('YmdHis') . '-' . bin2hex(random_bytes(2)), 0, 32);
         $creationDateTime = $now->format('Y-m-d\TH:i:s');
-        $collectionDate = $now->modify('+5 days')->format('Y-m-d');
+        $collectionDate = $this->collectionDate();
+        $count = count($transactions);
+        $total = self::amount($totalCents);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.008.001.02" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . "\n";
@@ -215,39 +344,41 @@ class SepaService {
 
         // Group Header
         $xml .= '    <GrpHdr>' . "\n";
-        $xml .= '      <MsgId>' . htmlspecialchars($msgId) . '</MsgId>' . "\n";
+        $xml .= '      <MsgId>' . $msgId . '</MsgId>' . "\n";
         $xml .= '      <CreDtTm>' . $creationDateTime . '</CreDtTm>' . "\n";
-        $xml .= '      <NbOfTxs>' . count($transactions) . '</NbOfTxs>' . "\n";
-        $xml .= '      <CtrlSum>' . number_format($totalAmount, 2, '.', '') . '</CtrlSum>' . "\n";
+        $xml .= '      <NbOfTxs>' . $count . '</NbOfTxs>' . "\n";
+        $xml .= '      <CtrlSum>' . $total . '</CtrlSum>' . "\n";
         $xml .= '      <InitgPty><Nm>' . $this->text($creditorName) . '</Nm></InitgPty>' . "\n";
         $xml .= '    </GrpHdr>' . "\n";
 
         // Payment Information
         $xml .= '    <PmtInf>' . "\n";
-        $xml .= '      <PmtInfId>' . htmlspecialchars($msgId) . '-1</PmtInfId>' . "\n";
+        $xml .= '      <PmtInfId>' . $msgId . '-1</PmtInfId>' . "\n";
         $xml .= '      <PmtMtd>DD</PmtMtd>' . "\n";
         $xml .= '      <BtchBookg>true</BtchBookg>' . "\n";
-        $xml .= '      <NbOfTxs>' . count($transactions) . '</NbOfTxs>' . "\n";
-        $xml .= '      <CtrlSum>' . number_format($totalAmount, 2, '.', '') . '</CtrlSum>' . "\n";
+        $xml .= '      <NbOfTxs>' . $count . '</NbOfTxs>' . "\n";
+        $xml .= '      <CtrlSum>' . $total . '</CtrlSum>' . "\n";
         // RCUR for all: since the SEPA Core rulebook 2016 the FRST marker is optional
         $xml .= '      <PmtTpInf><SvcLvl><Cd>SEPA</Cd></SvcLvl><LclInstrm><Cd>CORE</Cd></LclInstrm><SeqTp>RCUR</SeqTp></PmtTpInf>' . "\n";
         $xml .= '      <ReqdColltnDt>' . $collectionDate . '</ReqdColltnDt>' . "\n";
 
         // Creditor
         $xml .= '      <Cdtr><Nm>' . $this->text($creditorName) . '</Nm></Cdtr>' . "\n";
-        $xml .= '      <CdtrAcct><Id><IBAN>' . htmlspecialchars($account->getIban()) . '</IBAN></Id></CdtrAcct>' . "\n";
-        $xml .= '      <CdtrAgt>' . $this->agentXml($account->getBic()) . '</CdtrAgt>' . "\n";
-        $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . htmlspecialchars($account->getCreditorId()) . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
+        $xml .= '      <CdtrAcct><Id><IBAN>' . htmlspecialchars(self::compact($account->getIban()), ENT_XML1) . '</IBAN></Id></CdtrAcct>' . "\n";
+        $xml .= '      <CdtrAgt>' . $this->agentXml(self::compact($account->getBic())) . '</CdtrAgt>' . "\n";
+        // charges shared, the only value the SEPA rulebooks allow
+        $xml .= '      <ChrgBr>SLEV</ChrgBr>' . "\n";
+        $xml .= '      <CdtrSchmeId><Id><PrvtId><Othr><Id>' . htmlspecialchars(self::compact($account->getCreditorId()), ENT_XML1) . '</Id><SchmeNm><Prtry>SEPA</Prtry></SchmeNm></Othr></PrvtId></Id></CdtrSchmeId>' . "\n";
 
         // Transactions
         foreach ($transactions as $txn) {
             $xml .= '      <DrctDbtTxInf>' . "\n";
-            $xml .= '        <PmtId><EndToEndId>FEE-' . $txn['feeId'] . '</EndToEndId></PmtId>' . "\n";
-            $xml .= '        <InstdAmt Ccy="EUR">' . number_format($txn['amount'], 2, '.', '') . '</InstdAmt>' . "\n";
-            $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>' . htmlspecialchars($txn['mandateReference']) . '</MndtId><DtOfSgntr>' . htmlspecialchars($txn['mandateDate']) . '</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
-            $xml .= '        <DbtrAgt>' . $this->agentXml((string)$txn['bic']) . '</DbtrAgt>' . "\n";
+            $xml .= '        <PmtId><EndToEndId>FEE-' . (int)$txn['feeId'] . '</EndToEndId></PmtId>' . "\n";
+            $xml .= '        <InstdAmt Ccy="EUR">' . self::amount($txn['cents']) . '</InstdAmt>' . "\n";
+            $xml .= '        <DrctDbtTx><MndtRltdInf><MndtId>' . htmlspecialchars($txn['mandateReference'], ENT_XML1) . '</MndtId><DtOfSgntr>' . $txn['mandateDate'] . '</DtOfSgntr></MndtRltdInf></DrctDbtTx>' . "\n";
+            $xml .= '        <DbtrAgt>' . $this->agentXml($txn['bic']) . '</DbtrAgt>' . "\n";
             $xml .= '        <Dbtr><Nm>' . $this->text($txn['name']) . '</Nm></Dbtr>' . "\n";
-            $xml .= '        <DbtrAcct><Id><IBAN>' . htmlspecialchars(str_replace(' ', '', (string)$txn['iban'])) . '</IBAN></Id></DbtrAcct>' . "\n";
+            $xml .= '        <DbtrAcct><Id><IBAN>' . htmlspecialchars($txn['iban'], ENT_XML1) . '</IBAN></Id></DbtrAcct>' . "\n";
             $xml .= '        <RmtInf><Ustrd>' . $this->text($txn['reference'], 140) . '</Ustrd></RmtInf>' . "\n";
             $xml .= '      </DrctDbtTxInf>' . "\n";
         }
