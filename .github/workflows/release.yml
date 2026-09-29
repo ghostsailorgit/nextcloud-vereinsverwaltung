@@ -25,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'  # LTS; Node 25 is end of life, 26 becomes LTS on 2026-10-28
           cache: npm
 
       - name: Check that the tag matches appinfo/info.xml

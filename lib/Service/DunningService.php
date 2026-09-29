@@ -338,11 +338,17 @@ class DunningService {
         return $lines;
     }
 
+    /**
+     * Last name and first name are both passed: English addresses by last name ("Dear Ms Mustermann,"), the German
+     * translation (informal "du") by first name ("Liebe Erika,") - positional placeholders pick the one they need.
+     */
     private function greeting(Member $member): string {
-        return match ($member->getSalutation()) {
-            'Herr' => $this->doc->t('Dear Mr %s,', [$member->getName()]),
-            'Frau' => $this->doc->t('Dear Ms %s,', [$member->getName()]),
-            default => $this->doc->t('Dear %s,', [trim(($member->getFirstName() ?? '') . ' ' . $member->getName())]),
+        $first = trim((string)$member->getFirstName());
+        $params = [$member->getName(), $first];
+        return match (true) {
+            $first !== '' && $member->getSalutation() === 'Herr' => $this->doc->t('Dear Mr %1$s,', $params),
+            $first !== '' && $member->getSalutation() === 'Frau' => $this->doc->t('Dear Ms %1$s,', $params),
+            default => $this->doc->t('Dear %s,', [trim($first . ' ' . $member->getName())]),
         };
     }
 

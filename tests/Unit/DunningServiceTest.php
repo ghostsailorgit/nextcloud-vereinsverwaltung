@@ -255,9 +255,9 @@ class DunningServiceTest extends TestCase {
         $this->assertSame(2, $letters[10]['level']);
         $this->assertSame('1. Mahnung', $letters[10]['title']);
         $this->assertSame(['Frau', 'Erika Mustermann', 'Musterweg 10', '12345 Musterstadt'], $letters[10]['address']);
-        $this->assertSame('Sehr geehrte Frau Mustermann,', $letters[10]['greeting']);
+        $this->assertSame('Liebe Erika,', $letters[10]['greeting']);
         $this->assertSame(36.0, $letters[10]['total']);
-        $this->assertSame('Guten Tag Kim Muster,', $letters[11]['greeting']);
+        $this->assertSame('Hallo Kim Muster,', $letters[11]['greeting']);
         $this->assertCount(1, $letters[11]['fees']);
         $this->assertSame('Beitrag 2025, 2026, Mitglied 10', $letters[10]['reference']);
         // sorted by last name for putting them into envelopes: Muster before Mustermann
@@ -281,9 +281,24 @@ class DunningServiceTest extends TestCase {
 
         $letter = $service->letters(self::CLUB, [1], 14, self::TODAY)['letters'][0];
         $this->assertSame('Zahlungserinnerung', $letter['title']);
-        $this->assertSame('Sehr geehrte Frau Mustermann,', $letter['greeting']);
+        $this->assertSame('Liebe Erika,', $letter['greeting']);
         $this->assertSame('Frau', $letter['address'][0]);
         $this->assertSame('Beitrag 2025, Mitglied 10', $letter['reference']);
+    }
+
+    public function testEnglishLettersGreetByLastNameGermanOnesByFirstName(): void {
+        $english = new DunningService(...$this->deps, l10n: new SourceL10n());
+        $this->member(10, 'Erika', 'Mustermann', false, 'Frau');
+        $this->member(11, '', 'Muster', false, 'Herr');
+        $this->fee(1, 10, 24, '2025-03-31', 'overdue', 1, '2026-01-01');
+        $this->fee(2, 11, 24, '2025-03-31', 'overdue', 1, '2026-01-01');
+
+        $letters = array_column($english->letters(self::CLUB, [1, 2], 14, self::TODAY)['letters'], 'greeting', 'memberId');
+        $this->assertSame('Dear Ms Mustermann,', $letters[10]);
+        $this->assertSame('Dear Muster,', $letters[11], 'no first name: never "Lieber ," in German');
+
+        $letters = array_column($this->service->letters(self::CLUB, [1, 2], 14, self::TODAY)['letters'], 'greeting', 'memberId');
+        $this->assertSame(['Liebe Erika,', 'Hallo Muster,'], [$letters[10], $letters[11]]);
     }
 
     public function testLettersRejectAnEmptySelectionAndAnOddDeadline(): void {
