@@ -191,7 +191,13 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
   `js/store/club.js`; `js/api.js` hängt die `clubId` an jede Anfrage. Die Adresse der Nextcloud (Unterordner, `index.php`)
   gibt die Seite dem Frontend über `data-url-root` mit (`js/absoluteUrl.js`).
 - Tests: PHPUnit (`tests/Unit`), Nextcloud-Klassen kommen aus den `nextcloud/ocp`-Stubs.
-- PDF-Export: TCPDF aus `vendor/` (`composer install --no-dev`); fehlt es, antwortet der Export mit 503 und einem Hinweis.
+- PDF-Export: TCPDF aus `vendor/` (im Release-Archiv enthalten, aus dem Quellcode `composer install --no-dev`); fehlt es,
+  antwortet der Export mit 503 und einem Hinweis. Hat eine andere App schon eine `TCPDF`-Klasse geladen, wird diese
+  benutzt statt die eigene ein zweites Mal zu deklarieren (sonst PHP-Fatal-Error).
+- Release-Archiv: `scripts/build-archive.sh` (von `release.yml` und dem CI-Job `archive` benutzt) - gebautes Frontend,
+  Produktions-Abhängigkeiten, TCPDF ohne Beispiele und ohne die ungenutzten Schriften (nur Helvetica), keine Dev-Dateien.
+  Der CI-Job entpackt genau dieses Archiv in ein separates `custom_apps/` einer frischen Nextcloud, aktiviert es und lässt
+  Smoke-Test und Hintergrundjobs über Webcron laufen.
 - Übersetzungen: englische Quelltexte, Deutsch in `l10n/de.json` (einzige von Hand gepflegte Datei, `php scripts/l10n.php build`
   erzeugt den Rest; `L10nTest` meldet Fehlendes). Oberfläche und Meldungen kommen in der Sprache des Nutzers; PHP-Klassen
   bekommen `IL10N` als optionales letztes Argument (sonst englisch über `L10n\SourceL10n`). `occ` bleibt englisch.
