@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.19.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.19.2-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -28,7 +28,7 @@ Stand: Version 0.19.1-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 ## Ideen ohne Termin
 
 - Feinere Vereinsfunktionen (z. B. 1. Vorsitzender, Schriftführer) statt nur Mitglied, Kassierer, Vorstand.
-- Kleineres JavaScript-Bundle (aktuell etwa 3,3 MB, davon ein großer Teil Nextcloud-Vue-Komponenten).
+- Noch kleineres JavaScript beim Start (derzeit 1,26 MB, 306 KB komprimiert; größter Teil sind Nextcloud-Vue-Komponenten).
 
 ## Bekannte Einschränkungen
 

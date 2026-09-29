@@ -187,7 +187,9 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
 
 ## Technik
 - Backend: PHP, Nextcloud AppFramework (Controller → Service → Mapper/Entity), Migrationen in `lib/Migration`.
-- Frontend: Vue 3 + `@nextcloud/vue`, gebaut mit Vite nach `js/dist/`. Der ausgewählte Verein liegt in
+- Frontend: Vue 3 + `@nextcloud/vue`, gebaut mit Vite nach `js/dist/`: ein kleiner Einstieg `nextcloud-verein.mjs`, der Rest in
+  `js/dist/chunks/` - selten Gebrauchtes (Statistik-Diagramme, Nextclouds Dateiauswahl, Datums-Sprachdateien) lädt der Browser
+  erst bei Bedarf. Beim Kopieren auf einen Server immer den ganzen Ordner `js/dist/` mitnehmen. Der ausgewählte Verein liegt in
   `js/store/club.js`; `js/api.js` hängt die `clubId` an jede Anfrage. Die Adresse der Nextcloud (Unterordner, `index.php`)
   gibt die Seite dem Frontend über `data-url-root` mit (`js/absoluteUrl.js`).
 - Tests: PHPUnit (`tests/Unit`), Nextcloud-Klassen kommen aus den `nextcloud/ocp`-Stubs.

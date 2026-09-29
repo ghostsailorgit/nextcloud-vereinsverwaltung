@@ -15,11 +15,9 @@ use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
-use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Service\Clock;
 use OCA\Verein\Service\ClubService;
 use OCA\Verein\Service\SepaService;
-use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IDateTimeZone;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -38,7 +36,6 @@ class SepaServiceTest extends TestCase {
 
     private FeeMapper&MockObject $fees;
     private MemberMapper&MockObject $members;
-    private MembershipMapper&MockObject $memberships;
     private ClubService&MockObject $clubService;
     private SepaService $service;
 
@@ -53,7 +50,6 @@ class SepaServiceTest extends TestCase {
     protected function setUp(): void {
         $this->fees = $this->createMock(FeeMapper::class);
         $this->members = $this->createMock(MemberMapper::class);
-        $this->memberships = $this->createMock(MembershipMapper::class);
         $clubs = $this->createMock(ClubMapper::class);
         $this->clubService = $this->createMock(ClubService::class);
 
@@ -71,18 +67,23 @@ class SepaServiceTest extends TestCase {
 
         $this->fees->method('findByStatusesInClub')->willReturnCallback(fn () => $this->openFees);
         $this->members->method('find')->willReturnCallback(fn (int $id) => $this->personsById[$id]);
-        $this->memberships->method('findByMemberAndClub')->willReturnCallback(
-            function (int $memberId, int $clubId) {
-                return $this->membershipsByMember[$memberId] ?? throw new DoesNotExistException('none');
+        // the club's members: every person with a membership here, the membership attached
+        $this->members->method('findByClub')->willReturnCallback(function () {
+            $out = [];
+            foreach ($this->membershipsByMember as $memberId => $ms) {
+                $m = clone $this->personsById[$memberId];
+                $m->setMembership($ms);
+                $out[] = $m;
             }
-        );
+            return $out;
+        });
 
         $time = $this->createMock(ITimeFactory::class);
         $time->method('getTime')->willReturn(self::NOW);
         $tz = $this->createMock(IDateTimeZone::class);
         $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
 
-        $this->service = new SepaService($this->fees, $this->members, $this->memberships, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'));
+        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     private function fee(int $id, int $memberId, float $amount, ?string $description = null, string $dueDate = '2026-03-01 00:00:00'): void {
@@ -407,4 +408,16 @@ class SepaServiceTest extends TestCase {
             $this->assertTrue($dom->schemaValidate(self::SCHEMA));
         }
     }
+
+    public function testMembersOfTheClubAreNotLookedUpOneByOne(): void {
+        for ($i = 1; $i <= 30; $i++) {
+            $this->person($i, 'P' . $i, 'Mustermann', 'DE02120300000000202051');
+            $this->mandate($i, '2021-01-05');
+            $this->fee(100 + $i, $i, 5.0);
+        }
+        $this->members->expects($this->never())->method('find');
+
+        $this->assertSame(30, $this->service->previewSepaExport(self::CLUB)['transactionCount']);
+    }
 }
+

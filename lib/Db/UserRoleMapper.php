@@ -123,16 +123,6 @@ class UserRoleMapper extends QBMapper {
         return $qb->executeStatement();
     }
 
-    /**
-     * Lösche alle Rollen eines Users (alle Clubs)
-     */
-    public function deleteByUser(string $userId): int {
-        $qb = $this->db->getQueryBuilder();
-        $qb->delete($this->getTableName())
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId, IQueryBuilder::PARAM_STR)));
-
-        return $qb->executeStatement();
-    }
 
     /**
      * Erstelle eine Zuordnung

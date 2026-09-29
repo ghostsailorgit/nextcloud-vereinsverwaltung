@@ -4,6 +4,23 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.19.2-beta] - 2026-09-29
+
+### ⚡ Schneller
+- Die App lädt beim Öffnen 1,26 MB JavaScript (306 KB komprimiert) statt 3,4 MB (774 KB): Statistik-Diagramme,
+  Nextclouds Dateiauswahl und die Datums-Sprachdateien kommen erst, wenn sie gebraucht werden. Bisher war alles in eine
+  Datei gezwungen. In einer echten Nextcloud 34 mit englischem und deutschem Konto durchgeklickt.
+- Der SEPA-Export lädt die Mitglieder des Vereins mit zwei Datenbankabfragen statt mit zwei Abfragen je offenem Beitrag.
+
+### 🔧 Technik
+- Der JavaScript-Minifier nutzt keine „unsafe“-Optionen mehr (sie können Vergleiche und Rechnungen verändern).
+- Vier nie aufgerufene Datenbank-Methoden entfernt.
+
+### 🐛 Korrigiert
+- SEPA-Export: zwischen „Gläubiger-ID:“ und dem Wert fehlte das Leerzeichen.
+
+---
+
 ## [0.19.1-beta] - 2026-09-29
 
 ### 🌐 Übersetzungen

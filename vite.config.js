@@ -33,7 +33,7 @@ export default defineConfig({
       external: [],
       output: {
         globals: {},
-        inlineDynamicImports: true
+        chunkFileNames: 'chunks/[name]-[hash].mjs'
       },
       plugins: [
         terser({
@@ -41,10 +41,8 @@ export default defineConfig({
             drop_console: true,
             drop_debugger: true,
             passes: 3,
-            pure_funcs: ['console.log', 'console.info', 'console.debug'],
-            unsafe: true,
-            unsafe_comps: true,
-            unsafe_math: true
+            pure_funcs: ['console.log', 'console.info', 'console.debug']
+            // no unsafe* options: they may change what the code does (comparisons, float math) for a few KB
           },
           mangle: {
             properties: false

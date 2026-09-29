@@ -164,7 +164,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - Test security-relevant changes with a **real non-admin Nextcloud account** (temporary, deleted afterwards);
   an admin session hides permission bugs.
 - Deploying to a Nextcloud container: stage into a **fresh empty directory** every time (a reused staging
-  directory once overwrote hotfixes with stale files), copy `lib/`, `appinfo/`, `js/dist/`, `chown` to
+  directory once overwrote hotfixes with stale files), copy `lib/`, `appinfo/`, `js/dist/` (with `chunks/`), `chown` to
   `www-data`, run `occ upgrade`, then compare `sha1sum` of the files with the repo. PHP changes take ~60 s
   to show up (opcache revalidation).
 - The Bash tool can choke on heredocs with quotes or backticks; write helper scripts to files instead.

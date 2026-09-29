@@ -131,13 +131,6 @@ class FeeMapper extends QBMapper {
         return $this->findEntities($qb);
     }
 
-    public function findByStatus(string $status): array {
-        $qb = $this->db->getQueryBuilder();
-        $qb->select('*')
-            ->from($this->getTableName())
-            ->where($qb->expr()->eq('status', $qb->createNamedParameter($status)));
-        return $this->findEntities($qb);
-    }
 
     /**
      * @param string[] $statuses
