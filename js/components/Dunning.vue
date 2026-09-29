@@ -6,7 +6,7 @@
   <div class="dunning">
     <h2>{{ t('verein', 'Payment reminders') }}</h2>
     <p class="hint">
-      {{ t('verein', 'For unpaid fees past their due date, this creates one letter per person and raises the reminder level: payment reminder → second reminder → final notice. Anyone who received a letter recently is skipped, so the run can safely be repeated. The app sends nothing – you get the letters as a PDF to print or send.') }}
+      {{ t('verein', 'For unpaid fees past their due date, this creates one letter per person and raises the reminder level: payment reminder → second reminder → final notice. Anyone who received a letter recently is skipped, so the run can safely be repeated. Members with an email address can get their letter by email; everyone else gets it as a PDF to print.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
@@ -22,6 +22,9 @@
         <span>{{ t('verein', 'Payment deadline in the letter (days)') }}</span>
         <input v-model.number="deadlineDays" type="number" min="1" max="90" class="form-input" required />
       </label>
+      <NcCheckboxRadioSwitch class="by-email" type="checkbox" :model-value="byEmail" @update:model-value="byEmail = $event">
+        {{ t('verein', 'Send the letters by email where an email address is known (the rest as PDF)') }}
+      </NcCheckboxRadioSwitch>
       <div class="buttons">
         <NcButton type="submit" variant="secondary" :disabled="busy">{{ t('verein', 'Preview') }}</NcButton>
         <NcButton
@@ -46,6 +49,10 @@
       <p v-if="!plan.hasAccount" class="warning-text">
         {{ t('verein', 'No bank account is set for this club (“Club” tab), so the letters will not include bank details.') }}
       </p>
+      <p v-if="byEmail" class="hint">
+        {{ n('verein', '%n letter goes out by email, {print} as PDF.', '%n letters go out by email, {print} as PDF.', withEmail, { print: plan.included.length - withEmail }) }}
+        {{ t('verein', 'The emails are sent through the mail server set up in Nextcloud (Administration settings → Basic settings).') }}
+      </p>
       <p v-if="withoutAddress" class="warning-text">
         {{ n('verein', '%n person without a complete address – their letter cannot be sent by post.', '%n people without a complete address – their letters cannot be sent by post.', withoutAddress) }}
       </p>
@@ -54,11 +61,12 @@
         <summary>{{ t('verein', 'Who gets a letter') }}</summary>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Unpaid') }}</th></tr></thead>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Delivery') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Unpaid') }}</th></tr></thead>
             <tbody>
               <tr v-for="e in plan.included" :key="e.memberId">
                 <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> ({{ t('verein', 'no address') }})</span></td>
                 <td>{{ e.levelLabel }}</td>
+                <td>{{ byEmail && e.hasEmail ? t('verein', 'Email') : t('verein', 'PDF') }}</td>
                 <td>{{ e.fees.map(f => f.period || f.description).join(', ') }}</td>
                 <td class="num">{{ money(e.total) }}</td>
               </tr>
@@ -86,6 +94,7 @@
 import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import { t, n } from '@nextcloud/l10n'
 import { formatMoney } from '../format'
 import { api } from '../api'
@@ -101,7 +110,7 @@ export const DUNNING_LEVELS = {
 
 export default {
   name: 'Dunning',
-  components: { NcButton },
+  components: { NcButton, NcCheckboxRadioSwitch },
   emits: ['done'],
   setup(props, { emit }) {
     const overdueDays = ref(14)
@@ -110,9 +119,12 @@ export default {
     const plan = ref(null)
     const busy = ref(false)
     const lastFeeIds = ref([])
+    const byEmail = ref(true)
 
     const params = () => ({ overdueDays: overdueDays.value, intervalDays: intervalDays.value })
-    const withoutAddress = computed(() => plan.value ? plan.value.included.filter(e => !e.hasAddress).length : 0)
+    const withEmail = computed(() => plan.value ? plan.value.included.filter(e => e.hasEmail).length : 0)
+    // only the letters that go by post need a postal address
+    const withoutAddress = computed(() => plan.value ? plan.value.included.filter(e => !e.hasAddress && !(byEmail.value && e.hasEmail)).length : 0)
 
     const preview = async () => {
       busy.value = true
@@ -159,7 +171,10 @@ export default {
     const run = async () => {
       if (!plan.value) return
       const count = plan.value.included.length
-      if (!(await confirmAction(t('verein', 'Create reminder letters'), n('verein', 'Create %n letter? The reminder level of these fees is raised; this cannot be undone automatically.', 'Create %n letters? The reminder level of these fees is raised; this cannot be undone automatically.', count), { labelConfirm: t('verein', 'Create letters'), severity: 'warning' }))) return
+      const emails = byEmail.value ? withEmail.value : 0
+      let question = n('verein', 'Create %n letter? The reminder level of these fees is raised; this cannot be undone automatically.', 'Create %n letters? The reminder level of these fees is raised; this cannot be undone automatically.', count)
+      if (emails) question += ' ' + n('verein', '%n of them is sent by email right away.', '%n of them are sent by email right away.', emails)
+      if (!(await confirmAction(t('verein', 'Create reminder letters'), question, { labelConfirm: t('verein', 'Create letters'), severity: 'warning' }))) return
       busy.value = true
       let result = null
       try {
@@ -173,15 +188,38 @@ export default {
       showSuccess(n('verein', '%n letter created', '%n letters created', result.dunned))
       plan.value = null
       emit('done')
-      if (result.feeIds && result.feeIds.length) {
-        lastFeeIds.value = result.feeIds
-        await download(result.feeIds)
+      if (!result.feeIds || !result.feeIds.length) return
+      lastFeeIds.value = result.feeIds
+      let printIds = result.feeIds
+      if (emails) {
+        printIds = await sendEmails(result.feeIds)
+      }
+      if (printIds.length) {
+        await download(printIds)
+      }
+    }
+
+    // returns the fee ids whose letters still have to be printed (no address, or the email failed)
+    const sendEmails = async (feeIds) => {
+      busy.value = true
+      try {
+        const r = (await api.post('dunning/send', { feeIds: feeIds.join(','), deadlineDays: deadlineDays.value })).data
+        if (r.sent.length) showSuccess(n('verein', '%n letter sent by email', '%n letters sent by email', r.sent.length))
+        if (r.failed.length) {
+          showError(n('verein', '%n email could not be sent – the letter is in the PDF instead. The Nextcloud administrator can check the mail server settings and the log.', '%n emails could not be sent – the letters are in the PDF instead. The Nextcloud administrator can check the mail server settings and the log.', r.failed.length))
+        }
+        return r.printFeeIds
+      } catch (error) {
+        showError(extractErrorMessage(error, t('verein', 'The emails could not be sent – all letters are in the PDF instead.')))
+        return feeIds
+      } finally {
+        busy.value = false
       }
     }
 
     const money = formatMoney
 
-    return { t, n, overdueDays, intervalDays, deadlineDays, plan, busy, lastFeeIds, withoutAddress, preview, run, download, money }
+    return { t, n, overdueDays, intervalDays, deadlineDays, plan, busy, lastFeeIds, byEmail, withEmail, withoutAddress, preview, run, download, money }
   }
 }
 </script>
@@ -199,6 +237,7 @@ export default {
 .warning-text { color: var(--color-error-text, var(--color-error)); }
 .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
+.by-email { grid-column: 1 / -1; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 .result { margin-top: 16px; }
 .summary { font-size: 15px; }

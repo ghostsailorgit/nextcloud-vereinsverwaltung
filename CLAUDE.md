@@ -122,7 +122,10 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 
 17. **Dunning** (`DunningService`): one letter per person over all their due fees, level = highest level so far + 1, capped at 3;
     deactivated/anonymized people and anyone dunned within `intervalDays` are skipped with a reason. Preview first, the run is one
-    statement per level in a transaction. Letters are generated on demand from the fees' current level; the app sends nothing.
+    statement per level in a transaction. Letters are generated on demand from the fees' current level. Sending them by email
+    (`DunningMailService`) goes only through Nextcloud's `IMailer` (the mail server the Nextcloud admin configured; the club
+    only sets sender name and reply-to) - never store SMTP credentials or build a mail transport in the app. Whoever cannot be
+    reached by email comes back as `printFeeIds` for the PDF; SMTP errors go to the log, not into responses.
 18. **Member import** (`MemberImportService`): never maps a column to `userId` (it drives rights), a role other than member only
     with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
     other clubs), unexpected errors per row are reported as "internal error" (translated), never with the exception text.

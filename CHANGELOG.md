@@ -4,6 +4,22 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.20.0-beta] - 2026-09-29
+
+### ✨ Neu
+- **Mahnschreiben per E-Mail:** Im Mahnwesen ist „Schreiben per E-Mail verschicken, wo eine E-Mail-Adresse bekannt ist“
+  angehakt. Nach dem Lauf bekommt jede Person mit Adresse eine E-Mail mit kurzem Text (Beiträge, offener Betrag,
+  Bankverbindung, Frist – derselbe Wortlaut wie im Brief) und ihr Schreiben als PDF-Anhang. Wer keine Adresse hat oder
+  wessen E-Mail nicht zugestellt werden konnte, landet automatisch im PDF zum Drucken; die Vorschau zeigt vorher je
+  Person die Zustellung.
+- Versendet wird über den Mailserver, den die Nextcloud-Administration unter **Verwaltungseinstellungen → Grundeinstellungen
+  → E-Mail-Server** einrichtet (mit Test-Mail dort). Die App speichert keine Zugangsdaten. Im Reiter „Verein“ gibt es dazu
+  **Absendername** und **Antwortadresse** je Verein.
+- Das Protokoll zählt verschickte, gescheiterte und nicht zustellbare E-Mails (ohne Adressen); der technische Grund eines
+  Fehlers steht im Nextcloud-Log.
+
+---
+
 ## [0.19.3-beta] - 2026-09-29
 
 Jede Seite und jeder Dialog in einer echten Nextcloud 34 durchgeklickt (englisch und deutsch, 1600, 1440, 1280, 1024

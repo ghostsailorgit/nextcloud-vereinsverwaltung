@@ -86,7 +86,8 @@ const ACTIONS = {
   anonymize: t('verein', 'anonymized'),
   mark_paid: t('verein', 'marked as paid'),
   flag_overdue: t('verein', 'marked as overdue'),
-  dunning: t('verein', 'reminder sent')
+  dunning: t('verein', 'reminder sent'),
+  dunning_email: t('verein', 'reminders sent by email')
 }
 
 const FIELDS = {
@@ -205,6 +206,12 @@ export default {
       if (e.action === 'dunning') {
         const levels = Object.entries(c.levels || {}).map(([label, count]) => `${count}× ${label}`).join(', ')
         return [{ text: n('verein', '%n letter', '%n letters', c.letters) + ' ' + n('verein', 'for %n fee, {total} in total', 'for %n fees, {total} in total', c.count, { total: money(c.total || 0) }) + (levels ? ' (' + levels + ')' : '') }]
+      }
+      if (e.action === 'dunning_email') {
+        const parts = [n('verein', '%n email sent', '%n emails sent', c.sent || 0)]
+        if (c.failed) parts.push(n('verein', '%n could not be sent', '%n could not be sent', c.failed))
+        if (c.withoutEmail) parts.push(n('verein', '%n without an email address', '%n without an email address', c.withoutEmail))
+        return [{ text: parts.join(', ') }]
       }
       if (e.action === 'mark_paid' || e.action === 'flag_overdue') {
         return [{ text: n('verein', '%n fee', '%n fees', c.count) }]

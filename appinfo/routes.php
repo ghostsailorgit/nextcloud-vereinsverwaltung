@@ -56,6 +56,7 @@ return [
         ['name' => 'dunning#preview', 'url' => '/dunning/preview', 'verb' => 'POST'],
         ['name' => 'dunning#run', 'url' => '/dunning', 'verb' => 'POST'],
         ['name' => 'dunning#letters', 'url' => '/dunning/letters', 'verb' => 'GET'],
+        ['name' => 'dunning#send', 'url' => '/dunning/send', 'verb' => 'POST'],
         ['name' => 'finance#create', 'url' => '/finance', 'verb' => 'POST'],
         ['name' => 'finance#update', 'url' => '/finance/{id}', 'verb' => 'PUT'],
         ['name' => 'finance#destroy', 'url' => '/finance/{id}', 'verb' => 'DELETE'],

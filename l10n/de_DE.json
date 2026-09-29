@@ -149,6 +149,7 @@
         "Delete this fee?": "Diesen Beitrag löschen?",
         "Delete this role?": "Diese Rolle löschen?",
         "Delete “{name}”": "„{name}“ löschen",
+        "Delivery": "Zustellung",
         "Description": "Beschreibung",
         "Description must be at least 2 characters long": "Beschreibung muss mindestens 2 Zeichen lang sein",
         "Description must not be longer than 500 characters": "Beschreibung darf maximal 500 Zeichen lang sein",
@@ -176,6 +177,7 @@
         "Edit role": "Rolle bearbeiten",
         "Email": "E-Mail",
         "Email is invalid": "E-Mail ist ungültig",
+        "Emails from the club": "E-Mails des Vereins",
         "Enter a name or account name": "Name oder Kontoname eingeben",
         "Error": "Fehler",
         "Error activating the member": "Fehler beim Aktivieren des Mitglieds",
@@ -230,7 +232,7 @@
         "Finances": "Finanzen",
         "First name": "Vorname",
         "Flag overdue fees": "Überfällige markieren",
-        "For unpaid fees past their due date, this creates one letter per person and raises the reminder level: payment reminder → second reminder → final notice. Anyone who received a letter recently is skipped, so the run can safely be repeated. The app sends nothing – you get the letters as a PDF to print or send.": "Erstellt für offene Beiträge, deren Fälligkeit verstrichen ist, ein Schreiben je Person und erhöht die Mahnstufe: Zahlungserinnerung → 1. Mahnung → 2. und letzte Mahnung. Wer vor kurzem schon ein Schreiben bekommen hat, wird übersprungen, ein Lauf lässt sich also gefahrlos wiederholen. Die App verschickt nichts – die Schreiben kommen als PDF zum Drucken oder Versenden.",
+        "For unpaid fees past their due date, this creates one letter per person and raises the reminder level: payment reminder → second reminder → final notice. Anyone who received a letter recently is skipped, so the run can safely be repeated. Members with an email address can get their letter by email; everyone else gets it as a PDF to print.": "Erstellt für offene Beiträge, deren Fälligkeit verstrichen ist, ein Schreiben je Person und erhöht die Mahnstufe: Zahlungserinnerung → 1. Mahnung → 2. und letzte Mahnung. Wer vor kurzem schon ein Schreiben bekommen hat, wird übersprungen, ein Lauf lässt sich also gefahrlos wiederholen. Mitglieder mit E-Mail-Adresse können ihr Schreiben per E-Mail bekommen, alle anderen bekommen es als PDF zum Drucken.",
         "Former": "Ehemalig",
         "Founding member": "Gründungsmitglied",
         "IBAN is invalid": "IBAN ist ungültig",
@@ -357,6 +359,7 @@
         "Overdue by at least (days)": "Fällig seit mindestens (Tage)",
         "Overdue fees": "Überfällige Beiträge",
         "Overview and statistics of the club": "Übersicht und Statistiken der Vereinsverwaltung",
+        "PDF": "PDF",
         "PDF export": "PDF-Export",
         "PDF export failed": "PDF-Export fehlgeschlagen",
         "PDF export is not available: the TCPDF library is missing on the server. Please ask the administrator to install the app from the release archive or to run %s in the app folder.": "PDF-Export nicht verfügbar: Die Bibliothek TCPDF fehlt auf dem Server. Bitte den Administrator, die App aus dem Release-Archiv zu installieren oder im App-Ordner %s auszuführen.",
@@ -400,6 +403,7 @@
         "Record": "Betrifft",
         "Reference {reference}, signed on {date}": "Referenz {reference}, unterschrieben am {date}",
         "Reminder letters": "Mahnschreiben",
+        "Reminder letters can be sent by email. They go out through the mail server the Nextcloud administrator has set up (Administration settings → Basic settings → Email server), from its sender address; here you set the name recipients see and the address their replies go to.": "Mahnschreiben können per E-Mail verschickt werden. Sie gehen über den Mailserver, den die Nextcloud-Administration eingerichtet hat (Verwaltungseinstellungen → Grundeinstellungen → E-Mail-Server), mit dessen Absenderadresse; hier legst du fest, welchen Namen die Empfänger sehen und an welche Adresse ihre Antworten gehen.",
         "Reminder level {level}": "Mahnstufe {level}",
         "Reminder run failed": "Mahnlauf fehlgeschlagen",
         "Remove": "Entfernen",
@@ -408,6 +412,7 @@
         "Remove personal data irreversibly (only once the person has left every club or is deceased)": "Personenbezogene Daten unwiderruflich entfernen (nur wenn die Person überall ausgetreten oder verstorben ist)",
         "Remove this member from the club? Their fees in this club are deleted as well; the person remains in other clubs.": "Soll dieses Mitglied aus dem Verein entfernt werden? Seine Beiträge in diesem Verein werden ebenfalls gelöscht; die Person bleibt in anderen Vereinen erhalten.",
         "Replaced or removed:": "Ersetzt bzw. entfernt werden:",
+        "Reply-to address": "Antwortadresse",
         "Result": "Ergebnis",
         "Revoke": "Entziehen",
         "Revoke all roles of {name} in this club?": "Alle Rollen von {name} in diesem Verein entziehen?",
@@ -439,6 +444,8 @@
         "Select member…": "Mitglied auswählen …",
         "Select role…": "Rolle auswählen …",
         "Select…": "Auswählen …",
+        "Send the letters by email where an email address is known (the rest as PDF)": "Schreiben per E-Mail verschicken, wo eine E-Mail-Adresse bekannt ist (der Rest als PDF)",
+        "Sender name": "Absendername",
         "Sep": "Sep",
         "Signed mandate (PDF)": "Unterschriebenes Mandat (PDF)",
         "Size": "Größe",
@@ -462,6 +469,8 @@
         "The creditor ID of the bank account is invalid (“Club” tab)": "Die Gläubiger-ID des Bankkontos ist ungültig (Reiter „Verein“)",
         "The data could not be loaded": "Die Daten konnten nicht geladen werden",
         "The date left must not be before the date joined": "Austrittsdatum darf nicht vor dem Eintrittsdatum liegen",
+        "The emails are sent through the mail server set up in Nextcloud (Administration settings → Basic settings).": "Die E-Mails gehen über den in Nextcloud eingerichteten Mailserver (Verwaltungseinstellungen → Grundeinstellungen).",
+        "The emails could not be sent – all letters are in the PDF instead.": "Die E-Mails konnten nicht verschickt werden – alle Schreiben sind stattdessen im PDF.",
         "The fee category belongs to another club": "Die Beitragskategorie gehört zu einem anderen Verein",
         "The fee category does not exist": "Die Beitragskategorie existiert nicht",
         "The fee category is still used by members": "Die Beitragskategorie wird noch von Mitgliedern verwendet",
@@ -471,6 +480,7 @@
         "The file is too large (at most 2 MB)": "Die Datei ist zu groß (höchstens 2 MB)",
         "The first line must contain the column headings": "Die erste Zeile muss die Spaltenüberschriften enthalten",
         "The first line must contain the column headings. Recognized headings include Title, First name, Last name, Street, Postal code, City, Email, IBAN, BIC, Date of birth, Date joined, Date left, Position, Fee category, Mandate reference, Date of signature, Founding member and Deceased – so the app's own member export can be imported too. Separator: semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. Everything is checked first; nothing is saved until you confirm.": "Erste Zeile = Spaltenüberschriften. Erkannt werden u. a. Anrede, Vorname, Name (oder Nachname), Straße, PLZ, Ort, E-Mail, IBAN, BIC, Geburtsdatum, Eintritt, Austritt, Funktion, Beitragskategorie, Mandatsreferenz, Mandatsdatum, Gründungsmitglied, Verstorben – also auch der eigene Mitglieder-Export. Trennzeichen Semikolon, Komma oder Tab; Datum als TT.MM.JJJJ oder JJJJ-MM-TT. Zuerst wird nur geprüft, nichts gespeichert.",
+        "The letter with all details is attached as a PDF.": "Das Schreiben mit allen Einzelheiten hängt als PDF an.",
         "The letters could not be created": "Die Schreiben konnten nicht erzeugt werden",
         "The member does not belong to this club": "Das Mitglied gehört nicht zu diesem Verein",
         "The member is deactivated – no fees are created for deactivated members": "Das Mitglied ist deaktiviert - für deaktivierte Mitglieder werden keine Beiträge angelegt",
@@ -480,8 +490,10 @@
         "The person is already a member of this club": "Die Person ist bereits Mitglied in diesem Verein",
         "The person is already anonymized": "Die Person ist bereits anonymisiert",
         "The person is still an active member of at least one club and cannot be anonymized": "Die Person ist noch aktives Mitglied in mindestens einem Verein und kann nicht anonymisiert werden",
+        "The reply-to address is not a valid email address": "Die Antwortadresse ist keine gültige E-Mail-Adresse",
         "The role is already assigned to this account": "Die Rolle ist diesem Konto bereits zugewiesen",
         "The roles and their permissions apply to all clubs and are maintained by Nextcloud administrators. Here you can assign them to accounts for {club}.": "Die Rollen und ihre Berechtigungen gelten für alle Vereine und werden von Nextcloud-Administratoren gepflegt. Hier kannst du sie Konten für {club} zuweisen.",
+        "The sender name may have at most 100 characters and no line breaks": "Der Absendername darf höchstens 100 Zeichen und keine Zeilenumbrüche haben",
         "There are no reminder letters for these fees (paid, canceled or no reminder sent yet)": "Für diese Beiträge gibt es keine Mahnschreiben (bezahlt, storniert oder noch nicht gemahnt)",
         "This fee category already exists": "Diese Beitragskategorie gibt es schon",
         "This is the data the club has stored about you. If anything is wrong, please contact the board.": "Das sind die Daten, die der Verein über dich gespeichert hat (Selbstauskunft). Stimmt etwas nicht, wende dich bitte an den Vorstand.",
@@ -521,6 +533,18 @@
             "%n schon vorhanden",
             "%n schon vorhanden"
         ],
+        "_%n could not be sent_::_%n could not be sent_": [
+            "%n nicht zustellbar",
+            "%n nicht zustellbar"
+        ],
+        "_%n email could not be sent – the letter is in the PDF instead. The Nextcloud administrator can check the mail server settings and the log._::_%n emails could not be sent – the letters are in the PDF instead. The Nextcloud administrator can check the mail server settings and the log._": [
+            "%n E-Mail konnte nicht verschickt werden – das Schreiben ist stattdessen im PDF. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen.",
+            "%n E-Mails konnten nicht verschickt werden – die Schreiben sind stattdessen im PDF. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen."
+        ],
+        "_%n email sent_::_%n emails sent_": [
+            "%n E-Mail verschickt",
+            "%n E-Mails verschickt"
+        ],
         "_%n entry_::_%n entries_": [
             "%n Eintrag",
             "%n Einträge"
@@ -549,6 +573,14 @@
             "%n Schreiben erstellt",
             "%n Schreiben erstellt"
         ],
+        "_%n letter goes out by email, {print} as PDF._::_%n letters go out by email, {print} as PDF._": [
+            "%n Schreiben geht per E-Mail raus, {print} als PDF.",
+            "%n Schreiben gehen per E-Mail raus, {print} als PDF."
+        ],
+        "_%n letter sent by email_::_%n letters sent by email_": [
+            "%n Schreiben per E-Mail verschickt",
+            "%n Schreiben per E-Mail verschickt"
+        ],
         "_%n letter, total {total}_::_%n letters, total {total}_": [
             "%n Schreiben über zusammen {total}",
             "%n Schreiben über zusammen {total}"
@@ -565,6 +597,10 @@
             "%n Mitglied importiert",
             "%n Mitglieder importiert"
         ],
+        "_%n of them is sent by email right away._::_%n of them are sent by email right away._": [
+            "Davon geht %n sofort per E-Mail raus.",
+            "Davon gehen %n sofort per E-Mail raus."
+        ],
         "_%n person without a complete address – their letter cannot be sent by post._::_%n people without a complete address – their letters cannot be sent by post._": [
             "%n Person ohne vollständige Anschrift – ihr Schreiben lässt sich nicht per Post versenden.",
             "%n Personen ohne vollständige Anschrift – deren Schreiben lassen sich nicht per Post versenden."
@@ -576,6 +612,10 @@
         "_%n with errors_::_%n with errors_": [
             "%n fehlerhaft",
             "%n fehlerhaft"
+        ],
+        "_%n without an email address_::_%n without an email address_": [
+            "%n ohne E-Mail-Adresse",
+            "%n ohne E-Mail-Adresse"
         ],
         "_%n year a member_::_%n years a member_": [
             "%n Jahr dabei",
@@ -660,6 +700,7 @@
         "due since": "fällig seit",
         "due {date}": "fällig {date}",
         "e.g. adults": "z. B. Erwachsene",
+        "e.g. board@example.org": "z. B. vorstand@example.org",
         "e.g. club account": "z.B. Vereinskonto",
         "empty": "leer",
         "empty = automatic": "leer = automatisch",
@@ -707,6 +748,7 @@
         "recorded (content not logged)": "erfasst (Inhalt nicht protokolliert)",
         "reminder sent": "gemahnt",
         "reminder-letters_%s.pdf": "mahnschreiben_%s.pdf",
+        "reminders sent by email": "Mahnschreiben per E-Mail verschickt",
         "skipped: ": "übersprungen: ",
         "the personal data in older entries of the audit log": "die personenbezogenen Angaben in älteren Einträgen des Änderungsprotokolls",
         "turns {age}": "wird {age}",

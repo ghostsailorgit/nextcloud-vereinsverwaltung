@@ -123,8 +123,17 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   des eingestellten Abstands schon ein Schreiben bekommen haben - ein Lauf lässt sich deshalb gefahrlos wiederholen.
   Vorschau zuerst, der Lauf setzt Stufe und Datum in einer Transaktion (je Stufe eine SQL-Anweisung) und macht offene
   Beiträge überfällig. Die Schreiben (`GET /dunning/letters`, PDF für DIN-Fensterumschläge, sortiert nach Nachname) nennen
-  die Bankverbindung des Standardkontos und lassen sich später erneut erzeugen, jeweils mit der aktuellen Stufe. Die App
-  verschickt nichts; bezahlte Beiträge behalten ihre Stufe als Verlauf.
+  die Bankverbindung des Standardkontos und lassen sich später erneut erzeugen, jeweils mit der aktuellen Stufe. Bezahlte
+  Beiträge behalten ihre Stufe als Verlauf.
+- **Mahnschreiben per E-Mail** (`DunningMailService`, `POST /dunning/send`, nach dem Lauf für genau dessen Beiträge): je Person
+  eine E-Mail mit kurzem Text (dieselben Absätze wie der Brief, `PdfExporter::dunningLetterTexts()`, in Nextclouds
+  E-Mail-Vorlage) und ihrem Schreiben als PDF-Anhang. Versendet wird über Nextclouds eigenen Mailserver (öffentliche
+  Schnittstelle `IMailer`; eingerichtet von der Nextcloud-Administration unter Grundeinstellungen → E-Mail-Server) mit dessen
+  Absenderadresse - die App speichert keine Zugangsdaten und braucht keinen eigenen SMTP-Code. Je Verein kommen nur
+  Absendername und Antwortadresse dazu (`verein_clubs.mail_sender_name`, `mail_reply_to`, Reiter „Verein“). Wer keine
+  gültige Adresse hat oder wessen E-Mail scheitert, geht nicht verloren: deren Beitrags-IDs kommen als `printFeeIds` zurück,
+  die Oberfläche lädt genau diese Schreiben als PDF. Der Grund eines Fehlers (SMTP-Antwort) steht nur im Nextcloud-Log, das
+  Protokoll zählt verschickt/gescheitert/ohne Adresse (Aktion `dunning_email`, keine Adressen).
 
 ## Mitgliederimport
 CSV-Import (`MemberImportService`, Knopf „CSV importieren“ im Reiter „Mitglieder“, Recht „Mitglieder verwalten“). Die Oberfläche

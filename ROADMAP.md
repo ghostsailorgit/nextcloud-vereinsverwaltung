@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.19.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.20.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -9,7 +9,7 @@ Stand: Version 0.19.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | Mehrere Vereine | Vereine, Mitgliedschaften (eine Person in mehreren Vereinen), Bankkonten, Rechte je Verein |
 | Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung |
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
-| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben als PDF), Mitglieder deaktivieren |
+| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben per E-Mail über den Nextcloud-Mailserver oder als PDF), Mitglieder deaktivieren |
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, in der CI gegen das offizielle Schema geprüft, SEPA-Zeichensatz, Einzug nie vor Fälligkeit, Einzugsdatum nach Bankarbeitstagen, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge mit Grund, „bezahlt“-Markierung nach dem Export |
 | Kalender | Geburtstage und Jubiläen je Verein als App-Kalender über Nextclouds öffentliche Schnittstelle, sichtbar nur für ausgewählte Gruppen |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
@@ -24,7 +24,7 @@ Stand: Version 0.19.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 - **Veröffentlichung im App Store:** App signieren und Archiv aus `release.yml` hochladen (englische `info.xml` mit
   Beschreibung, Doku-Links und Bildschirmfotos ist fertig).
-- Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).
+- Vorabankündigung (Pre-Notification) vor dem SEPA-Einzug per E-Mail, auf demselben Weg wie die Mahnschreiben.
 
 ## Ideen ohne Termin
 
