@@ -5,11 +5,29 @@
 -->
 <template>
   <div class="finance-container">
-    <FeeRun v-if="canWriteFinance" @done="fetchFees" />
-    <Dunning v-if="canWriteFinance" @done="fetchFees" />
+    <!-- Statistics -->
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-label">{{ t('verein', 'Total outstanding') }}</div>
+        <div class="stat-value">{{ formatMoney(totalOutstanding) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">{{ t('verein', 'Paid') }}</div>
+        <div class="stat-value">{{ formatMoney(totalPaid) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">{{ t('verein', 'Number of fees') }}</div>
+        <div class="stat-value">{{ fees.length }}</div>
+      </div>
+    </div>
 
-    <!-- Form für neue Gebühr -->
-    <div class="form-section">
+    <div v-if="canWriteFinance" class="tools">
+      <FeeRun @done="fetchFees" />
+      <Dunning @done="fetchFees" />
+    </div>
+
+    <!-- Add a single fee: opened from the list header -->
+    <div v-if="canWriteFinance && showForm" ref="formSection" class="form-section">
       <h2>{{ t('verein', 'Add fee') }}</h2>
       <form @submit.prevent="addFee" class="fee-form">
         <NcSelect
@@ -32,7 +50,7 @@
           <span>{{ t('verein', 'Due date') }}</span>
           <input
             v-model="formData.dueDate"
-            type="datetime-local"
+            type="date"
             required
             class="form-input"
           />
@@ -45,26 +63,13 @@
           :input-label="t('verein', 'Status')"
           :clearable="false"
         />
-        <NcButton type="submit" variant="primary" :disabled="loading">
-          {{ loading ? t('verein', 'Saving…') : t('verein', 'Add') }}
-        </NcButton>
+        <div class="form-actions">
+          <NcButton type="submit" variant="primary" :disabled="loading">
+            {{ loading ? t('verein', 'Saving…') : t('verein', 'Add') }}
+          </NcButton>
+          <NcButton type="button" variant="tertiary" @click="showForm = false">{{ t('verein', 'Cancel') }}</NcButton>
+        </div>
       </form>
-    </div>
-
-    <!-- Statistics -->
-    <div class="stats-section">
-      <div class="stat-card">
-        <div class="stat-label">{{ t('verein', 'Total outstanding') }}</div>
-        <div class="stat-value">{{ formatMoney(totalOutstanding) }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">{{ t('verein', 'Paid') }}</div>
-        <div class="stat-value">{{ formatMoney(totalPaid) }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">{{ t('verein', 'Number of fees') }}</div>
-        <div class="stat-value">{{ fees.length }}</div>
-      </div>
     </div>
 
     <!-- Fees Table -->
@@ -72,11 +77,12 @@
       <div class="section-header">
         <h2>{{ t('verein', 'Fee list') }}</h2>
         <div class="export-buttons">
+          <NcButton v-if="canWriteFinance" variant="primary" @click="openForm">{{ t('verein', 'Add fee') }}</NcButton>
           <ExportButtons resource="fees" inline />
         </div>
       </div>
       <div class="table-wrapper">
-        <table class="fees-table">
+        <table class="fees-table sticky-actions">
           <thead>
             <tr>
               <th>{{ t('verein', 'Member') }}</th>
@@ -84,7 +90,7 @@
               <th>{{ t('verein', 'Status') }}</th>
               <th>{{ t('verein', 'Due on') }}</th>
               <th>{{ t('verein', 'Paid on') }}</th>
-              <th>{{ t('verein', 'Actions') }}</th>
+              <th v-if="canWriteFinance">{{ t('verein', 'Actions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -119,42 +125,33 @@
               <td v-if="editingId === fee.id" class="cell-field">
                 <label class="date-field">
                   <span>{{ t('verein', 'Due date') }}</span>
-                  <input v-model="editData.dueDate" type="datetime-local" class="form-input-inline" />
+                  <input v-model="editData.dueDate" type="date" class="form-input-inline" />
                 </label>
               </td>
 
               <td>{{ fee.paidDate ? formatDate(fee.paidDate) : '-' }}</td>
 
-              <td class="actions">
-                <NcButton
-                  v-if="editingId !== fee.id"
-                  @click="startEdit(fee)"
-                  variant="secondary"
-                >
-                  {{ t('verein', 'Edit') }}
-                </NcButton>
-                <NcButton
-                  v-else
-                  @click="saveEdit(fee.id)"
-                  variant="primary"
-                  :disabled="loading"
-                >
-                  {{ t('verein', 'Save') }}
-                </NcButton>
-                <NcButton
-                  v-if="editingId === fee.id"
-                  @click="cancelEdit"
-                  variant="tertiary"
-                >
-                  {{ t('verein', 'Cancel') }}
-                </NcButton>
-                <NcButton
-                  @click="deleteFee(fee.id)"
-                  variant="error"
-                  :disabled="loading"
-                >
-                  {{ t('verein', 'Delete') }}
-                </NcButton>
+              <td v-if="canWriteFinance">
+                <div class="actions">
+                  <template v-if="editingId !== fee.id">
+                    <NcButton @click="startEdit(fee)" variant="secondary">
+                      {{ t('verein', 'Edit') }}
+                    </NcButton>
+                    <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: getMemberName(fee.memberId) })" :disabled="loading">
+                      <NcActionButton close-after-click @click="deleteFee(fee.id)">
+                        {{ t('verein', 'Delete') }}
+                      </NcActionButton>
+                    </NcActions>
+                  </template>
+                  <template v-else>
+                    <NcButton @click="saveEdit(fee.id)" variant="primary" :disabled="loading">
+                      {{ t('verein', 'Save') }}
+                    </NcButton>
+                    <NcButton @click="cancelEdit" variant="tertiary">
+                      {{ t('verein', 'Cancel') }}
+                    </NcButton>
+                  </template>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -166,13 +163,15 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
 import { formatMoney, formatDate } from '../format'
+import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcActions from '@nextcloud/vue/components/NcActions'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -185,7 +184,7 @@ import { absoluteUrl as generateUrl } from '../absoluteUrl'
 
 export default {
   name: 'Finance',
-  components: { NcButton, NcTextField, NcSelect, ExportButtons, FeeRun, Dunning },
+  components: { NcActionButton, NcActions, NcButton, NcTextField, NcSelect, ExportButtons, FeeRun, Dunning },
   setup() {
     const canWriteFinance = computed(() => can('verein.finance.write'))
     const fees = ref([])
@@ -238,12 +237,20 @@ export default {
       }
     }
 
+    const showForm = ref(false)
+    const formSection = ref(null)
+    const openForm = () => {
+      showForm.value = true
+      nextTick(() => formSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    }
+
     const addFee = async () => {
       loading.value = true
       try {
         await api.post('finance', formData.value)
         formData.value = { memberId: '', amount: '', status: 'open', dueDate: '' }
         showSuccess(t('verein', 'Fee added'))
+        showForm.value = false
         await fetchFees()
       } catch (error) {
         console.error('Error adding fee:', error)
@@ -255,7 +262,8 @@ export default {
 
     const startEdit = (fee) => {
       editingId.value = fee.id
-      editData.value = { ...fee }
+      // a due date is a day (the column is a datetime, the fee run stores midnight)
+      editData.value = { ...fee, dueDate: (fee.dueDate || '').slice(0, 10) }
     }
 
     const saveEdit = async (id) => {
@@ -330,6 +338,9 @@ export default {
     return {
       t,
       canWriteFinance,
+      showForm,
+      formSection,
+      openForm,
       fetchFees,
       fees,
       members,
@@ -359,42 +370,20 @@ export default {
 
 <style scoped lang="scss">
 .finance-container {
-  /* Use full width with responsive layout */
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-
-  @media (min-width: 1200px) {
-    /* two-column layout for wide screens: form on the left, stats+table
-       stacked on the right. Explicit placement is required here - with 3
-       direct children (form/stats/table) but only 2 grid columns, default
-       grid auto-flow wraps the table onto a new row starting back at
-       column 1, trapping it in the narrow 320px track instead of the wide
-       one (it then only grows via its own internal horizontal scrollbar). */
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 2rem;
-    align-items: start;
-  }
 }
 
-@media (min-width: 1200px) {
-  .form-section {
-    grid-column: 1;
-    grid-row: 1 / -1;
-  }
+/* annual fee run and payment reminders next to each other when there is room */
+.tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  gap: 2rem;
+  align-items: start;
 
-  .stats-section {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .table-section {
-    grid-column: 2;
-    grid-row: 2;
-  }
+  > * { margin-bottom: 0; min-width: 0; }
 }
 
 .form-section,
@@ -404,6 +393,10 @@ export default {
   padding: 24px;
   margin-bottom: 20px;
   border: 1px solid var(--color-border);
+
+  @media (max-width: 600px) {
+    padding: 16px 12px;
+  }
   box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
 
   h2 {
@@ -414,11 +407,23 @@ export default {
   }
 }
 
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
 .fee-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: end;
+
+  /* NcSelect's own min-width (260px) is wider than a grid cell */
+  :deep(.v-select.select) {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .date-field {
@@ -502,6 +507,7 @@ export default {
 
 .export-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -527,12 +533,13 @@ export default {
       border-bottom: 1px solid var(--color-border);
       transition: background 0.2s;
 
+      /* the row color is a variable so the sticky actions cell can paint exactly the same (App.vue) */
       &:hover {
-        background: var(--color-background-hover);
+        --row-tint: var(--color-background-hover);
       }
 
       &.editing {
-        background: var(--color-primary-light);
+        --row-tint: var(--color-primary-light);
       }
 
       &.paid {
@@ -540,7 +547,7 @@ export default {
       }
 
       &.overdue {
-        background: var(--color-error-light);
+        --row-tint: var(--color-error-light);
       }
 
       td {
@@ -590,8 +597,8 @@ export default {
 
 .actions {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
 }
 
 .empty-state {

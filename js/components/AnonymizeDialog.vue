@@ -10,7 +10,7 @@
     @update:open="(v) => { if (!v) close() }"
   >
     <div v-if="member" class="anonymize-dialog">
-      <p class="warning">
+      <p class="warning-text">
         <strong>{{ fullName }}</strong> {{ t('verein', 'will be anonymized irreversibly. This cannot be undone in the app; only restoring an older backup would bring the data back, and all later changes would be lost.') }}
       </p>
       <p>{{ t('verein', 'Replaced or removed:') }}</p>
@@ -92,6 +92,6 @@ export default {
 
 <style scoped>
 .anonymize-dialog { padding: 0 4px 8px; }
-.warning { color: var(--color-error-text, var(--color-error)); }
+.warning-text { color: var(--color-error-text, var(--color-error)); }
 ul { margin: 4px 0 12px 20px; list-style: disc; }
 </style>

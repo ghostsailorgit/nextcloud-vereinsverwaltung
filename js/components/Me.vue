@@ -6,7 +6,7 @@
   <div class="me-page">
     <h2>{{ t('verein', 'My data') }}</h2>
     <p v-if="loading">{{ t('verein', 'Loading…') }}</p>
-    <p v-else-if="error" class="error">{{ error }}</p>
+    <p v-else-if="error" class="error-text">{{ error }}</p>
 
     <template v-else-if="data && data.linked">
       <p class="hint">
@@ -46,18 +46,20 @@
 
       <div class="card">
         <h3>{{ t('verein', 'Fees') }}</h3>
-        <table v-if="data.fees.length">
-          <thead><tr><th>{{ t('verein', 'Club') }}</th><th>{{ t('verein', 'Due') }}</th><th>{{ t('verein', 'Amount') }}</th><th>{{ t('verein', 'Status') }}</th><th>{{ t('verein', 'Comment') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="(f, i) in data.fees" :key="i">
-              <td>{{ f.club }}</td>
-              <td>{{ formatDate(f.dueDate) }}</td>
-              <td>{{ formatMoney(f.amount) }}</td>
-              <td>{{ statusLabel(f.status) }}</td>
-              <td>{{ f.description || '' }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div v-if="data.fees.length" class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Club') }}</th><th>{{ t('verein', 'Due') }}</th><th>{{ t('verein', 'Amount') }}</th><th>{{ t('verein', 'Status') }}</th><th>{{ t('verein', 'Comment') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="(f, i) in data.fees" :key="i">
+                <td>{{ f.club }}</td>
+                <td>{{ formatDate(f.dueDate) }}</td>
+                <td>{{ formatMoney(f.amount) }}</td>
+                <td>{{ statusLabel(f.status) }}</td>
+                <td>{{ f.description || '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <p v-else class="hint">{{ t('verein', 'No fees recorded.') }}</p>
       </div>
 
@@ -141,7 +143,7 @@ dd { margin: 0; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--color-border); }
 .hint { color: var(--color-text-maxcontrast); }
-.error { color: var(--color-error); }
+.error-text { color: var(--color-error); }
 .actions { display: flex; gap: 8px; }
 .badge { font-size: 12px; padding: 2px 8px; border-radius: 8px; margin-left: 8px; }
 .badge.active { background: var(--color-success); color: #fff; }

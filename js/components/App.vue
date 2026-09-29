@@ -206,5 +206,45 @@ export default {
 .verein-container {
   padding: 2rem;
   width: 100%;
+
+  @media (max-width: 600px) {
+    padding: 12px 8px;
+  }
+}
+</style>
+
+<style lang="scss">
+/* One heading scale for all tabs: Nextcloud's defaults for h2/h3 inside app content are display sizes (26-28px),
+   which some tabs used and others overrode with 18px. Components can still set their own (scoped rules win). */
+.verein-container {
+  h2 { font-size: 22px; line-height: 1.3; margin: 0 0 16px; }
+  h3 { font-size: 18px; line-height: 1.3; margin: 0 0 12px; }
+  h4 { font-size: 16px; line-height: 1.3; margin: 16px 0 8px; }
+
+  /* Nextcloud's core CSS sets white-space: nowrap on every table, so no cell wrapped and wide tables pushed
+     the whole page sideways. Cells wrap again; what must stay on one line says so itself. */
+  table { white-space: normal; }
+
+  /* every table sits in one of these, so a table that is still too wide (phones) scrolls on its own */
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+
+  /* long lists (members, fees): the actions column stays in view while the table scrolls sideways */
+  /* rows set their color as --row-tint; the sticky cell lays the same tint over an opaque background,
+     otherwise a semi-transparent row color showed twice (or the scrolled content shone through) */
+  .sticky-actions {
+    tbody tr { background: var(--row-tint, transparent); }
+    /* one line per row; the list scrolls sideways instead (headings may wrap: "Member since" is wider than "21 years") */
+    td { white-space: nowrap; }
+    th:last-child,
+    td:last-child {
+      position: sticky;
+      right: 0;
+      box-shadow: -6px 0 6px -6px var(--color-box-shadow, rgba(0, 0, 0, 0.2));
+    }
+    td:last-child {
+      background: linear-gradient(var(--row-tint, transparent), var(--row-tint, transparent)), var(--color-main-background);
+    }
+    thead th:last-child { background: var(--color-background-hover); }
+  }
 }
 </style>

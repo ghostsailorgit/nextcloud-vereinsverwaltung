@@ -4,7 +4,7 @@
   - SPDX-License-Identifier: AGPL-3.0-only
 -->
 <template>
-  <div class="members-container" :class="{ 'no-form': !canManage }">
+  <div class="members-container">
     <!-- Alert Komponente -->
     <Alert
       ref="alertRef"
@@ -13,8 +13,8 @@
       :errors="alertErrors"
     />
 
-    <!-- Form für neues/zu bearbeitendes Mitglied -->
-    <div v-if="canManage" class="form-section">
+    <!-- Add/edit form: only open while adding or editing, so the list gets the full width -->
+    <div v-if="canManage && showForm" ref="formSection" class="form-section">
       <h2>{{ editingId ? t('verein', 'Edit member') : t('verein', 'Add member') }}</h2>
 
       <!-- Add a person who is already a member of another club (no duplicate) -->
@@ -63,7 +63,7 @@
           :model-value="formData.name"
           @update:model-value="formData.name = $event"
           type="text"
-          :label="t('verein', 'Name')"
+          :label="t('verein', 'Last name')"
           placeholder="Mustermann"
           required
         />
@@ -136,6 +136,7 @@
         />
         <NcSelect
           v-model="formData.feeRateId"
+          class="fee-rate-select"
           :options="feeRateOptions"
           :reduce="r => r.id"
           label="label"
@@ -191,7 +192,7 @@
           <NcButton type="submit" variant="primary" :disabled="loading">
             {{ loading ? t('verein', 'Saving…') : (editingId ? t('verein', 'Save') : t('verein', 'Add')) }}
           </NcButton>
-          <NcButton v-if="editingId" type="button" variant="tertiary" @click="cancelEdit">
+          <NcButton type="button" variant="tertiary" @click="cancelEdit">
             {{ t('verein', 'Cancel') }}
           </NcButton>
         </div>
@@ -199,12 +200,15 @@
     </div>
 
     <!-- Members Table -->
-    <MemberImport v-if="canManage && showImport" class="import-section" @done="fetchMembers" />
+    <MemberImport v-if="canManage && showImport" @done="fetchMembers" />
 
     <div class="table-section">
       <div class="section-header">
         <h2>{{ t('verein', 'Member list') }}</h2>
         <div class="export-buttons">
+          <NcButton v-if="canManage" variant="primary" @click="startAdd">
+            {{ t('verein', 'Add member') }}
+          </NcButton>
           <NcButton v-if="canManage" variant="secondary" @click="showImport = !showImport">
             {{ showImport ? t('verein', 'Close import') : t('verein', 'Import CSV') }}
           </NcButton>
@@ -225,18 +229,17 @@
       </div>
 
       <div class="table-wrapper">
-        <table class="members-table">
+        <table class="members-table sticky-actions">
           <thead>
             <tr>
               <th>{{ t('verein', '#') }}</th>
               <th>{{ t('verein', 'Name') }}</th>
               <th>{{ t('verein', 'Email') }}</th>
               <th>{{ t('verein', 'City') }}</th>
-              <th>{{ t('verein', 'Nextcloud account') }}</th>
+              <th>{{ t('verein', 'Account') }}</th>
               <th>{{ t('verein', 'Age') }}</th>
               <th>{{ t('verein', 'Member since') }}</th>
               <th>{{ t('verein', 'Position') }}</th>
-              <th>{{ t('verein', 'Status') }}</th>
               <th>{{ t('verein', 'Actions') }}</th>
             </tr>
           </thead>
@@ -247,15 +250,15 @@
               <td>{{ member.email }}</td>
               <td>{{ member.city || '-' }}</td>
               <td>
-                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'bank account missing') }})</span></span>
+                <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'account no longer exists') }})</span></span>
                 <span v-else class="hint">–</span>
               </td>
               <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n year', '%n years', member.age) : '-' }}</td>
               <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n year', '%n years', member.membershipYears) : '-' }}</td>
               <td>
+                <!-- position plus the status where it is not simply "active" (one column less, so the list fits) -->
+                <div class="status-cell">
                 <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
-              </td>
-              <td class="status-cell">
                 <span v-if="member.deceased" class="status-badge deceased">{{ t('verein', 'Deceased') }}</span>
                 <span v-if="member.anonymizedAt" class="status-badge anonymized" :title="t('verein', 'Personal data was permanently removed')">{{ t('verein', 'Anonymized') }}</span>
                 <span v-else-if="member.isFormer" class="status-badge former">{{ t('verein', 'Former') }}</span>
@@ -264,54 +267,54 @@
                   class="status-badge deactivated"
                   :title="t('verein', 'No fees, no calendar events and no automatic permissions until the member is activated again')"
                 >{{ t('verein', 'Deactivated') }}</span>
-                <span v-else class="status-badge active">{{ t('verein', 'Active') }}</span>
                 <span v-if="member.foundingMember" class="status-badge founding" :title="t('verein', 'Founding member')">★</span>
+                </div>
               </td>
-              <td class="actions">
-                <NcButton v-if="canManage" @click="startEdit(member)" variant="secondary">
-                  {{ t('verein', 'Edit') }}
-                </NcButton>
-                <NcButton
-                  v-if="canManage && canManageRoles && member.deactivated"
-                  @click="activateMember(member.id)"
-                  variant="secondary"
-                  :disabled="loading"
-                >
-                  {{ t('verein', 'Activate') }}
-                </NcButton>
-                <NcButton
-                  v-else-if="canManage && canManageRoles"
-                  @click="deactivateMember(member.id)"
-                  variant="secondary"
-                  :disabled="loading"
-                >
-                  {{ t('verein', 'Deactivate') }}
-                </NcButton>
-                <NcButton
-                  v-if="canManage"
-                  @click="deleteMember(member.id)"
-                  variant="error"
-                  :disabled="loading"
-                >
-                  {{ t('verein', 'Remove from club') }}
-                </NcButton>
-                <NcButton
-                  variant="tertiary"
-                  :disabled="loading"
-                  :title="t('verein', 'All data stored about this person in this club, as a JSON file (right of access, Art. 15 GDPR)')"
-                  @click="exportMember(member)"
-                >
-                  {{ t('verein', 'Personal data export') }}
-                </NcButton>
-                <NcButton
-                  v-if="canManageRoles && member.isFormer && !member.anonymizedAt"
-                  variant="error"
-                  :disabled="loading"
-                  :title="t('verein', 'Remove personal data irreversibly (only once the person has left every club or is deceased)')"
-                  @click="anonymizeTarget = member"
-                >
-                  {{ t('verein', 'Anonymize') }}
-                </NcButton>
+              <td>
+                <!-- Edit stays visible, everything else goes into the "…" menu so a row stays one line high -->
+                <div class="actions">
+                  <NcButton v-if="canManage" @click="startEdit(member)" variant="secondary">
+                    {{ t('verein', 'Edit') }}
+                  </NcButton>
+                  <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: displayName(member) })" :disabled="loading">
+                    <NcActionButton
+                      v-if="canManage && canManageRoles && member.deactivated"
+                      close-after-click
+                      @click="activateMember(member.id)"
+                    >
+                      {{ t('verein', 'Activate') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      v-else-if="canManage && canManageRoles"
+                      close-after-click
+                      @click="deactivateMember(member.id)"
+                    >
+                      {{ t('verein', 'Deactivate') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      close-after-click
+                      :description="t('verein', 'All data stored about this person in this club, as a JSON file (right of access, Art. 15 GDPR)')"
+                      @click="exportMember(member)"
+                    >
+                      {{ t('verein', 'Personal data export') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      v-if="canManage"
+                      close-after-click
+                      @click="deleteMember(member.id)"
+                    >
+                      {{ t('verein', 'Remove from club') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      v-if="canManageRoles && member.isFormer && !member.anonymizedAt"
+                      close-after-click
+                      :description="t('verein', 'Remove personal data irreversibly (only once the person has left every club or is deceased)')"
+                      @click="anonymizeTarget = member"
+                    >
+                      {{ t('verein', 'Anonymize') }}
+                    </NcActionButton>
+                  </NcActions>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -329,7 +332,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
@@ -338,6 +341,8 @@ import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate, salutationLabel } from '../format'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
+import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcActions from '@nextcloud/vue/components/NcActions'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -373,6 +378,8 @@ const emptyFormData = () => ({
 export default {
   name: 'Members',
   components: {
+    NcActionButton,
+    NcActions,
     NcButton,
     NcTextField,
     NcSelect,
@@ -593,9 +600,32 @@ export default {
       }
     }
 
+    const showForm = ref(false)
+    const formSection = ref(null)
+    const revealForm = () => {
+      showForm.value = true
+      nextTick(() => formSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    }
+
+    // The API sends null for empty fields; NcTextField renders nothing at all for a null value
+    // (the BIC and mandate reference fields disappeared), so empty fields get the form's default instead.
+    const fillForm = (member) => {
+      const defaults = emptyFormData()
+      Object.assign(formData, defaults, member)
+      for (const key of Object.keys(defaults)) {
+        if (formData[key] === null || formData[key] === undefined) formData[key] = defaults[key]
+      }
+    }
+
+    const startAdd = () => {
+      cancelEdit()
+      revealForm()
+    }
+
     const startEdit = async (member) => {
       editingId.value = member.id
-      Object.assign(formData, emptyFormData(), member)
+      revealForm()
+      fillForm(member)
       setSelectedUserFrom(member)
       userOptions.value = []
 
@@ -603,7 +633,7 @@ export default {
         const response = await api.getMember(member.id)
         const latest = response.data?.data || response.data?.member
         if (latest) {
-          Object.assign(formData, emptyFormData(), latest)
+          fillForm(latest)
           setSelectedUserFrom(latest)
         }
         // Suggest matching Nextcloud accounts by the member's name
@@ -614,7 +644,8 @@ export default {
       }
     }
 
-    const cancelEdit = () => {
+    function cancelEdit() {
+      showForm.value = false
       editingId.value = null
       Object.assign(formData, emptyFormData())
       selectedUser.value = null
@@ -719,6 +750,9 @@ export default {
       roleLabel,
       saveMember,
       startEdit,
+      startAdd,
+      showForm,
+      formSection,
       cancelEdit,
       deleteMember,
       deactivateMember,
@@ -757,20 +791,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-
-  @media (min-width: 1200px) {
-    /* two-column layout: form + list on wide screens */
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 2rem;
-    align-items: start;
-  }
 }
-
-.members-container.no-form { display: flex; }
-
-/* the import spans both columns of the wide layout */
-.import-section { grid-column: 1 / -1; }
 
 .form-section,
 .table-section {
@@ -779,6 +800,10 @@ export default {
   padding: 24px;
   margin-bottom: 20px;
   border: 1px solid var(--color-border);
+
+  @media (max-width: 600px) {
+    padding: 16px 12px;
+  }
   box-shadow: 0 2px 8px var(--color-box-shadow, rgba(0, 0, 0, 0.1));
 
   h2 {
@@ -793,6 +818,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 16px;
 
   h2 {
@@ -804,18 +831,21 @@ export default {
 
 .export-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-}
-
-@media (min-width: 1100px) {
-  .form-section { margin-bottom: 0; }
 }
 
 .member-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: end;
+
+  /* NcSelect brings a min-width of 260px, wider than a grid cell: it overlapped the next field */
+  :deep(.v-select.select) {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .form-subheader {
@@ -837,6 +867,8 @@ export default {
   border-bottom: 1px solid var(--color-border);
   display: grid;
   gap: 12px;
+
+  > .input-field { max-width: 480px; }
 }
 
 .lookup-results {
@@ -859,6 +891,11 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  > span {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+  }
 }
 
 .mandate-file-row {
@@ -874,6 +911,12 @@ export default {
 
 .account-link {
   grid-column: 1 / -1;
+
+  > :first-child { max-width: 480px; }
+}
+/* "Adults (€60.00) – default" does not fit into one cell */
+@media (min-width: 900px) {
+  .fee-rate-select { grid-column: span 2; }
 }
 
 .form-actions {
@@ -955,7 +998,7 @@ export default {
     border-bottom: 2px solid var(--color-border);
 
     th {
-      padding: 12px;
+      padding: 12px 10px;
       text-align: left;
       font-weight: 600;
       color: var(--color-text);
@@ -967,16 +1010,17 @@ export default {
       border-bottom: 1px solid var(--color-border);
       transition: background 0.2s;
 
+      /* the row color is a variable so the sticky actions cell can paint exactly the same (App.vue) */
       &:hover {
-        background: var(--color-background-hover);
+        --row-tint: var(--color-background-hover);
       }
 
       &.editing {
-        background: var(--color-primary-light);
+        --row-tint: var(--color-primary-light);
       }
 
       td {
-        padding: 12px;
+        padding: 12px 10px;
         color: var(--color-text);
       }
     }
@@ -1020,11 +1064,6 @@ export default {
   font-size: 12px;
   font-weight: 600;
 
-  &.active {
-    background: var(--color-success-light);
-    color: var(--color-success);
-  }
-
   &.former {
     background: var(--color-warning-light);
     color: var(--color-warning);
@@ -1056,8 +1095,8 @@ export default {
 
 .actions {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
 }
 
 .empty-state {

@@ -15,17 +15,19 @@
         <NcTextField :model-value="form.postalCode" @update:model-value="form.postalCode = $event" :label="t('verein', 'Postal code')" />
         <NcTextField :model-value="form.city" @update:model-value="form.city = $event" :label="t('verein', 'City')" />
         <NcTextField
+          class="wide"
           :model-value="form.documentsPath"
           @update:model-value="form.documentsPath = $event"
           :label="t('verein', 'Team folder in Files')"
-          placeholder="/Mein-Verein"
+          :placeholder="t('verein', '/My club')"
           :helper-text="t('verein', 'Path of the club\'s folder, where documents and the signed SEPA mandates are stored.')"
         />
         <NcTextField
+          class="wide"
           :model-value="form.calendarGroups"
           @update:model-value="form.calendarGroups = $event"
           :label="t('verein', 'Nextcloud groups for the club calendar')"
-          placeholder="vorstand, mitglieder"
+          :placeholder="t('verein', 'board, members')"
           :helper-text="t('verein', 'Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and membership anniversaries in their Calendar app and on their phones (read-only). Birthdays are personal data – only enter groups that should see them.')"
         />
         <div class="actions">
@@ -41,23 +43,29 @@
       <p class="hint">
         {{ t('verein', 'A club can have several bank accounts. The label, BIC and creditor ID are used for the SEPA export.') }}
       </p>
-      <table v-if="club.accounts.length" class="accounts">
-        <thead>
-          <tr><th>{{ t('verein', 'Label') }}</th><th>IBAN</th><th>BIC</th><th>{{ t('verein', 'Creditor ID') }}</th><th>{{ t('verein', 'Actions') }}</th></tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in club.accounts" :key="a.id">
-            <td>{{ a.label || '–' }} <span v-if="a.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
-            <td>{{ a.iban }}</td>
-            <td>{{ a.bic || '–' }}</td>
-            <td>{{ a.creditorId || '–' }}</td>
-            <td class="row-actions">
-              <NcButton variant="secondary" @click="editAccount(a)">{{ t('verein', 'Edit') }}</NcButton>
-              <NcButton variant="error" @click="removeAccount(a)">{{ t('verein', 'Delete') }}</NcButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="club.accounts.length" class="table-scroll">
+        <table class="accounts">
+          <thead>
+            <tr><th>{{ t('verein', 'Label') }}</th><th>IBAN</th><th>BIC</th><th>{{ t('verein', 'Creditor ID') }}</th><th>{{ t('verein', 'Actions') }}</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in club.accounts" :key="a.id">
+              <td>{{ a.label || '–' }} <span v-if="a.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
+              <td>{{ a.iban }}</td>
+              <td>{{ a.bic || '–' }}</td>
+              <td>{{ a.creditorId || '–' }}</td>
+              <td>
+                <div class="row-actions">
+                  <NcButton variant="secondary" @click="editAccount(a)">{{ t('verein', 'Edit') }}</NcButton>
+                  <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: a.label || a.iban })">
+                    <NcActionButton close-after-click @click="removeAccount(a)">{{ t('verein', 'Delete') }}</NcActionButton>
+                  </NcActions>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p v-else class="hint">{{ t('verein', 'No account yet.') }}</p>
 
       <h4>{{ accountForm.id ? t('verein', 'Edit bank account') : t('verein', 'Add bank account') }}</h4>
@@ -83,19 +91,25 @@
       <p class="hint">
         {{ t('verein', 'Each fee category has an annual fee. The default category applies to members without a category of their own (member form). An amount of 0 means fee-exempt (e.g. honorary members). The categories are used by the annual fee run (“Finances” tab).') }}
       </p>
-      <table v-if="club.feeRates && club.feeRates.length" class="accounts">
-        <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Annual fee') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
-        <tbody>
-          <tr v-for="r in club.feeRates" :key="r.id">
-            <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
-            <td>{{ formatMoney(r.amount) }}</td>
-            <td class="row-actions">
-              <NcButton variant="secondary" @click="editRate(r)">{{ t('verein', 'Edit') }}</NcButton>
-              <NcButton variant="error" @click="removeRate(r)">{{ t('verein', 'Delete') }}</NcButton>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="club.feeRates && club.feeRates.length" class="table-scroll">
+        <table class="accounts">
+          <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Annual fee') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
+          <tbody>
+            <tr v-for="r in club.feeRates" :key="r.id">
+              <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
+              <td>{{ formatMoney(r.amount) }}</td>
+              <td>
+                <div class="row-actions">
+                  <NcButton variant="secondary" @click="editRate(r)">{{ t('verein', 'Edit') }}</NcButton>
+                  <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: r.name })">
+                    <NcActionButton close-after-click @click="removeRate(r)">{{ t('verein', 'Delete') }}</NcActionButton>
+                  </NcActions>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p v-else class="hint">{{ t('verein', 'No category yet.') }}</p>
 
       <h4>{{ rateForm.id ? t('verein', 'Edit fee category') : t('verein', 'Add fee category') }}</h4>
@@ -158,6 +172,8 @@
 <script>
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
+import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcActions from '@nextcloud/vue/components/NcActions'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
@@ -173,7 +189,7 @@ const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId
 
 export default {
   name: 'Clubs',
-  components: { NcButton, NcTextField, NcSelect, Backups },
+  components: { NcActionButton, NcActions, NcButton, NcTextField, NcSelect, Backups },
   setup() {
     const busy = ref(false)
     const newClubName = ref('')
@@ -298,7 +314,8 @@ export default {
     }
 
     const resetAccountForm = () => Object.assign(accountForm, emptyAccount())
-    const editAccount = (a) => Object.assign(accountForm, emptyAccount(), a)
+    // null (label, BIC, creditor ID not set) would make NcTextField render nothing, so empty fields stay ''
+    const editAccount = (a) => Object.assign(accountForm, emptyAccount(), Object.fromEntries(Object.entries(a).filter(([, v]) => v !== null)))
 
     const saveAccount = async () => {
       const ok = await run(async () => {
@@ -347,11 +364,15 @@ export default {
   gap: 12px;
   align-items: start;
 }
+/* NcSelect's own min-width (260px) is wider than a grid cell */
+.grid :deep(.v-select.select) { min-width: 0; width: 100%; }
 .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
 .hint { color: var(--color-text-maxcontrast); }
 .accounts { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .accounts th, .accounts td { padding: 8px; text-align: left; border-bottom: 1px solid var(--color-border); }
-.row-actions { display: flex; gap: 8px; }
+.row-actions { display: flex; gap: 4px; align-items: center; }
+/* fields with a long explanation get the full width instead of a narrow column */
+.wide { grid-column: 1 / -1; }
 .badge {
   background: var(--color-primary-element);
   color: var(--color-primary-element-text);
@@ -361,5 +382,5 @@ export default {
   margin-left: 6px;
 }
 .checkbox-field { display: flex; gap: 8px; align-items: center; }
-.delete-row { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+.delete-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; }
 </style>

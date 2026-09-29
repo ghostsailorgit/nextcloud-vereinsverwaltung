@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.19.2-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 0.19.3-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -17,12 +17,13 @@ Stand: Version 0.19.2-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | Qualität | Automatische Tests und CI, Integrationstests gegen Nextcloud 33-35 mit SQLite, MySQL, MariaDB und PostgreSQL, API-Übersicht aus dem Code erzeugt |
 | Übersetzungen | Englisch nach festem Glossar (per Test geprüft), Deutsch mitgeliefert (durchgehend „du“, auch in den Mahnschreiben); Oberfläche, Meldungen und Dokumente übersetzbar; Datum und Beträge nach Spracheinstellung; PDFs mit Unicode-Schrift; Briefe in der Sprache der Instanz, sonst in der des Erstellers |
 | Installation | Release-Archiv ohne Kommandozeile installierbar (entpacken, hochladen, aktivieren), keine zusätzlichen PHP-Erweiterungen, Programme oder System-Cron nötig; in der CI aus dem Archiv in eine frische Nextcloud installiert und getestet |
+| Oberfläche | Jede Seite in Englisch und Deutsch von Handy- bis Monitorbreite durchgeklickt; Listen einzeilig mit Aktionsmenü, Formulare auf Knopfdruck, Bestätigungen für Löschen in Rot |
 | Lizenz | SPDX-Kopf in jeder Datei, REUSE-konform (per CI geprüft), Urheber des Ursprungsprojekts in `AUTHORS.md` |
 
 ## Als Nächstes
 
-- **Veröffentlichung im App Store:** Bildschirmfotos, App signieren und Archiv aus `release.yml` hochladen (englische
-  `info.xml` mit Beschreibung und Doku-Links ist fertig).
+- **Veröffentlichung im App Store:** App signieren und Archiv aus `release.yml` hochladen (englische `info.xml` mit
+  Beschreibung, Doku-Links und Bildschirmfotos ist fertig).
 - Mahnschreiben auf Wunsch per E-Mail statt nur als PDF (bisher verschickt die App nichts).
 
 ## Ideen ohne Termin

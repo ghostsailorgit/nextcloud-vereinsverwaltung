@@ -4,6 +4,44 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.19.3-beta] - 2026-09-29
+
+Jede Seite und jeder Dialog in einer echten Nextcloud 34 durchgeklickt (englisch und deutsch, 1600, 1440, 1280, 1024
+und 390 Pixel breit) und alles behoben, was dabei auffiel.
+
+### ✨ Bedienung
+- Mitglieder-, Beitrags-, Rollen-, Konto- und Kategorielisten: „Bearbeiten“ bleibt sichtbar, alle anderen Aktionen
+  (Deaktivieren, Datenauskunft, Aus Verein entfernen, Anonymisieren, Löschen) stehen im Menü „…“. Eine Zeile ist wieder
+  eine Zeile hoch statt vier gestapelter Knöpfe.
+- Die Formulare „Mitglied hinzufügen“ und „Beitrag hinzufügen“ öffnen sich erst auf Knopfdruck über der Liste; die Liste
+  hat dadurch die volle Breite. Die Spalte „Status“ ist in „Funktion“ aufgegangen (angezeigt wird nur, was nicht einfach
+  „aktiv“ ist).
+- Mitglieder- und Beitragsliste: wird die Liste zu breit, scrollt sie seitlich, die Aktionen bleiben rechts stehen.
+- Finanzen: Beitragslauf und Mahnwesen stehen nebeneinander über der Beitragsliste statt darunter; Fälligkeit ist ein
+  Datum ohne Uhrzeit.
+- Dashboard: Kennzahlen in einer Reihe, Diagramme und Listen über die volle Breite (vorher lief der Jubiläumstext aus
+  seiner Karte). Die Kachel „Mitglieder“ zählt die aktiven Mitglieder wie die Mitgliederliste.
+- Bestätigungen für Löschen und Entfernen haben einen roten Knopf; Schließen mit X oder Escape zählt als „Abbrechen“.
+- Rollen: Berechtigungen mit lesbarem Namen („Mitglieder ansehen“) statt nur `verein.member.view`.
+- Einheitliche Überschriftengrößen in allen Reitern, weniger Rand auf dem Handy.
+
+### 🐛 Korrigiert
+- Mitglied bearbeiten: die Felder BIC und Mandatsreferenz fehlten, wenn sie noch leer waren (ebenso Bezeichnung, BIC und
+  Gläubiger-ID beim Bearbeiten eines Kontos) - sie ließen sich also nie nachtragen.
+- Mitgliederwachstum im Dashboard: zählte, wann ein Datensatz angelegt wurde, statt Ein- und Austrittsdatum; nach dem
+  Erfassen oder Importieren sprang die Kurve von 0 auf alle.
+- Tabellen liefen über den Rand der Seite hinaus (Nextcloud verbietet Zeilenumbrüche in Tabellen); das Formular
+  überlagerte Felder mit Auswahllisten; Klassennamen wie `warning` und `loading` kollidierten mit Nextcloud (gelber
+  Hintergrund, doppelter Ladekreisel).
+- Englischer Hinweis bei einem gelöschten Nextcloud-Konto lautete „bank account missing“; jetzt „account no longer
+  exists“ („Konto existiert nicht mehr“).
+- Platzhalter im Reiter „Verein“ waren fest deutsch.
+
+### 📷 App Store
+- Fünf Bildschirmfotos (Beispielverein, erfundene Daten) in `docs/screenshots/`, in der `info.xml` eingetragen.
+
+---
+
 ## [0.19.2-beta] - 2026-09-29
 
 ### ⚡ Schneller

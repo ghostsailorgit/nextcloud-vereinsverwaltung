@@ -192,6 +192,12 @@ gelöscht werden. Die Spalte `verein_clubs.calendar_uri` bleibt nur, damit älte
   erst bei Bedarf. Beim Kopieren auf einen Server immer den ganzen Ordner `js/dist/` mitnehmen. Der ausgewählte Verein liegt in
   `js/store/club.js`; `js/api.js` hängt die `clubId` an jede Anfrage. Die Adresse der Nextcloud (Unterordner, `index.php`)
   gibt die Seite dem Frontend über `data-url-root` mit (`js/absoluteUrl.js`).
+- Oberfläche (in 0.19.3 jede Seite bei 390 bis 1600 Pixel Breite durchgeklickt): Listen zeigen „Bearbeiten“ und ein Menü
+  „…“ (`NcActions` mit `force-menu`, sonst wird eine einzelne Aktion als leerer Symbolknopf gezeigt). Jede Tabelle steckt in
+  `.table-scroll` und scrollt seitlich statt die Seite zu verbreitern; Nextclouds Kern-CSS verbietet Umbrüche in Tabellen, die
+  App erlaubt sie in `App.vue` wieder. Lange Listen (`.sticky-actions`) bleiben einzeilig, ihre Aktionsspalte steht fest; die
+  Zeilenfarbe kommt als `--row-tint`. `NcTextField` zeigt bei `null` gar nichts an: Formulare füllen leere Felder mit `''`.
+  Keine Klassennamen, die Nextcloud selbst belegt (`warning`, `error`, `success`, `loading`, `icon-*`).
 - Tests: PHPUnit (`tests/Unit`), Nextcloud-Klassen kommen aus den `nextcloud/ocp`-Stubs.
 - PDF-Export: TCPDF aus `vendor/` (im Release-Archiv enthalten, aus dem Quellcode `composer install --no-dev`); fehlt es,
   antwortet der Export mit 503 und einem Hinweis. Hat eine andere App schon eine `TCPDF`-Klasse geladen, wird diese

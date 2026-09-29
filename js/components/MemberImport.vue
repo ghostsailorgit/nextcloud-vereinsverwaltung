@@ -33,20 +33,22 @@
         <span v-if="progress" class="progress">{{ progress }}</span>
       </div>
 
-      <table class="rows">
-        <thead><tr><th>{{ t('verein', 'Line') }}</th><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'Result') }}</th><th>{{ t('verein', 'Notes') }}</th></tr></thead>
-        <tbody>
-          <tr v-for="r in plan.rows" :key="r.line" :class="r.status">
-            <td>{{ r.line }}</td>
-            <td>{{ r.name }}</td>
-            <td>{{ statusLabel(r) }}</td>
-            <td>
-              <div v-for="(m, i) in r.messages" :key="'m' + i">{{ m }}</div>
-              <div v-for="(w, i) in r.warnings" :key="'w' + i" class="warn">{{ w }}</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="rows">
+          <thead><tr><th>{{ t('verein', 'Line') }}</th><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'Result') }}</th><th>{{ t('verein', 'Notes') }}</th></tr></thead>
+          <tbody>
+            <tr v-for="r in plan.rows" :key="r.line" :class="r.status">
+              <td>{{ r.line }}</td>
+              <td>{{ r.name }}</td>
+              <td>{{ statusLabel(r) }}</td>
+              <td>
+                <div v-for="(m, i) in r.messages" :key="'m' + i">{{ m }}</div>
+                <div v-for="(w, i) in r.warnings" :key="'w' + i" class="warn">{{ w }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

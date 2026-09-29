@@ -43,36 +43,40 @@
         {{ n('verein', '%n letter, total {total}', '%n letters, total {total}', plan.included.length, { total: money(plan.total) }) }}
         <span v-if="plan.skipped.length"> · {{ n('verein', '%n skipped', '%n skipped', plan.skipped.length) }}</span>
       </p>
-      <p v-if="!plan.hasAccount" class="warning">
+      <p v-if="!plan.hasAccount" class="warning-text">
         {{ t('verein', 'No bank account is set for this club (“Club” tab), so the letters will not include bank details.') }}
       </p>
-      <p v-if="withoutAddress" class="warning">
+      <p v-if="withoutAddress" class="warning-text">
         {{ n('verein', '%n person without a complete address – their letter cannot be sent by post.', '%n people without a complete address – their letters cannot be sent by post.', withoutAddress) }}
       </p>
 
       <details v-if="plan.included.length" open>
         <summary>{{ t('verein', 'Who gets a letter') }}</summary>
-        <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Unpaid') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="e in plan.included" :key="e.memberId">
-              <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> ({{ t('verein', 'no address') }})</span></td>
-              <td>{{ e.levelLabel }}</td>
-              <td>{{ e.fees.map(f => f.period || f.description).join(', ') }}</td>
-              <td class="num">{{ money(e.total) }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Letter') }}</th><th>{{ t('verein', 'Fees') }}</th><th class="num">{{ t('verein', 'Unpaid') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="e in plan.included" :key="e.memberId">
+                <td>{{ e.name }}<span v-if="!e.hasAddress" class="hint"> ({{ t('verein', 'no address') }})</span></td>
+                <td>{{ e.levelLabel }}</td>
+                <td>{{ e.fees.map(f => f.period || f.description).join(', ') }}</td>
+                <td class="num">{{ money(e.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </details>
 
       <details v-if="plan.skipped.length">
         <summary>{{ t('verein', 'Skipped ({count})', { count: plan.skipped.length }) }}</summary>
-        <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
-          </tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
+            </tbody>
+          </table>
+        </div>
       </details>
     </div>
   </div>
@@ -190,9 +194,9 @@ export default {
   padding: 20px 24px;
   margin-bottom: 20px;
 }
-.dunning h2 { margin-top: 0; }
-.hint { color: var(--color-text-maxcontrast); }
-.warning { color: var(--color-error-text, var(--color-error)); }
+.dunning h2 { margin-top: 0; font-size: 18px; }
+.hint { color: var(--color-text-maxcontrast); margin-bottom: 12px; }
+.warning-text { color: var(--color-error-text, var(--color-error)); }
 .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
