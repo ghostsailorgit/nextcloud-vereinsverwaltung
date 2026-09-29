@@ -61,3 +61,6 @@ tmp/
 # PHPUnit
 .phpunit.result.cache
 tests/Integration/smoke-state.json
+
+# Official SEPA schema, downloaded in CI (ISO licence, not committed)
+tests/fixtures/pain.008.001.02.xsd
