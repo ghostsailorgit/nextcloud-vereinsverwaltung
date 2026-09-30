@@ -348,6 +348,30 @@ class SepaServiceTest extends TestCase {
         $this->assertSame('2026-04-10', $this->value($this->exportXml(), '//p:ReqdColltnDt'));
     }
 
+    public function testARequestedCollectionDateIsUsedByPreviewAndFile(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 5.0);
+
+        // e.g. the date an advance notice named: Sat 25 April becomes the next TARGET day, Mon 27 April
+        $this->assertSame('2026-04-27', $this->service->previewSepaExport(self::CLUB, null, '2026-04-25')['collectionDate']);
+        $this->assertSame('2026-04-27', $this->service->previewSepaExport(self::CLUB, null, '2026-04-25')['transactions'][0]['collectionDate']);
+        $dom = new \DOMDocument();
+        $dom->loadXML($this->service->generateSepaXml(self::CLUB, null, '2026-04-25')['xml']);
+        $this->assertSame('2026-04-27', $this->value($dom, '//p:ReqdColltnDt'));
+        $this->assertSame('2026-04-10', $this->service->previewSepaExport(self::CLUB)['collectionDate'], 'without one: the earliest possible date, as before');
+    }
+
+    public function testARequestedCollectionDateBeforeTheEarliestPossibleIsRefused(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 5.0);
+
+        $this->expectException(\OCA\Verein\Exception\ValidationException::class);
+        $this->expectExceptionMessage('10.04.2026');
+        $this->service->previewSepaExport(self::CLUB, null, '2026-04-03');
+    }
+
     public function testMessageIdIsUniquePerFileAndFitsTheSchema(): void {
         $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
         $this->mandate(1, '2021-01-05');

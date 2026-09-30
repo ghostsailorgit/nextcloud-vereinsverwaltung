@@ -65,7 +65,9 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    Sequence type is always RCUR (allowed since 2016). Data the bank would reject (amount <= 0, invalid IBAN/BIC, bad
    mandate date/reference) is skipped with a reason too; text goes through `SepaService::text()` (SEPA character set).
    Fees are never collected before their due date (one `PmtInf` per collection date, fees due > 14 days after the
-   earliest date are skipped as "not due yet"). `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing.
+   earliest date are skipped as "not due yet"). An optional requested collection date (never before the earliest) is used by
+   preview, advance notice and file alike. The advance notice by email (`SepaPrenotificationService`) stays optional - the
+   export must never require it. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing.
 6. **Self-service is read-only** on purpose (a member changing their own IBAN would be a SEPA fraud risk).
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the
@@ -122,10 +124,11 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 
 17. **Dunning** (`DunningService`): one letter per person over all their due fees, level = highest level so far + 1, capped at 3;
     deactivated/anonymized people and anyone dunned within `intervalDays` are skipped with a reason. Preview first, the run is one
-    statement per level in a transaction. Letters are generated on demand from the fees' current level. Sending them by email
-    (`DunningMailService`) goes only through Nextcloud's `IMailer` (the mail server the Nextcloud admin configured; the club
-    only sets sender name and reply-to) - never store SMTP credentials or build a mail transport in the app. Whoever cannot be
-    reached by email comes back as `printFeeIds` for the PDF; SMTP errors go to the log, not into responses.
+    statement per level in a transaction. Letters are generated on demand from the fees' current level. **Every email to members**
+    (reminder letters, advance notice) goes through `ClubMailer`, i.e. only Nextcloud's `IMailer` (the mail server the Nextcloud
+    admin configured; the club only sets sender name and reply-to) - never store SMTP credentials or build a mail transport in
+    the app. Whoever cannot be reached by email is reported (reminders: `printFeeIds` for the PDF); SMTP errors go to the log,
+    not into responses.
 18. **Member import** (`MemberImportService`): never maps a column to `userId` (it drives rights), a role other than member only
     with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
     other clubs), unexpected errors per row are reported as "internal error" (translated), never with the exception text.

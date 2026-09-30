@@ -3,6 +3,7 @@
         "#": "Nr.",
         "%1$s “%2$s” is not a valid date (use DD.MM.YYYY or YYYY-MM-DD)": "%1$s „%2$s“ ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT)",
         "%1$s “%2$s”: please enter Yes or No": "%1$s „%2$s“: bitte Ja oder Nein angeben",
+        "%1$s: %2$s on %3$s": "%1$s: %2$s am %3$s",
         "%s is invalid": "%s ist ungültig",
         "/My club": "/Mein Verein",
         "A club can have several bank accounts. The label, BIC and creditor ID are used for the SEPA export.": "Ein Verein kann mehrere Konten haben. Bezeichnung, BIC und Gläubiger-ID werden beim SEPA-Export verwendet.",
@@ -12,6 +13,7 @@
         "Account": "Konto",
         "Account and role are required": "Konto und Rolle erforderlich",
         "Account holder: %s": "Kontoinhaber: %s",
+        "Account: IBAN ending in %s": "Konto: IBAN endet auf %s",
         "Action failed": "Aktion fehlgeschlagen",
         "Actions": "Aktionen",
         "Activate": "Aktivieren",
@@ -25,6 +27,9 @@
         "Add member": "Mitglied hinzufügen",
         "Add to this club": "Übernehmen",
         "Address": "Adresse",
+        "Advance notice": "Vorabankündigung",
+        "Advance notice (optional)": "Vorabankündigung (freiwillig)",
+        "Advance notice of your SEPA direct debit – %s": "Vorabankündigung deiner SEPA-Lastschrift – %s",
         "Age": "Alter",
         "All": "Alle",
         "All areas": "Alle Bereiche",
@@ -99,6 +104,8 @@
         "Club: {name}": "Verein: {name}",
         "Clubs": "Verein",
         "Collection date": "Einzugsdatum",
+        "Collection date (optional)": "Einzugsdatum (optional)",
+        "Collection date:": "Einzugsdatum:",
         "Comma-separated. Members of these Nextcloud groups automatically see the calendar “Club events” with birthdays and membership anniversaries in their Calendar app and on their phones (read-only). Birthdays are personal data – only enter groups that should see them.": "Kommagetrennt. Mitglieder dieser Nextcloud-Gruppen sehen den Kalender „Vereinstermine“ mit Geburtstagen und Vereinsjubiläen automatisch in ihrer Kalender-App und auf dem Handy (nur lesend). Geburtstage sind personenbezogene Daten – nur Gruppen eintragen, die sie sehen sollen.",
         "Comment": "Bemerkung",
         "Comment (optional)": "Bemerkung (optional)",
@@ -114,6 +121,7 @@
         "Creditor ID": "Gläubiger-ID",
         "Creditor ID is invalid (e.g. DE98ZZZ09999999999)": "Gläubiger-ID ist ungültig (z.B. DE98ZZZ09999999999)",
         "Creditor ID:": "Gläubiger-ID:",
+        "Creditor ID: %s": "Gläubiger-ID: %s",
         "Creditor identifier (SEPA)": "Gläubiger-ID (SEPA)",
         "Creditor:": "Gläubiger:",
         "Dashboard": "Dashboard",
@@ -178,6 +186,7 @@
         "Email": "E-Mail",
         "Email is invalid": "E-Mail ist ungültig",
         "Emails from the club": "E-Mails des Vereins",
+        "Empty: the earliest possible date. Set a date if you announce the collection in advance – the file then uses the same date.": "Leer: das frühestmögliche Datum. Setze ein Datum, wenn du den Einzug vorher ankündigst – die Datei nutzt dann dasselbe Datum.",
         "Enter a name or account name": "Name oder Kontoname eingeben",
         "Error": "Fehler",
         "Error activating the member": "Fehler beim Aktivieren des Mitglieds",
@@ -277,6 +286,7 @@
         "Mandate file": "Mandatsdatei",
         "Mandate reference": "Mandatsreferenz",
         "Mandate reference may only contain letters, digits and simple special characters (at most 35 characters)": "Mandatsreferenz darf nur Buchstaben, Ziffern und einfache Sonderzeichen enthalten (max. 35 Zeichen)",
+        "Mandate reference: %s": "Mandatsreferenz: %s",
         "Mar": "Mär",
         "Mark as paid": "Als bezahlt markieren",
         "Marking failed": "Markieren fehlgeschlagen",
@@ -297,6 +307,7 @@
         "Member since (years)": "Mitglied seit (Jahre)",
         "Member updated": "Mitglied aktualisiert",
         "Members": "Mitglieder",
+        "Members must be told the amount and date before a direct debit – usually at least 14 days before, unless a shorter period was agreed (e.g. in the mandate or the statutes). How you do that is up to you: with the fee invoice, in the statutes, on paper – or here by email.": "Vor einer Lastschrift müssen die Mitglieder Betrag und Datum erfahren – in der Regel mindestens 14 Tage vorher, außer es wurde eine kürzere Frist vereinbart (z. B. im Mandat oder in der Satzung). Wie das geschieht, entscheidest du: mit der Beitragsrechnung, in der Satzung, auf Papier – oder hier per E-Mail.",
         "Members with a linked Nextcloud account (member form) automatically get a role in this club according to their position. These permissions end automatically when someone leaves or dies. Empty = no automatic permissions. Roles assigned in the “Roles” tab are kept.": "Mitglieder mit verknüpftem Nextcloud-Konto (Mitgliederformular) bekommen je nach Vereinsrolle automatisch eine App-Rolle für diesen Verein. Die Rechte enden von selbst, sobald jemand austritt oder verstirbt. Leer = keine automatischen Rechte. Zusätzlich vergebene Rollen unter „Rollen“ bleiben bestehen.",
         "Membership": "Mitgliedschaft",
         "Membership anniversary: %s": "Vereinsjubiläum: %s",
@@ -346,6 +357,7 @@
         "Not found": "Nicht gefunden",
         "Not imported: {list}": "Nicht übernommen: {list}",
         "Not included in the export:": "Nicht im Export enthalten:",
+        "Not notified by email (please inform them another way): {names}": "Nicht per E-Mail benachrichtigt (bitte auf anderem Weg informieren): {names}",
         "Notes": "Hinweise",
         "Nov": "Nov",
         "Number of fees": "Anzahl Beiträge",
@@ -385,6 +397,7 @@
         "Personal data was permanently removed": "Personenbezogene Daten wurden unwiderruflich entfernt",
         "Personal details": "Personenangaben",
         "Please import 1 to 100 lines at a time": "Bitte 1 bis 100 Zeilen auf einmal importieren",
+        "Please make sure your account has sufficient funds on that day. If anything is incorrect, please contact the board.": "Bitte sorge dafür, dass dein Konto an diesem Tag gedeckt ist. Wenn etwas nicht stimmt, wende dich bitte an den Vorstand.",
         "Please pay the amount by %s. The board can give you the bank details.": "Bitte begleiche den Betrag bis zum %s. Die Bankverbindung erfährst du beim Vorstand.",
         "Please transfer the amount by %s to the club's bank account:": "Bitte überweise den Betrag bis zum %s auf das Konto des Vereins:",
         "Position": "Funktion",
@@ -444,6 +457,7 @@
         "Select member…": "Mitglied auswählen …",
         "Select role…": "Rolle auswählen …",
         "Select…": "Auswählen …",
+        "Send": "Senden",
         "Send the letters by email where an email address is known (the rest as PDF)": "Schreiben per E-Mail verschicken, wo eine E-Mail-Adresse bekannt ist (der Rest als PDF)",
         "Sender name": "Absendername",
         "Sep": "Sep",
@@ -461,16 +475,21 @@
         "The IBAN of the bank account is invalid (“Club” tab)": "Die IBAN des Bankkontos ist ungültig (Reiter „Verein“)",
         "The Nextcloud account does not exist": "Das Nextcloud-Konto existiert nicht",
         "The Nextcloud account is already linked to %s": "Das Nextcloud-Konto ist bereits mit %s verknüpft",
+        "The advance notice could not be sent": "Die Vorabankündigung konnte nicht verschickt werden",
         "The audit log could not be loaded": "Protokoll konnte nicht geladen werden",
         "The bank account does not belong to this club": "Das Bankkonto gehört nicht zu diesem Verein",
         "The chosen role does not exist": "Die gewählte Rolle existiert nicht",
         "The club still has members and cannot be deleted": "Der Verein hat noch Mitglieder und kann nicht gelöscht werden",
         "The clubs could not be loaded": "Die Vereine konnten nicht geladen werden",
+        "The collection date is invalid": "Das Einzugsdatum ist ungültig",
+        "The collection date may be at most one year ahead": "Das Einzugsdatum darf höchstens ein Jahr in der Zukunft liegen",
+        "The collection date must be on or after %s (banks need a few business days)": "Das Einzugsdatum muss am oder nach dem %s liegen (Banken brauchen einige Geschäftstage Vorlauf)",
         "The creditor ID of the bank account is invalid (“Club” tab)": "Die Gläubiger-ID des Bankkontos ist ungültig (Reiter „Verein“)",
         "The data could not be loaded": "Die Daten konnten nicht geladen werden",
         "The date left must not be before the date joined": "Austrittsdatum darf nicht vor dem Eintrittsdatum liegen",
         "The emails are sent through the mail server set up in Nextcloud (Administration settings → Basic settings).": "Die E-Mails gehen über den in Nextcloud eingerichteten Mailserver (Verwaltungseinstellungen → Grundeinstellungen).",
         "The emails could not be sent – all letters are in the PDF instead.": "Die E-Mails konnten nicht verschickt werden – alle Schreiben sind stattdessen im PDF.",
+        "The export uses the same date.": "Der Export nutzt dasselbe Datum.",
         "The fee category belongs to another club": "Die Beitragskategorie gehört zu einem anderen Verein",
         "The fee category does not exist": "Die Beitragskategorie existiert nicht",
         "The fee category is still used by members": "Die Beitragskategorie wird noch von Mitgliedern verwendet",
@@ -505,6 +524,7 @@
         "Too many lines (at most %s)": "Zu viele Zeilen (höchstens %s)",
         "Total amount:": "Gesamtbetrag:",
         "Total outstanding": "Gesamt ausstehend",
+        "Total: %s": "Gesamt: %s",
         "Transactions:": "Transaktionen:",
         "Treasurer": "Kassierer",
         "Type the full name to confirm": "Zum Bestätigen den vollständigen Namen eintippen",
@@ -519,6 +539,7 @@
         "View members": "Mitglieder ansehen",
         "View the audit log": "Protokoll ansehen",
         "Warning": "Warnung",
+        "We will collect the following amounts from your account by SEPA direct debit:": "wir ziehen die folgenden Beträge per SEPA-Lastschrift von deinem Konto ein:",
         "What": "Was",
         "Who": "Wer",
         "Who changed what and when. Personal data (name, address, email, IBAN, date of birth, mandate …) never appears here in plain text, only as “changed”. Entries about people are kept for 10 years, everything else for 30 days.": "Wer hat wann was geändert. Personenbezogene Angaben (Name, Anschrift, E-Mail, IBAN, Geburtsdatum, Mandat …) stehen hier nie im Klartext, sondern nur als „geändert“. Einträge zu Personen werden 10 Jahre aufbewahrt, alles andere 30 Tage.",
@@ -529,6 +550,14 @@
         "Yes": "Ja",
         "You are not allowed to change the club data.": "Du hast keine Berechtigung, die Vereinsdaten zu ändern.",
         "You are not assigned to any club yet. Please ask an administrator to give you a role in a club.": "Du bist noch keinem Verein zugeordnet. Bitte wende dich an einen Administrator, damit er dir in der Vereinsverwaltung eine Rolle zuweist.",
+        "_%n advance notice sent for the collection on {date}._::_%n advance notices sent for the collection on {date}._": [
+            "%n Vorabankündigung für den Einzug am {date} verschickt.",
+            "%n Vorabankündigungen für den Einzug am {date} verschickt."
+        ],
+        "_%n advance notice sent_::_%n advance notices sent_": [
+            "%n Vorabankündigung verschickt",
+            "%n Vorabankündigungen verschickt"
+        ],
         "_%n already exists_::_%n already exist_": [
             "%n schon vorhanden",
             "%n schon vorhanden"
@@ -540,6 +569,10 @@
         "_%n email could not be sent – the letter is in the PDF instead. The Nextcloud administrator can check the mail server settings and the log._::_%n emails could not be sent – the letters are in the PDF instead. The Nextcloud administrator can check the mail server settings and the log._": [
             "%n E-Mail konnte nicht verschickt werden – das Schreiben ist stattdessen im PDF. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen.",
             "%n E-Mails konnten nicht verschickt werden – die Schreiben sind stattdessen im PDF. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen."
+        ],
+        "_%n email could not be sent. The Nextcloud administrator can check the mail server settings and the log._::_%n emails could not be sent. The Nextcloud administrator can check the mail server settings and the log._": [
+            "%n E-Mail konnte nicht verschickt werden. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen.",
+            "%n E-Mails konnten nicht verschickt werden. Die Nextcloud-Administration kann die Mailserver-Einstellungen und das Protokoll prüfen."
         ],
         "_%n email sent_::_%n emails sent_": [
             "%n E-Mail verschickt",
@@ -661,6 +694,18 @@
             "%n Beitrag als bezahlt markieren",
             "%n Beiträge als bezahlt markieren"
         ],
+        "_Send advance notice by email ({count} member)_::_Send advance notice by email ({count} members)_": [
+            "Vorabankündigung per E-Mail senden ({count} Mitglied)",
+            "Vorabankündigung per E-Mail senden ({count} Mitglieder)"
+        ],
+        "_Send an advance notice of the collection on {date} to %n member by email?_::_Send an advance notice of the collection on {date} to %n members by email?_": [
+            "Vorabankündigung für den Einzug am {date} per E-Mail an %n Mitglied senden?",
+            "Vorabankündigung für den Einzug am {date} per E-Mail an %n Mitglieder senden?"
+        ],
+        "_The collection is in %n day. That is only enough if a shorter notice period was agreed; otherwise choose a later collection date above._::_The collection is in %n days. That is only enough if a shorter notice period was agreed; otherwise choose a later collection date above._": [
+            "Der Einzug ist in %n Tag. Das reicht nur, wenn eine kürzere Frist vereinbart wurde; sonst wähle oben ein späteres Einzugsdatum.",
+            "Der Einzug ist in %n Tagen. Das reicht nur, wenn eine kürzere Frist vereinbart wurde; sonst wähle oben ein späteres Einzugsdatum."
+        ],
         "_The file contains %n fee. Once you have submitted it to the bank, you can mark exactly this fee as paid._::_The file contains %n fees. Once you have submitted it to the bank, you can mark exactly these fees as paid._": [
             "Die Datei enthält %n Beitrag. Sobald du sie bei der Bank eingereicht hast, kannst du genau diesen Beitrag als bezahlt markieren.",
             "Die Datei enthält %n Beiträge. Sobald du sie bei der Bank eingereicht hast, kannst du genau diese Beiträge als bezahlt markieren."
@@ -679,6 +724,7 @@
         ],
         "account no longer exists": "Konto existiert nicht mehr",
         "activated": "aktiviert",
+        "advance notice of the direct debit sent": "Vorabankündigung der Lastschrift verschickt",
         "already exists": "schon vorhanden",
         "amount is zero or negative": "Betrag ist null oder negativ",
         "anonymized": "anonymisiert",
@@ -688,6 +734,7 @@
         "carried out": "ausgeführt",
         "changed": "geändert",
         "changed (content not logged)": "geändert (Inhalt nicht protokolliert)",
+        "collection on {date}": "Einzug am {date}",
         "copy on file": "Kopie liegt vor",
         "created": "angelegt",
         "date of signature of the mandate is in the future": "Unterschriftsdatum des Mandats liegt in der Zukunft",

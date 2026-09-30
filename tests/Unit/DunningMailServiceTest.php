@@ -9,6 +9,7 @@ use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\L10n\SourceL10n;
 use OCA\Verein\Service\AuditLogService;
+use OCA\Verein\Service\ClubMailer;
 use OCA\Verein\Service\DunningMailService;
 use OCA\Verein\Service\DunningService;
 use OCA\Verein\Service\Export\PdfExporter;
@@ -97,11 +98,12 @@ class DunningMailServiceTest extends TestCase {
             return [];
         });
 
-        return new class($dunning, $pdf, $mailer, $clubs, $this->createMock(LoggerInterface::class), $audit, SourceL10n::fromAppLanguage('de')) extends DunningMailService {
+        $clubMailer = new class($mailer, $this->createMock(LoggerInterface::class)) extends ClubMailer {
             protected function senderAddress(): string {
                 return 'noreply@cloud.example.org';
             }
         };
+        return new DunningMailService($dunning, $pdf, $clubMailer, $clubs, $audit, SourceL10n::fromAppLanguage('de'));
     }
 
     public function testSendsOneMessagePerPersonAndReturnsTheRestForPrinting(): void {

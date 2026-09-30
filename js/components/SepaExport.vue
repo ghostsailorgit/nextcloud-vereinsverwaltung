@@ -27,6 +27,12 @@
           />
         </div>
 
+        <label class="date-field">
+          <span>{{ t('verein', 'Collection date (optional)') }}</span>
+          <input v-model="collectionDate" type="date" class="form-input" @change="previewData = null" />
+          <small class="hint">{{ t('verein', 'Empty: the earliest possible date. Set a date if you announce the collection in advance – the file then uses the same date.') }}</small>
+        </label>
+
         <div v-if="selectedAccount" class="creditor-info">
           <p><strong>{{ t('verein', 'Creditor:') }}</strong> {{ clubName }}</p>
           <p><strong>IBAN:</strong> {{ selectedAccount.iban }}</p>
@@ -64,7 +70,7 @@
         <p><strong>IBAN:</strong> {{ previewData.creditorIban }}</p>
         <p><strong>{{ t('verein', 'Number of transactions:') }}</strong> {{ previewData.transactionCount }}</p>
         <p><strong>{{ t('verein', 'Total amount:') }}</strong> {{ formatMoney(previewData.totalAmount) }}</p>
-        <p><strong>{{ t('verein', 'Earliest collection date:') }}</strong> {{ formatDate(previewData.collectionDate) }}</p>
+        <p><strong>{{ collectionDate ? t('verein', 'Collection date:') : t('verein', 'Earliest collection date:') }}</strong> {{ formatDate(previewData.collectionDate) }}</p>
         <p>{{ t('verein', 'Fees are never collected before their due date: fees due up to 14 days after the earliest collection date are collected on their due date; later ones remain unpaid until a later export.') }}</p>
         <p>{{ t('verein', 'Names and texts are converted to the SEPA character set (ä → ae, & → +).') }}</p>
       </div>
@@ -77,6 +83,31 @@
             <em>({{ s.reason }})</em>
           </li>
         </ul>
+      </div>
+
+      <!-- optional: nobody has to announce collections this way -->
+      <div v-if="previewData.transactions.length" class="notice-box">
+        <h4>{{ t('verein', 'Advance notice (optional)') }}</h4>
+        <p class="hint">
+          {{ t('verein', 'Members must be told the amount and date before a direct debit – usually at least 14 days before, unless a shorter period was agreed (e.g. in the mandate or the statutes). How you do that is up to you: with the fee invoice, in the statutes, on paper – or here by email.') }}
+        </p>
+        <p v-if="daysUntilCollection < 14" class="warning-text">
+          {{ n('verein', 'The collection is in %n day. That is only enough if a shorter notice period was agreed; otherwise choose a later collection date above.', 'The collection is in %n days. That is only enough if a shorter notice period was agreed; otherwise choose a later collection date above.', daysUntilCollection) }}
+        </p>
+        <div class="form-buttons">
+          <NcButton variant="secondary" :disabled="noticeBusy || !membersWithEmail" @click="sendNotice">
+            {{ n('verein', 'Send advance notice by email ({count} member)', 'Send advance notice by email ({count} members)', membersWithEmail, { count: membersWithEmail }) }}
+          </NcButton>
+        </div>
+        <div v-if="noticeResult" class="notice-result">
+          <p>
+            {{ n('verein', '%n advance notice sent for the collection on {date}.', '%n advance notices sent for the collection on {date}.', noticeResult.sent.length, { date: formatDate(noticeResult.collectionDate) }) }}
+            {{ t('verein', 'The export uses the same date.') }}
+          </p>
+          <p v-if="noticeResult.withoutEmail.length || noticeResult.failed.length" class="warning-text">
+            {{ t('verein', 'Not notified by email (please inform them another way): {names}', { names: [...noticeResult.withoutEmail, ...noticeResult.failed].map(p => p.name).join(', ') }) }}
+          </p>
+        </div>
       </div>
 
       <h4>{{ t('verein', 'Transactions:') }}</h4>
@@ -129,7 +160,10 @@ export default {
       accountId: null,
       previewData: null,
       exportedFeeIds: [],
-      marking: false
+      marking: false,
+      collectionDate: '',
+      noticeBusy: false,
+      noticeResult: null
     }
   },
   computed: {
@@ -141,6 +175,16 @@ export default {
     },
     selectedAccount() {
       return this.accounts.find(a => a.id === this.accountId) || null
+    },
+    membersWithEmail() {
+      const ids = new Set((this.previewData?.transactions || []).filter(t => t.hasEmail).map(t => t.memberId))
+      return ids.size
+    },
+    daysUntilCollection() {
+      if (!this.previewData?.collectionDate) return 0
+      const [y, m, d] = this.previewData.collectionDate.split('-').map(Number)
+      const today = new Date()
+      return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000)
     }
   },
   mounted() {
@@ -156,7 +200,26 @@ export default {
       return (account.label ? account.label + ' – ' : '') + account.iban
     },
     requestParams() {
-      return { clubId: clubState.currentId, accountId: this.accountId }
+      const params = { clubId: clubState.currentId, accountId: this.accountId }
+      if (this.collectionDate) params.collectionDate = this.collectionDate
+      return params
+    },
+    async sendNotice() {
+      const date = formatDate(this.previewData.collectionDate)
+      if (!(await confirmAction(t('verein', 'Advance notice'), n('verein', 'Send an advance notice of the collection on {date} to %n member by email?', 'Send an advance notice of the collection on {date} to %n members by email?', this.membersWithEmail, { date }), { labelConfirm: t('verein', 'Send'), severity: 'warning' }))) return
+      this.noticeBusy = true
+      try {
+        const res = (await axios.post(generateUrl('/apps/verein/sepa/notice'), this.requestParams())).data
+        this.noticeResult = res
+        // the file must be collected on the announced date, also after a reload of the preview
+        this.collectionDate = res.collectionDate
+        if (res.sent.length) showSuccess(n('verein', '%n advance notice sent', '%n advance notices sent', res.sent.length))
+        if (res.failed.length) showError(n('verein', '%n email could not be sent. The Nextcloud administrator can check the mail server settings and the log.', '%n emails could not be sent. The Nextcloud administrator can check the mail server settings and the log.', res.failed.length))
+      } catch (error) {
+        showError(extractErrorMessage(error, t('verein', 'The advance notice could not be sent')))
+      } finally {
+        this.noticeBusy = false
+      }
     },
     async preview() {
       try {
@@ -165,6 +228,7 @@ export default {
           this.requestParams()
         )
         this.previewData = response.data
+        this.noticeResult = null
       } catch (error) {
         console.error('Error loading preview:', error)
         this.previewData = null
@@ -266,6 +330,14 @@ export default {
   border-radius: 4px;
   margin-bottom: 20px;
 }
+
+.date-field { display: flex; flex-direction: column; gap: 4px; max-width: 480px; margin-bottom: 15px; }
+.date-field input { max-width: 200px; }
+.hint { color: var(--color-text-maxcontrast); }
+.warning-text { color: var(--color-error-text, var(--color-error)); }
+.notice-box { background: var(--color-main-background); border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+.notice-box h4 { margin-top: 0; }
+.notice-result p { margin: 8px 0 0; }
 
 .mark-paid { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
 .mark-paid p { margin: 0; flex: 1 1 320px; }

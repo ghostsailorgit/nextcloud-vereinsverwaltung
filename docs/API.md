@@ -98,6 +98,7 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 |---|---|---|
 | POST | `/sepa/export` | `verein.sepa.export` |
 | POST | `/sepa/preview` | `verein.sepa.export` |
+| POST | `/sepa/notice` | `verein.sepa.export` |
 
 ## Export (CSV/PDF)
 
