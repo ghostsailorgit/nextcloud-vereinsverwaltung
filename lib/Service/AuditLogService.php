@@ -41,7 +41,7 @@ class AuditLogService {
      * written before a field was added to (or removed from) this list, or before anonymize() ran.
      */
     private const SAFE_FIELDS = [
-        'member' => ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'deactivated', 'deceased', 'clubId'],
+        'member' => ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'feeExemptJoinYear', 'deactivated', 'deceased', 'clubId'],
     ];
 
     /**

@@ -148,6 +148,10 @@
           <span>{{ t('verein', 'Founding member') }}</span>
         </label>
         <label class="checkbox-field">
+          <input v-model="formData.feeExemptJoinYear" type="checkbox" />
+          <span>{{ t('verein', 'Fee-exempt in the year joined') }}</span>
+        </label>
+        <label class="checkbox-field">
           <input v-model="formData.deceased" type="checkbox" />
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
@@ -365,6 +369,7 @@ const emptyFormData = () => ({
   leaveDate: '',
   role: 'member',
   foundingMember: false,
+  feeExemptJoinYear: false,
   deceased: false,
   iban: '',
   bic: '',

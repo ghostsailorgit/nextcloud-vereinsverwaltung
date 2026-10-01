@@ -50,6 +50,7 @@ class MemberImportService {
         'mandatsreferenz' => 'mandateReference', 'mandatereference' => 'mandateReference',
         'mandatsdatum' => 'mandateDate', 'mandatunterschriebenam' => 'mandateDate', 'mandatedate' => 'mandateDate', 'dateofsignature' => 'mandateDate',
         'grundungsmitglied' => 'foundingMember', 'gruendungsmitglied' => 'foundingMember', 'foundingmember' => 'foundingMember',
+        'eintrittsjahrbeitragsfrei' => 'feeExemptJoinYear', 'beitragsfreiimeintrittsjahr' => 'feeExemptJoinYear', 'feeexemptintheyearjoined' => 'feeExemptJoinYear',
         'verstorben' => 'deceased', 'deceased' => 'deceased',
     ];
 
@@ -299,7 +300,7 @@ class MemberImportService {
             $data[$field] = $date;
         }
 
-        foreach (['foundingMember' => $this->l->t('Founding member'), 'deceased' => $this->l->t('Deceased')] as $field => $label) {
+        foreach (['foundingMember' => $this->l->t('Founding member'), 'feeExemptJoinYear' => $this->l->t('Fee-exempt in the year joined'), 'deceased' => $this->l->t('Deceased')] as $field => $label) {
             $raw = mb_strtolower(trim($record[$field] ?? ''));
             if (in_array($raw, ['', 'nein', 'no', 'n', '0', 'false', 'falsch', '-'], true)) {
                 $data[$field] = false;

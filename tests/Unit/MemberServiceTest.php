@@ -88,6 +88,7 @@ class MemberServiceTest extends TestCase {
             'joinDate' => '2020-05-01',
             'role' => 'treasurer',
             'foundingMember' => 'true',
+            'feeExemptJoinYear' => 'true',
             'mandateDate' => '2021-01-05',
             'mandateReference' => ' REF-1 ',
         ]);
@@ -98,6 +99,7 @@ class MemberServiceTest extends TestCase {
         $this->assertSame('treasurer', $inserted->getRole());
         $this->assertSame('2020-05-01', $inserted->getJoinDate());
         $this->assertTrue($inserted->getFoundingMember());
+        $this->assertTrue($inserted->getFeeExemptJoinYear());
         $this->assertSame('2021-01-05', $inserted->getMandateDate());
         $this->assertSame('REF-1', $inserted->getMandateReference());
         // club data is readable through the member

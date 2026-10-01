@@ -26,7 +26,10 @@ use OCA\Verein\L10n\DocumentL10n;
  * after new members joined, and previewed before anything is written.
  *
  * With $prorata, a member who joined during the fee year pays only for the
- * months from the join month (inclusive) to December, rounded to cents.
+ * months from the join month (inclusive) to December, rounded to cents. A
+ * membership with Membership::$feeExemptJoinYear pays nothing at all for the
+ * year it was joined in (and this takes precedence over $prorata); every
+ * year after that is billed normally.
  */
 class FeeRunService {
     private IL10N $l;
@@ -108,6 +111,10 @@ class FeeRunService {
             $join = $member->getJoinDate();
             if (!empty($join) && (int)substr($join, 0, 4) > $year) {
                 $skip($this->l->t('joins after %s', [$year]));
+                continue;
+            }
+            if ($member->getFeeExemptJoinYear() && !empty($join) && (int)substr($join, 0, 4) === $year) {
+                $skip($this->l->t('fee-exempt in the year joined'));
                 continue;
             }
             if (isset($alreadyBilled[$member->getId()])) {

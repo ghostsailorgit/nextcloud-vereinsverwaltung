@@ -60,7 +60,7 @@ class FeeRunServiceTest extends TestCase {
         $this->rateList[] = $r;
     }
 
-    private function member(int $id, string $first, string $name, ?int $rateId = null, ?string $join = '2015-01-01', ?string $leave = null, bool $deceased = false): void {
+    private function member(int $id, string $first, string $name, ?int $rateId = null, ?string $join = '2015-01-01', ?string $leave = null, bool $deceased = false, bool $feeExemptJoinYear = false): void {
         $m = new Member();
         $m->setId($id);
         $m->setFirstName($first);
@@ -72,6 +72,7 @@ class FeeRunServiceTest extends TestCase {
         $ms->setFeeRateId($rateId);
         $ms->setJoinDate($join);
         $ms->setLeaveDate($leave);
+        $ms->setFeeExemptJoinYear($feeExemptJoinYear);
         $m->setMembership($ms);
         $this->memberList[] = $m;
     }
@@ -269,6 +270,39 @@ class FeeRunServiceTest extends TestCase {
         $this->service->run(self::CLUB, 2026, '2026-03-31', null, true);
 
         $this->assertSame(6.0, $inserted[0]->getAmount());
+    }
+
+    public function testFeeExemptJoinYearSkipsOnlyTheYearJoined(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        // joined this fee year, exempt -> skipped; joined an earlier year, exempt -> billed normally
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-06-01', null, false, true);
+        $this->member(11, 'Alt', 'Mitglied', null, '2015-01-01', null, false, true);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Alt Mitglied'], $this->names($plan['included']));
+        $reasons = array_column($plan['skipped'], 'reason', 'name');
+        $this->assertStringContainsString('beitragsfrei', $reasons['Neu Mitglied']);
+    }
+
+    public function testFeeExemptJoinYearTakesPrecedenceOverProrata(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-06-01', null, false, true);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $this->assertSame([], $plan['included']);
+        $this->assertStringContainsString('beitragsfrei', $plan['skipped'][0]['reason']);
+    }
+
+    public function testRunWritesNoFeeForAFeeExemptJoinYear(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-06-01', null, false, true);
+        $this->fees->expects($this->never())->method('insert');
+
+        $result = $this->service->run(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(0, $result['created']);
     }
 
     public function testInvalidYearOrDateIsRejected(): void {

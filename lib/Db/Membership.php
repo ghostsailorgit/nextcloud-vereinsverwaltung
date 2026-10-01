@@ -26,6 +26,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDeactivated(bool $deactivated)
  * @method bool getFoundingMember()
  * @method void setFoundingMember(bool $foundingMember)
+ * @method bool getFeeExemptJoinYear()
+ * @method void setFeeExemptJoinYear(bool $feeExemptJoinYear)
  * @method ?string getMandateReference()
  * @method void setMandateReference(?string $mandateReference)
  * @method ?string getMandateDate()
@@ -48,6 +50,8 @@ class Membership extends Entity implements JsonSerializable {
     protected bool $foundingMember = false;
     // Deactivated: no payments (fee run, SEPA), no calendar reminders, no derived rights; nothing is deleted
     protected bool $deactivated = false;
+    // Skips the annual fee for the year in FeeRunService::plan(); only that year, not every year after
+    protected bool $feeExemptJoinYear = false;
     protected ?string $mandateReference = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
@@ -61,6 +65,7 @@ class Membership extends Entity implements JsonSerializable {
         $this->addType('clubId', 'integer');
         $this->addType('foundingMember', 'bool');
         $this->addType('deactivated', 'bool');
+        $this->addType('feeExemptJoinYear', 'bool');
         $this->addType('feeRateId', 'integer');
     }
 
@@ -83,6 +88,7 @@ class Membership extends Entity implements JsonSerializable {
             'leaveDate' => $this->leaveDate,
             'foundingMember' => $this->foundingMember,
             'deactivated' => $this->deactivated,
+            'feeExemptJoinYear' => $this->feeExemptJoinYear,
             'mandateReference' => $this->mandateReference,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,

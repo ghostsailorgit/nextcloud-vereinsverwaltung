@@ -112,6 +112,11 @@ class Member extends Entity implements JsonSerializable {
         return $this->membership?->getFoundingMember() ?? false;
     }
 
+    /** Fee-exempt for the year in Membership::$feeExemptJoinYear, see FeeRunService::plan(). */
+    public function getFeeExemptJoinYear(): bool {
+        return $this->membership?->getFeeExemptJoinYear() ?? false;
+    }
+
     /**
      * "Vorname Name", falling back to just "Name" if no first name is set.
      */
@@ -183,6 +188,7 @@ class Member extends Entity implements JsonSerializable {
             'leaveDate' => $this->getLeaveDate(),
             'foundingMember' => $this->getFoundingMember(),
             'deactivated' => $this->getDeactivated(),
+            'feeExemptJoinYear' => $this->getFeeExemptJoinYear(),
             'mandateReference' => $this->membership?->getMandateReference(),
             'mandateDate' => $this->membership?->getMandateDate(),
             'mandateFile' => $this->membership?->getMandateFile(),

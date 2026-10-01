@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [0.22.0-beta] - 2026-10-04
+
+### ✨ Neu
+- **Eintrittsjahr beitragsfrei:** neues Häkchen im Mitgliederformular. Ist es gesetzt, überspringt der Beitragslauf
+  dieses Mitglied nur für das Jahr des Eintritts (mit Begründung in der Vorschau); jedes Jahr danach wird wie gewohnt
+  abgerechnet. Geht der anteiligen Berechnung vor, falls beides gleichzeitig aktiv ist.
+
+---
+
 ## [0.21.0-beta] - 2026-09-29
 
 ### ✨ Neu

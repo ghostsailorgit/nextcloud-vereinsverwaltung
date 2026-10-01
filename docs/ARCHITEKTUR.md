@@ -109,11 +109,15 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   jede Mitgliedschaft kann im Mitgliederformular eine eigene Kategorie bekommen.
 - **Beitragslauf** (Reiter „Finanzen“): Jahr und Fälligkeit wählen, Vorschau ansehen, erzeugen. Aktive Mitglieder bekommen ihren
   Jahresbeitrag; übersprungen werden Ausgetretene und Verstorbene, spätere Eintritte, Beitragsfreie, Mitglieder ohne Kategorie
-  (und ohne Standard) sowie alle, die für das Jahr schon einen Beitrag haben. Ein Lauf lässt sich deshalb wiederholen.
+  (und ohne Standard), Mitglieder mit Häkchen „Eintrittsjahr beitragsfrei“ (nur für das Eintrittsjahr, siehe unten) sowie alle,
+  die für das Jahr schon einen Beitrag haben. Ein Lauf lässt sich deshalb wiederholen.
   Wahlweise **anteilig**: Wer im Beitragsjahr eingetreten ist, zahlt die Monate ab dem Eintrittsmonat (einschließlich) bis
   Dezember (Jahresbeitrag × Monate / 12, auf Cent gerundet). Eintritt im Januar, früher oder ohne Datum = ganzes Jahr, damit
   fehlende Daten nicht zu einem zu niedrigen Beitrag führen. Die Option gilt je Lauf, nicht je Verein (keine gespeicherte
   Einstellung); ein Austritt im Beitragsjahr wird nicht anteilig gerechnet (Ausgetretene bekommen keinen Beitrag).
+- **Eintrittsjahr beitragsfrei** (`Membership::$feeExemptJoinYear`, Häkchen im Mitgliederformular): komplett beitragsfrei,
+  aber nur für das Jahr des Eintritts - jedes weitere Jahr wird normal abgerechnet, auch ohne das Häkchen erneut zu setzen.
+  Geht der anteiligen Berechnung vor, falls ein Lauf beides gleichzeitig hätte (`FeeRunService::plan()`).
 - **Nach dem SEPA-Export** bietet die Seite an, genau die exportierten Beiträge als bezahlt zu markieren (erst nach dem Einreichen bei der Bank).
 - **Überfällige markieren** setzt offene Beiträge mit abgelaufener Fälligkeit auf „überfällig“.
 - **Mahnwesen** (`DunningService`, Reiter „Finanzen“, Recht „Finanzen bearbeiten“): Beiträge, die offen oder überfällig und seit

@@ -91,6 +91,7 @@ class SelfServiceService {
                 'joinDate' => $membership->getJoinDate(),
                 'leaveDate' => $membership->getLeaveDate(),
                 'foundingMember' => $membership->getFoundingMember(),
+                'feeExemptJoinYear' => $membership->getFeeExemptJoinYear(),
                 'isFormer' => $view->isFormer(),
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [

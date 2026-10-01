@@ -255,7 +255,7 @@ class AuditLogServiceTest extends TestCase {
 
         // Kept in sync with AuditLogService::SAFE_FIELDS['member'] by hand (it is private on purpose -
         // this test exists so a mismatch shows up as a leaked value above, not as a silent drift here).
-        $safeFields = ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'deactivated', 'deceased', 'clubId'];
+        $safeFields = ['id', 'role', 'joinDate', 'leaveDate', 'foundingMember', 'feeExemptJoinYear', 'deactivated', 'deceased', 'clubId'];
         $decoded = json_decode($raw, true);
         $payload = $member->jsonSerialize();
         foreach ($safeFields as $field) {

@@ -9,7 +9,7 @@ Stand: Version 0.21.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 | Mehrere Vereine | Vereine, Mitgliedschaften (eine Person in mehreren Vereinen), Bankkonten, Rechte je Verein |
 | Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung |
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
-| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben per E-Mail über den Nextcloud-Mailserver oder als PDF), Mitglieder deaktivieren |
+| Beiträge | Kategorien, Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr, oder Eintrittsjahr ganz beitragsfrei per Häkchen am Mitglied), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben per E-Mail über den Nextcloud-Mailserver oder als PDF), Mitglieder deaktivieren |
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, in der CI gegen das offizielle Schema geprüft, SEPA-Zeichensatz, Einzug nie vor Fälligkeit, Einzugsdatum nach Bankarbeitstagen oder frei wählbar, freiwillige Vorabankündigung per E-Mail, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge mit Grund, „bezahlt“-Markierung nach dem Export |
 | Kalender | Geburtstage und Jubiläen je Verein als App-Kalender über Nextclouds öffentliche Schnittstelle, sichtbar nur für ausgewählte Gruppen |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |

@@ -110,7 +110,7 @@ class MemberService {
      *
      * @param array $data Person keys: name, firstName, salutation, address,
      *   street, postalCode, city, email, iban, bic, birthDate, deceased.
-     *   Membership keys: role, joinDate, leaveDate, foundingMember,
+     *   Membership keys: role, joinDate, leaveDate, foundingMember, feeExemptJoinYear,
      *   mandateReference, mandateDate, mandateFile
      */
     public function create(int $clubId, array $data): Member {
@@ -359,6 +359,7 @@ class MemberService {
         $membership->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
         $membership->setLeaveDate($this->nullIfEmpty($data['leaveDate'] ?? null));
         $membership->setFoundingMember($this->toBool($data['foundingMember'] ?? false));
+        $membership->setFeeExemptJoinYear($this->toBool($data['feeExemptJoinYear'] ?? false));
         $membership->setMandateReference($this->nullIfEmpty($data['mandateReference'] ?? null));
         $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
         $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));
