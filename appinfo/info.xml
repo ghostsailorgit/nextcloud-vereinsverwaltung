@@ -22,7 +22,7 @@
 - **Club calendar** with birthdays and membership anniversaries, visible only to the Nextcloud groups you choose.
 - **Data protection:** audit log without personal data in plain text, personal data export, anonymization, daily backups with restore.
 
-No extra PHP extensions, tools or system cron are needed. **Beta:** check the first SEPA file with your bank's validation tool before the first real collection.]]></description>
+No extra PHP extensions, tools or system cron are needed. **Please** check the first SEPA file with your bank's validation tool before the first real collection.]]></description>
     <description lang="de"><![CDATA[Mitglieder, Beiträge und SEPA-Lastschriften eines oder mehrerer Vereine verwalten – in der eigenen Nextcloud, die Daten bleiben auf dem eigenen Server.
 
 - **Mehrere Vereine in einer Installation.** Eine Person kann in mehreren Vereinen Mitglied sein, jeweils mit eigenem Eintrittsdatum, eigener Funktion und eigenem SEPA-Mandat. Jeder Verein hat eigene Bankkonten und eine eigene Gläubiger-ID.
@@ -34,8 +34,8 @@ No extra PHP extensions, tools or system cron are needed. **Beta:** check the fi
 - **Vereinskalender** mit Geburtstagen und Vereinsjubiläen, nur für die ausgewählten Nextcloud-Gruppen sichtbar.
 - **Datenschutz:** Änderungsprotokoll ohne personenbezogene Daten im Klartext, Datenauskunft, Anonymisieren, tägliche Sicherung mit Wiederherstellung.
 
-Es werden keine zusätzlichen PHP-Erweiterungen, Programme oder System-Cron benötigt. **Beta:** Die erste SEPA-Datei vor dem ersten echten Einzug mit dem Prüfwerkzeug der eigenen Bank kontrollieren.]]></description>
-    <version>0.22.0-beta</version>
+Es werden keine zusätzlichen PHP-Erweiterungen, Programme oder System-Cron benötigt. **Bitte** die erste SEPA-Datei vor dem ersten echten Einzug mit dem Prüfwerkzeug der eigenen Bank kontrollieren.]]></description>
+    <version>1.0.0</version>
     <licence>agpl</licence>
     <author>Vereinsverwaltung</author>
     <namespace>Verein</namespace>
