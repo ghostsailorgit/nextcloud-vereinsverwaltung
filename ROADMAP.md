@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 0.21.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 1.0.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -22,8 +22,8 @@ Stand: Version 0.21.0-beta. Die Reihenfolge ist keine Zusage, sondern die aktuel
 
 ## Als Nächstes
 
-- **Veröffentlichung im App Store:** App signieren und Archiv aus `release.yml` hochladen (englische `info.xml` mit
-  Beschreibung, Doku-Links und Bildschirmfotos ist fertig).
+- **Veröffentlichung im App Store:** Zertifikat und App-ID `verein` sind registriert; das Archiv aus `release.yml`
+  wird ab 1.0.0 signiert hochgeladen.
 
 ## Ideen ohne Termin
 

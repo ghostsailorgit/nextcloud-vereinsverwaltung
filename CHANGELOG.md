@@ -1,6 +1,16 @@
 # Änderungen
 
-Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/), die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Solange die App im Beta-Stadium ist, können sich Dinge zwischen Versionen noch ändern.
+Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/), die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
+
+---
+
+## [1.0.0] - 2026-10-13
+
+Erste Version für den Nextcloud App Store, funktional wie 0.22.0-beta.
+
+### 🔧 Technik
+- Versionsnummer ohne Beta-Zusatz, damit die App auch Instanzen auf dem stabilen Update-Kanal angeboten wird.
+- Abhängigkeiten im Frontend aktualisiert (`dompurify` 3.4.16, `source-map-js` 1.2.2) nach Hinweisen von `npm audit`.
 
 ---
 

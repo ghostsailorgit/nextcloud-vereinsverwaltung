@@ -10,7 +10,7 @@ Das Projekt wird ehrenamtlich gepflegt; eine feste Antwortzeit kann nicht zugesa
 
 ## Unterstützte Versionen
 
-Das Projekt befindet sich in der Beta. Sicherheitskorrekturen gibt es für den jeweils **aktuellen Stand von `master`** bzw. die letzte veröffentlichte Version.
+Sicherheitskorrekturen gibt es für den jeweils **aktuellen Stand von `master`** bzw. die letzte veröffentlichte Version.
 
 ## Was die App zur Sicherheit tut
 
