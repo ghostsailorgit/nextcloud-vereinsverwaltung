@@ -412,7 +412,10 @@ class MemberController extends Controller {
     public function export($id) {
         try {
             $this->memberService->find($this->clubId(), (int)$id);
-            $data = $this->selfService->forMemberId((int)$id, $this->clubId());
+            // viewing members does not include seeing what they paid
+            $uid = $this->userSession->getUser()?->getUID() ?? '';
+            $mayReadFinances = $this->roleService->userHasPermission($uid, 'verein.finance.read', $this->clubId());
+            $data = $this->selfService->forMemberId((int)$id, $this->clubId(), $mayReadFinances);
             $data['status'] = 'ok';
             $data['exportedAt'] = date('c');
             return new DataDownloadResponse(

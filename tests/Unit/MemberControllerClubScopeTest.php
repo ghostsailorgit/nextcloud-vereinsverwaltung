@@ -35,6 +35,7 @@ class MemberControllerClubScopeTest extends TestCase {
 
     /** @var array<string, mixed> */
     private array $params = ['clubId' => '3'];
+    private bool $mayReadFinances = false;
 
     protected function setUp(): void {
         $this->memberService = $this->createMock(MemberService::class);
@@ -45,6 +46,7 @@ class MemberControllerClubScopeTest extends TestCase {
         );
 
         $roleService = $this->createMock(RoleService::class);
+        $roleService->method('userHasPermission')->willReturnCallback(fn (string $uid, string $permission) => $permission !== 'verein.finance.read' || $this->mayReadFinances);
         $user = $this->createMock(IUser::class);
         $user->method('getUID')->willReturn('admin');
         $session = $this->createMock(IUserSession::class);
@@ -105,7 +107,7 @@ class MemberControllerClubScopeTest extends TestCase {
         $member = new Member();
         $member->setId(9);
         $this->memberService->method('find')->with(3, 9)->willReturn($member);
-        $this->selfService->expects($this->once())->method('forMemberId')->with(9, 3)->willReturn([
+        $this->selfService->expects($this->once())->method('forMemberId')->with(9, 3, false)->willReturn([
             'linked' => true,
             'nextcloudAccount' => null,
             'person' => [],
@@ -116,5 +118,20 @@ class MemberControllerClubScopeTest extends TestCase {
         $response = $this->controller->export(9);
 
         $this->assertNotSame(404, $response->getStatus());
+    }
+
+    /** @dataProvider financeRights */
+    public function testExportAsksForTheFeesOnlyWithTheRightToSeeFinances(bool $mayRead): void {
+        $this->mayReadFinances = $mayRead;
+        $member = new Member();
+        $member->setId(9);
+        $this->memberService->method('find')->with(3, 9)->willReturn($member);
+        $this->selfService->expects($this->once())->method('forMemberId')->with(9, 3, $mayRead)->willReturn(['linked' => false]);
+
+        $this->controller->export(9);
+    }
+
+    public static function financeRights(): array {
+        return ['with' => [true], 'without' => [false]];
     }
 }

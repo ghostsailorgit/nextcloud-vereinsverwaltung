@@ -53,15 +53,21 @@ class SelfServiceService {
      * @param int|null $onlyClubId Restricts memberships and fees to this club - the caller
      *   (MemberController::export()) must already have confirmed the person is a member of it;
      *   this method does not check permissions itself, same as forUser().
+     * @param bool $includeFees false leaves the fees out (the caller may see the member but not the finances)
      * @throws NotFoundException
      */
-    public function forMemberId(int $memberId, ?int $onlyClubId = null): array {
+    public function forMemberId(int $memberId, ?int $onlyClubId = null, bool $includeFees = true): array {
         try {
             $person = $this->members->find($memberId);
         } catch (DoesNotExistException $e) {
             throw new NotFoundException($this->l->t('Member not found'));
         }
-        return $this->buildExport($person, $person->getUserId(), $onlyClubId);
+        $data = $this->buildExport($person, $person->getUserId(), $onlyClubId);
+        if (!$includeFees) {
+            unset($data['fees']);
+            $data['feesOmitted'] = true;
+        }
+        return $data;
     }
 
     /**

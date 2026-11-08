@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.1.1] - 2026-11-08
+
+### 🐛 Korrigiert
+- Rollen ohne Finanzrecht: Die Datenauskunft eines Mitglieds enthielt dessen Beiträge, obwohl dafür „Mitglieder ansehen“
+  reichte. Sie kommen jetzt nur noch mit dem Recht „Finanzen ansehen“ mit, sonst vermerkt die Datei das.
+- Das Dashboard zeigte solchen Rollen eine Fehlermeldung statt ihrer Zahlen; jetzt erscheinen sie ohne die Beitragszahlen.
+
+---
+
 ## [1.1.0] - 2026-11-08
 
 ### ✨ Neu
