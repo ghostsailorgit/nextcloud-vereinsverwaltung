@@ -135,6 +135,43 @@ class MemberServiceTest extends TestCase {
         $this->assertFalse($stored[1]->getHonoraryPaysFee());
     }
 
+    public function testPayerRules(): void {
+        $this->members->method('insert')->willReturnCallback(function ($m) { $m->setId(55); return $m; });
+        $stored = [];
+        $this->memberships->method('insert')->willReturnCallback(function ($ms) use (&$stored) { $stored[] = $ms; return $ms; });
+        $self = $this->membership(55, 3);
+        $withPayer = $this->membership(9, 3);
+        $withPayer->setPayerMemberId(1);
+        $plain = $this->membership(8, 3);
+        $this->memberships->method('findByMemberAndClub')->willReturnCallback(function (int $m) use ($withPayer, $plain) {
+            return match ($m) {
+                8 => $plain,
+                9 => $withPayer,
+                default => throw new \OCP\AppFramework\Db\DoesNotExistException('x'),
+            };
+        });
+
+        $this->service->create(3, ['name' => 'Muster', 'email' => '', 'payerMemberId' => '8']);
+        $this->assertSame(8, $stored[0]->getPayerMemberId());
+        foreach ([['55', 'eigener'], ['9', 'jemand anderes'], ['7', 'nicht Mitglied']] as [$payer, $message]) {
+            try {
+                $this->service->create(3, ['name' => 'Muster', 'email' => '', 'payerMemberId' => $payer]);
+                $this->fail('accepted payer ' . $payer);
+            } catch (\OCA\Verein\Exception\ValidationException $e) {
+                $this->assertStringContainsString($message, $e->getMessage());
+            }
+        }
+    }
+
+    public function testSomeonePayingForOthersCannotGetAPayer(): void {
+        $this->members->method('insert')->willReturnCallback(function ($m) { $m->setId(55); return $m; });
+        $this->memberships->method('findByMemberAndClub')->willReturn($this->membership(8, 3));
+        $this->memberships->method('countPayees')->willReturn(2);
+
+        $this->expectExceptionMessage('zahlt für andere');
+        $this->service->create(3, ['name' => 'Muster', 'email' => '', 'payerMemberId' => '8']);
+    }
+
     public function testRemoveKeepsThePersonWhileAnotherClubStillHasThem(): void {
         $member = $this->person(8);
         $member->setMembership($this->membership(8, 1));
@@ -143,6 +180,7 @@ class MemberServiceTest extends TestCase {
 
         $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
         $this->fees->expects($this->once())->method('cancelOpenOfMember')->with(8, 1);
+        $this->memberships->expects($this->once())->method('clearPayer')->with(8, 1);
         $this->memberships->expects($this->once())->method('delete')->with($member->getMembership());
         $this->members->expects($this->never())->method('delete');
 

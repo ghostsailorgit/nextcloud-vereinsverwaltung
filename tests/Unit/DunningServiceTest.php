@@ -301,6 +301,23 @@ class DunningServiceTest extends TestCase {
         $this->assertSame(['Liebe Erika,', 'Hallo Muster,'], [$letters[10], $letters[11]]);
     }
 
+    public function testThePayerGetsOneLetterForEveryoneTheyPayFor(): void {
+        $this->member(10, 'Anna', 'Muster');
+        $child = $this->member(11, 'Ben', 'Muster');
+        $child->getMembership()->setPayerMemberId(10);
+        $this->fee(1, 10, 24, '2026-03-31', 'overdue', 1, '2026-01-01');
+        $this->fee(2, 11, 12, '2026-03-31', 'overdue', 1, '2026-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 14, 14, self::TODAY);
+        $this->assertSame(['Anna Muster'], array_column($plan['included'], 'name'));
+        $this->assertSame(36.0, $plan['included'][0]['total']);
+
+        $letters = $this->service->letters(self::CLUB, [1, 2], 14, self::TODAY)['letters'];
+        $this->assertCount(1, $letters);
+        $this->assertSame(10, $letters[0]['memberId']);
+        $this->assertStringContainsString('(Ben Muster)', $letters[0]['fees'][1]['text']);
+    }
+
     public function testLettersRejectAnEmptySelectionAndAnOddDeadline(): void {
         foreach ([[[], 14], [[1], 0], [[1], 91]] as [$ids, $days]) {
             try {

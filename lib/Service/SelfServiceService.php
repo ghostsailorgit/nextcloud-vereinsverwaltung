@@ -105,7 +105,7 @@ class SelfServiceService {
                 'mandate' => [
                     'reference' => $membership->getEffectiveMandateReference(),
                     'date' => $membership->getMandateDate(),
-                    'signedCopyOnFile' => !empty($membership->getMandateFile()),
+                    'signedCopyOnFile' => !empty($membership->getMandateFile()) || $membership->getMandateOnPaper(),
                 ],
             ];
         }

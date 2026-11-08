@@ -119,6 +119,10 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   Dezember (Jahresbeitrag × Monate / 12, auf Cent gerundet). Eintritt im Januar, früher oder ohne Datum = ganzes Jahr, damit
   fehlende Daten nicht zu einem zu niedrigen Beitrag führen. Die Option gilt je Lauf, nicht je Verein (keine gespeicherte
   Einstellung); ein Austritt im Beitragsjahr wird nicht anteilig gerechnet (Ausgetretene bekommen keinen Beitrag).
+- **Beitragszahler** (`Membership::$payerMemberId`, Auswahl im Mitgliederformular): Jemand im Verein zahlt für andere (Partner, Kinder); alle bleiben
+  eigenständige Mitglieder mit eigenen Beiträgen. Der SEPA-Export zieht ihre Beiträge je Einzugsdatum als eine Lastschrift vom Konto und mit dem Mandat
+  des Zahlers ein (Verwendungszweck nennt die Personen), das Mahnwesen schreibt einen Brief an den Zahler (`FeePayer::of()`). Nur eine Ebene; ein
+  ausgetretener oder deaktivierter Zahler zählt nicht mehr. Wer den Zahler aus dem Verein entfernt, löst die Bündelung.
 - **Ehrenmitglieder** (`Membership::$honoraryMember`, Häkchen im Mitgliederformular) bekommen im Beitragslauf keinen Beitrag. Wer
   freiwillig weiterzahlt (`$honoraryPaysFee`, zweites Häkchen), wird normal nach seiner Beitragskategorie abgerechnet.
 - **Eintrittsjahr beitragsfrei** (`Membership::$feeExemptJoinYear`, Häkchen im Mitgliederformular): komplett beitragsfrei,

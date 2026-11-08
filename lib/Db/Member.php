@@ -115,6 +115,14 @@ class Member extends Entity implements JsonSerializable {
         return $this->membership?->getFoundingMember() ?? false;
     }
 
+    public function getMandateOnPaper(): bool {
+        return $this->membership?->getMandateOnPaper() ?? false;
+    }
+
+    public function getPayerMemberId(): ?int {
+        return $this->membership?->getPayerMemberId();
+    }
+
     public function getHonoraryMember(): bool {
         return $this->membership?->getHonoraryMember() ?? false;
     }
@@ -203,6 +211,8 @@ class Member extends Entity implements JsonSerializable {
             'feeExemptJoinYear' => $this->getFeeExemptJoinYear(),
             'honoraryMember' => $this->getHonoraryMember(),
             'honoraryPaysFee' => $this->getHonoraryPaysFee(),
+            'mandateOnPaper' => $this->getMandateOnPaper(),
+            'payerMemberId' => $this->getPayerMemberId(),
             'mandateReference' => $this->membership?->getMandateReference(),
             'mandateDate' => $this->membership?->getMandateDate(),
             'mandateFile' => $this->membership?->getMandateFile(),

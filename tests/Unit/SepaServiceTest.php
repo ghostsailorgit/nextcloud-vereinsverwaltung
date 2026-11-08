@@ -152,6 +152,57 @@ class SepaServiceTest extends TestCase {
         $this->assertSame(['Paula Ausgetreten' => 'nicht mehr Mitglied dieses Vereins'], array_column($preview['skipped'], 'reason', 'memberName'));
     }
 
+    public function testAPayerIsDebitedOnceForEveryoneTheyPayFor(): void {
+        $this->person(1, 'Anna', 'Muster', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->person(2, 'Ben', 'Muster', '');
+        $this->mandate(2, '');
+        $this->membershipsByMember[2]->setPayerMemberId(1);
+        $this->person(3, 'Cleo', 'Muster', '');
+        $this->mandate(3, '');
+        $this->membershipsByMember[3]->setPayerMemberId(1);
+        $this->person(4, 'Dora', 'Einzeln', 'DE02120300000000202051');
+        $this->mandate(4, '2021-01-05');
+        $this->fee(10, 1, 24.0, 'Beitrag 2026');
+        $this->fee(11, 2, 12.0, 'Beitrag 2026');
+        $this->fee(12, 3, 12.0, 'Beitrag 2026');
+        $this->fee(13, 4, 24.0, 'Beitrag 2026');
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(2, $preview['transactionCount']);
+        $this->assertSame([], $preview['skipped']);
+        $byName = array_column($preview['transactions'], null, 'memberName');
+        $bundle = $byName['Anna Muster'];
+        $this->assertEquals(48, $bundle['amount']);
+        $this->assertSame([10, 11, 12], $bundle['feeIds']);
+        $this->assertSame('Beitrag 2026 für Anna, Ben, Cleo', $bundle['reference']);
+        $this->assertSame(['Anna', 'Ben', 'Cleo'], $bundle['forMembers']);
+        $this->assertSame(1, $bundle['memberId']);
+        $this->assertSame([], $byName['Dora Einzeln']['forMembers']);
+        $this->assertEquals(72, $preview['totalAmount']);
+
+        $file = $this->service->generateSepaXml(self::CLUB);
+        $this->assertSame([10, 11, 12, 13], $file['feeIds']);
+        $this->assertSame(2, substr_count($file['xml'], '<DrctDbtTxInf>'));
+        $this->assertStringContainsString('<InstdAmt Ccy="EUR">48.00</InstdAmt>', $file['xml']);
+    }
+
+    public function testAPayerWhoLeftNoLongerCounts(): void {
+        $this->person(1, 'Anna', 'Muster', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->membershipsByMember[1]->setLeaveDate('2025-12-31');
+        $this->person(2, 'Ben', 'Muster', '');
+        $this->mandate(2, '');
+        $this->membershipsByMember[2]->setPayerMemberId(1);
+        $this->fee(11, 2, 12.0);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(0, $preview['transactionCount']);
+        $this->assertSame(['Ben Muster' => 'keine IBAN hinterlegt'], array_column($preview['skipped'], 'reason', 'memberName'));
+    }
+
     public function testDeactivatedMembersAreNotCollectedEvenWithIbanAndMandate(): void {
         $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
         $this->mandate(1, '2021-01-05');
