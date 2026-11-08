@@ -322,6 +322,123 @@ class FeeRunServiceTest extends TestCase {
         $this->assertSame(0, $result['created']);
     }
 
+    private function tieredRate(int $id, string $name, array $tiers, ?string $cutoff = '12-31', bool $default = true): void {
+        $this->rate($id, $name, 0.0, $default);
+        $this->rateList[count($this->rateList) - 1]->setAgeTiers(json_encode($tiers));
+        $this->rateList[count($this->rateList) - 1]->setAgeCutoff($cutoff);
+    }
+
+    private const TIERS = [['fromAge' => 0, 'amount' => 0.0], ['fromAge' => 6, 'amount' => 10.0], ['fromAge' => 14, 'amount' => 15.0], ['fromAge' => 18, 'amount' => 25.0]];
+
+    private function born(int $index, ?string $birthDate): void {
+        $this->memberList[$index]->setBirthDate($birthDate);
+    }
+
+    public function testTheAgeOnDecember31OfTheFeeYearPicksTheTier(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Klein', 'Kind');
+        $this->born(0, '2021-12-31');    // 5 -> 0 €, exempt
+        $this->member(11, 'Sechs', 'Kind');
+        $this->born(1, '2020-12-31');    // turns 6 on the last day
+        $this->member(12, 'Dreizehn', 'Kind');
+        $this->born(2, '2013-01-01');    // 13
+        $this->member(13, 'Vierzehn', 'Kind');
+        $this->born(3, '2012-12-31');    // 14
+        $this->member(14, 'Erst', 'Erwachsen');
+        $this->born(4, '2008-12-31');    // 18
+        $this->member(15, 'Alt', 'Erwachsen');
+        $this->born(5, '1950-06-15');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertEquals([
+            'Sechs Kind' => 10.0, 'Dreizehn Kind' => 10.0, 'Vierzehn Kind' => 15.0, 'Erst Erwachsen' => 25.0, 'Alt Erwachsen' => 25.0,
+        ], array_column($plan['included'], 'amount', 'name'));
+        $this->assertSame(['Klein Kind' => 'beitragsfrei (Verein)'], array_column($plan['skipped'], 'reason', 'name'));
+        $this->assertSame(85.0, $plan['total']);
+    }
+
+    public function testAnotherCutOffDayCountsOnlyBirthdaysUpToThatDay(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS, '01-01');
+        $this->member(10, 'Neujahr', 'Kind');
+        $this->born(0, '2008-01-01');    // already 18 on January 1
+        $this->member(11, 'Zweiter', 'Kind');
+        $this->born(1, '2008-01-02');    // still 17
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Neujahr Kind' => 25.0, 'Zweiter Kind' => 15.0], array_column($plan['included'], 'amount', 'name'));
+    }
+
+    public function testWithoutABirthDateAByAgeCategoryReportsInsteadOfGuessing(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Ohne', 'Datum');
+        $this->member(11, 'Kaputt', 'Datum');
+        $this->born(1, '0000-00-00');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([], $plan['included']);
+        $this->assertCount(2, $plan['skipped']);
+        $this->assertStringContainsString('Geburtsdatum', $plan['skipped'][0]['reason']);
+        $this->assertStringContainsString('Geburtsdatum', $plan['skipped'][1]['reason']);
+    }
+
+    public function testAFlatCategoryDoesNotNeedABirthDate(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Ohne', 'Datum');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(24.0, $plan['included'][0]['amount']);
+        $this->assertArrayNotHasKey('ageFrom', $plan['included'][0]);
+    }
+
+    public function testThePreviewShowsWhoMovedToAnotherTier(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Wechselt', 'Jetzt');
+        $this->born(0, '2008-05-05');    // 18 in 2026, 17 in 2025
+        $this->member(11, 'Bleibt', 'Gleich');
+        $this->born(1, '2000-05-05');
+        $this->member(12, 'Neu', 'Eingetreten', null, '2026-02-01');
+        $this->born(2, '2008-05-05');    // moves up too, but paid nothing before
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $byName = array_column($plan['included'], null, 'name');
+        $this->assertSame(18, $byName['Wechselt Jetzt']['ageFrom']);
+        $this->assertSame(14, $byName['Wechselt Jetzt']['previousAgeFrom']);
+        $this->assertSame(15.0, $byName['Wechselt Jetzt']['previousAmount']);
+        $this->assertArrayNotHasKey('previousAgeFrom', $byName['Bleibt Gleich']);
+        $this->assertArrayNotHasKey('previousAgeFrom', $byName['Neu Eingetreten']);
+    }
+
+    public function testProrataAppliesToTheTierAmount(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Okt', 'Mitglied', null, '2026-10-15');
+        $this->born(0, '2000-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $this->assertSame(6.25, $plan['included'][0]['amount']);
+        $this->assertSame(25.0, $plan['included'][0]['fullAmount']);
+    }
+
+    public function testRunWritesTheTierAmount(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Vierzehn', 'Kind');
+        $this->born(0, '2012-03-03');
+        $inserted = [];
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$inserted) {
+            $inserted[] = $f;
+            return $f;
+        });
+
+        $this->service->run(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(15.0, $inserted[0]->getAmount());
+    }
+
     public function testInvalidYearOrDateIsRejected(): void {
         try {
             $this->service->plan(self::CLUB, 1999, '2026-03-31');

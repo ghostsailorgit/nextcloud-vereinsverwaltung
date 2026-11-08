@@ -121,4 +121,69 @@ class FeeRateServiceTest extends TestCase {
 
         $this->assertTrue($this->store[$b->getId()]->getIsDefault());
     }
+
+    private const TIERS = [['fromAge' => '18', 'amount' => '25,50'], ['fromAge' => 0, 'amount' => '0'], ['fromAge' => '6', 'amount' => 10]];
+
+    public function testAgeTiersAreSortedStoredAndReplaceTheAmount(): void {
+        $rate = $this->service->create(1, ['name' => 'Verein', 'amount' => '', 'ageTiers' => self::TIERS, 'ageCutoff' => '']);
+
+        $this->assertSame(0.0, $rate->getAmount());
+        $this->assertSame('12-31', $rate->getAgeCutoff(), 'the cut-off defaults to the end of the fee year');
+        $this->assertEquals([['fromAge' => 0, 'amount' => 0.0], ['fromAge' => 6, 'amount' => 10.0], ['fromAge' => 18, 'amount' => 25.5]], $rate->jsonSerialize()['ageTiers']);
+    }
+
+    public function testAnExistingCategoryCanGoBackToOneAmount(): void {
+        $rate = $this->service->create(1, ['name' => 'Verein', 'ageTiers' => self::TIERS, 'ageCutoff' => '06-30']);
+
+        $this->service->update(1, $rate->getId(), ['name' => 'Verein', 'amount' => '30', 'ageTiers' => []]);
+
+        $this->assertSame(30.0, $rate->getAmount());
+        $this->assertNull($rate->getAgeTiers());
+        $this->assertNull($rate->getAgeCutoff());
+    }
+
+    /** @dataProvider invalidAgeSettings */
+    public function testInvalidAgeSettingsAreRefused(array $tiers, mixed $cutoff, string $expected): void {
+        try {
+            $this->service->create(1, ['name' => 'Verein', 'amount' => '1', 'ageTiers' => $tiers, 'ageCutoff' => $cutoff]);
+            $this->fail('accepted');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString($expected, $e->getMessage());
+        }
+    }
+
+    public static function invalidAgeSettings(): array {
+        $ok = [['fromAge' => 0, 'amount' => 1]];
+        return [
+            'no tier from 0' => [[['fromAge' => 6, 'amount' => 1]], null, '0'],
+            'same age twice' => [[['fromAge' => 0, 'amount' => 1], ['fromAge' => '0', 'amount' => 2]], null, 'Altersstufe'],
+            'negative age' => [[['fromAge' => -1, 'amount' => 1]], null, 'Altersstufen'],
+            'age is text' => [[['fromAge' => 'x', 'amount' => 1]], null, 'Altersstufen'],
+            'not a list of tiers' => [['x'], null, 'Altersstufen'],
+            'negative amount' => [[['fromAge' => 0, 'amount' => -1]], null, 'Betrag'],
+            'missing amount' => [[['fromAge' => 0]], null, 'Betrag'],
+            'array as amount' => [[['fromAge' => 0, 'amount' => [1]]], null, 'Betrag'],
+            'too many tiers' => [array_map(fn ($a) => ['fromAge' => $a, 'amount' => 1], range(0, 20)), null, 'Altersstufen'],
+            'impossible day' => [$ok, '02-30', 'Stichtag'],
+            'wrong format' => [$ok, '31.12.', 'Stichtag'],
+            'not text' => [$ok, ['12-31'], 'Stichtag'],
+        ];
+    }
+
+    public function testTheWebInterfaceSendsTheTiersAsJsonText(): void {
+        $rate = $this->service->create(1, ['name' => 'Verein', 'amount' => '', 'ageTiers' => '[{"fromAge":0,"amount":"5"},{"fromAge":"18","amount":"25.50"}]', 'ageCutoff' => '06-30']);
+
+        $this->assertEquals([['fromAge' => 0, 'amount' => 5.0], ['fromAge' => 18, 'amount' => 25.5]], $rate->jsonSerialize()['ageTiers']);
+    }
+
+    public function testBrokenJsonTextIsRefused(): void {
+        $this->expectException(ValidationException::class);
+        $this->service->create(1, ['name' => 'Verein', 'amount' => '1', 'ageTiers' => '[object Object]']);
+    }
+
+    public function testFebruary29IsAPossibleCutOff(): void {
+        $rate = $this->service->create(1, ['name' => 'Verein', 'ageTiers' => [['fromAge' => 0, 'amount' => 1]], 'ageCutoff' => '02-29']);
+
+        $this->assertSame('02-29', $rate->getAgeCutoff());
+    }
 }

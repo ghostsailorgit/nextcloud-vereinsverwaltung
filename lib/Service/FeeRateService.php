@@ -18,10 +18,12 @@ use OCP\IL10N;
 
 /**
  * Membership fee categories of a club ("Erwachsene", "Kinder", ...) with the
- * yearly amount each one pays. One category can be the club's default, used
- * for members without an explicit category.
+ * yearly amount each one pays, either one amount or by age (see AgeGrading). One
+ * category can be the club's default, used for members without an explicit category.
  */
 class FeeRateService {
+    private const MAX_AGE_TIERS = 20;
+
     private IL10N $l;
 
     public function __construct(
@@ -137,7 +139,20 @@ class FeeRateService {
             }
         }
 
-        $raw = str_replace(',', '.', trim((string)($data['amount'] ?? '')));
+        $tiers = $this->parseAgeTiers($data['ageTiers'] ?? null);
+
+        $rate->setName($name);
+        // with tiers the amount of each tier counts, not this one
+        $rate->setAmount($tiers === [] ? $this->parseAmount($data['amount'] ?? '') : 0.0);
+        $rate->setAgeTiers($tiers === [] ? null : json_encode($tiers));
+        $rate->setAgeCutoff($tiers === [] ? null : $this->parseCutoff($data['ageCutoff'] ?? null));
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function parseAmount(mixed $value): float {
+        $raw = is_scalar($value) ? str_replace(',', '.', trim((string)$value)) : '';
         if ($raw === '' || !is_numeric($raw)) {
             throw new ValidationException($this->l->t('Amount is invalid'));
         }
@@ -145,10 +160,56 @@ class FeeRateService {
         if ($amount < 0 || $amount > 100000) {
             throw new ValidationException($this->l->t('Amount must be between 0 and 100,000 (0 = fee-exempt)'));
         }
-
-        $rate->setName($name);
-        $rate->setAmount($amount);
+        return $amount;
     }
+
+    /**
+     * @return array<int, array{fromAge: int, amount: float}> ascending; empty = the category does not depend on age
+     * @throws ValidationException
+     */
+    private function parseAgeTiers(mixed $raw): array {
+        if ($raw === null || $raw === '' || $raw === []) {
+            return [];
+        }
+        // the web interface sends form fields, so the list arrives as JSON text
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+        if (!is_array($raw) || count($raw) > self::MAX_AGE_TIERS) {
+            throw new ValidationException($this->l->t('The age tiers are invalid'));
+        }
+        $byAge = [];
+        foreach ($raw as $tier) {
+            $from = is_array($tier) ? filter_var($tier['fromAge'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 150]]) : false;
+            if ($from === false) {
+                throw new ValidationException($this->l->t('The age tiers are invalid'));
+            }
+            if (isset($byAge[$from])) {
+                throw new ValidationException($this->l->t('Each age may only start one age tier'));
+            }
+            $byAge[$from] = ['fromAge' => $from, 'amount' => $this->parseAmount($tier['amount'] ?? '')];
+        }
+        if (!isset($byAge[0])) {
+            throw new ValidationException($this->l->t('The first age tier must start at age 0'));
+        }
+        ksort($byAge);
+        return array_values($byAge);
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function parseCutoff(mixed $raw): string {
+        if ($raw === null || $raw === '') {
+            return AgeGrading::DEFAULT_CUTOFF;
+        }
+        // 2024 is a leap year, so February 29 is a possible day
+        if (!is_string($raw) || !preg_match('/^(\d{2})-(\d{2})$/', $raw, $m) || !checkdate((int)$m[1], (int)$m[2], 2024)) {
+            throw new ValidationException($this->l->t('The cut-off day is invalid'));
+        }
+        return $raw;
+    }
+
 
     private function toBool(mixed $value): bool {
         return is_bool($value) ? $value : in_array($value, ['1', 1, 'true', true], true);

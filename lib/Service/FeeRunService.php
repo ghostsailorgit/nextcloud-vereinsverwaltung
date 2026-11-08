@@ -30,6 +30,9 @@ use OCA\Verein\L10n\DocumentL10n;
  * membership with Membership::$feeExemptJoinYear pays nothing at all for the
  * year it was joined in (and this takes precedence over $prorata); every
  * year after that is billed normally.
+ *
+ * A category with age tiers charges the tier of the age on its cut-off day of the
+ * fee year. Without a birth date the member is reported, not charged a guessed amount.
  */
 class FeeRunService {
     private IL10N $l;
@@ -131,12 +134,23 @@ class FeeRunService {
                 $skip($this->l->t('no fee category'));
                 continue;
             }
-            if ((float)$rate->getAmount() <= 0) {
+            $fullAmount = (float)$rate->getAmount();
+            $tierInfo = [];
+            $tiers = $rate->getAgeTierList();
+            if ($tiers !== []) {
+                $tier = AgeGrading::tierFor($tiers, $member->getBirthDate(), $year, $rate->getAgeCutoff());
+                if ($tier === null) {
+                    $skip($this->l->t('no date of birth (fee category by age)'));
+                    continue;
+                }
+                $fullAmount = $tier['amount'];
+                $tierInfo = $this->tierInfo($tier, $tiers, $member->getBirthDate(), $year, $rate->getAgeCutoff(), $join);
+            }
+            if ($fullAmount <= 0) {
                 $skip($this->l->t('fee-exempt (%s)', [$rate->getName()]));
                 continue;
             }
 
-            $fullAmount = (float)$rate->getAmount();
             $months = $prorata ? $this->monthsInYear($join, $year) : 12;
             $amount = $months === 12 ? $fullAmount : round($fullAmount * $months / 12, 2);
             if ($amount <= 0) {
@@ -149,7 +163,7 @@ class FeeRunService {
                 'name' => $member->getFullName(),
                 'category' => $rate->getName(),
                 'amount' => $amount,
-            ];
+            ] + $tierInfo;
             if ($months !== 12) {
                 $entry['fullAmount'] = $fullAmount;
                 $entry['months'] = $months;
@@ -209,6 +223,24 @@ class FeeRunService {
             'prorata' => $prorata,
         ]);
         return $plan;
+    }
+
+    /**
+     * For the preview: the tier, and the previous one if the member moved up since last year. Somebody who only joined
+     * this year did not change tier.
+     *
+     * @param array{fromAge: int, amount: float} $tier
+     * @param array<int, array{fromAge: int, amount: float}> $tiers
+     */
+    private function tierInfo(array $tier, array $tiers, ?string $birthDate, int $year, ?string $cutoff, ?string $joinDate): array {
+        $info = ['ageFrom' => $tier['fromAge']];
+        $previous = AgeGrading::tierFor($tiers, $birthDate, $year - 1, $cutoff);
+        $joinedBefore = empty($joinDate) || (int)substr($joinDate, 0, 4) < $year;
+        if ($joinedBefore && $previous !== null && $previous['fromAge'] !== $tier['fromAge']) {
+            $info['previousAgeFrom'] = $previous['fromAge'];
+            $info['previousAmount'] = $previous['amount'];
+        }
+        return $info;
     }
 
     /**

@@ -388,6 +388,7 @@ import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs
 import { extractErrorMessage } from '../errorMessage'
 import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate, salutationLabel } from '../format'
+import { hasAgeTiers } from '../feeRates'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -482,7 +483,7 @@ export default {
     const feeRateOptions = computed(() =>
       (currentClub.value?.feeRates || []).map(r => ({
         id: r.id,
-        label: r.name + ' (' + formatMoney(r.amount) + ')' + (r.isDefault ? ' – ' + t('verein', 'default') : '')
+        label: r.name + ' (' + (hasAgeTiers(r) ? t('verein', 'by age') : formatMoney(r.amount)) + ')' + (r.isDefault ? ' – ' + t('verein', 'default') : '')
       }))
     )
 
