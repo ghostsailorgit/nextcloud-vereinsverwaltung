@@ -8,8 +8,8 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ### ✨ Geändert
 - **Mitglied entfernen löscht keine Beiträge mehr.** Sie bleiben als Nachweis in der Beitragsliste, mit dem Namen und dem Zusatz
-  „(entfernt)“, auch wenn die Person ganz gelöscht wird. Beitragslauf, SEPA-Export und Mahnwesen berücksichtigen sie nicht mehr;
-  offene Beiträge behalten ihren Status und lassen sich von Hand als bezahlt markieren oder stornieren.
+  „(entfernt)“, auch wenn die Person ganz gelöscht wird. Offene und überfällige Beiträge werden dabei storniert, das
+  Protokoll hält die Anzahl fest. Beitragslauf, SEPA-Export und Mahnwesen berücksichtigen die Person nicht mehr.
 - Beim Löschen eines Vereins gehen auch die Beiträge ehemaliger Mitglieder verloren; der Dialog sagt das.
 
 ---

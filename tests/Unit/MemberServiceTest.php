@@ -128,6 +128,7 @@ class MemberServiceTest extends TestCase {
         $this->memberships->method('findByMember')->with(8)->willReturn([$this->membership(8, 2)]);
 
         $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
+        $this->fees->expects($this->once())->method('cancelOpenOfMember')->with(8, 1);
         $this->memberships->expects($this->once())->method('delete')->with($member->getMembership());
         $this->members->expects($this->never())->method('delete');
 

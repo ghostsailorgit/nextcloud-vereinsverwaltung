@@ -122,6 +122,17 @@ class FeeMapper extends QBMapper {
             ->executeStatement();
     }
 
+    /** @return int number of fees cancelled */
+    public function cancelOpenOfMember(int $memberId, int $clubId): int {
+        $qb = $this->db->getQueryBuilder();
+        return $qb->update($this->getTableName())
+            ->set('status', $qb->createNamedParameter('cancelled'))
+            ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->in('status', $qb->createNamedParameter(['open', 'overdue'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)))
+            ->executeStatement();
+    }
+
     /** Anonymizing a person also removes the name kept on fees of clubs they left earlier. */
     public function clearMemberName(int $memberId): void {
         $qb = $this->db->getQueryBuilder();

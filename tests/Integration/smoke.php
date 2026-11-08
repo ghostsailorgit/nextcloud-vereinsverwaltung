@@ -122,7 +122,7 @@ if ($mode === 'run') {
     $goneFee = $fees->create($other->getId(), $gone->getId(), 9.0, 'open', '2026-01-01');
     $members->remove($other->getId(), $gone->getId());
     $kept = $fees->find($other->getId(), $goneFee->getId());
-    check($kept->getMemberName() === 'Eva CI Entfernt' && $kept->getStatus() === 'open', 'fee of a removed member stays with the name');
+    check($kept->getMemberName() === 'Eva CI Entfernt' && $kept->getStatus() === 'cancelled', 'fee of a removed member stays with the name, open fee cancelled');
     svc(\OCA\Verein\Db\FeeMapper::class)->clearMemberName($gone->getId());
     check($fees->find($other->getId(), $goneFee->getId())->getMemberName() === null, 'kept name can be cleared');
     $fees->delete($other->getId(), $goneFee->getId());

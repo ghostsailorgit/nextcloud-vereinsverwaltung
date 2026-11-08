@@ -85,6 +85,7 @@ const ACTIONS = {
   activate: t('verein', 'activated'),
   anonymize: t('verein', 'anonymized'),
   mark_paid: t('verein', 'marked as paid'),
+  cancel_open: t('verein', 'cancelled'),
   flag_overdue: t('verein', 'marked as overdue'),
   dunning: t('verein', 'reminder sent'),
   dunning_email: t('verein', 'reminders sent by email'),
@@ -216,7 +217,7 @@ export default {
         if (c.withoutEmail) parts.push(n('verein', '%n without an email address', '%n without an email address', c.withoutEmail))
         return [{ text: parts.join(', ') }]
       }
-      if (e.action === 'mark_paid' || e.action === 'flag_overdue') {
+      if (e.action === 'mark_paid' || e.action === 'flag_overdue' || e.action === 'cancel_open') {
         return [{ text: n('verein', '%n fee', '%n fees', c.count) }]
       }
       const safe = safeFields.value[e.entityType] // undefined = type is not redacted at all
