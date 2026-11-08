@@ -148,6 +148,7 @@ class ClubGroupServiceTest extends TestCase {
             }
         }
         $this->assertSame('2024-06-30', $this->service->addMember(self::CLUB, $g->getId(), 10, '2024-06-30', '2024-07-31')->getJoinedOn());
+        $this->assertSame('2024-01-01', $this->service->addMember(self::CLUB, $g->getId(), 10, '2023-06-01', '2024-01-01')->getLeftOn(), 'ending on the day the next period starts');
     }
 
     public function testOnlyOneOpenPeriodPerMemberAndGroup(): void {
