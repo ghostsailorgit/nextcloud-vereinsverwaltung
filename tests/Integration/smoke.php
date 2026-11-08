@@ -98,6 +98,16 @@ if ($mode === 'run') {
     check($byName['CI Spät']->getPhone() === '+49 170 1234567', 'phone number stored (migration + entity)');
     check($byName['CI Müller']->getBirthDate() !== null && str_starts_with((string)$byName['CI Müller']->getBirthDate(), '1980-02-01'), 'German date stored as ISO');
 
+    $groups = svc(\OCA\Verein\Service\ClubGroupService::class);
+    $group = $groups->create($clubId, ['name' => 'CI Gruppe', 'description' => 'Montags']);
+    $period = $groups->addMember($clubId, $group->getId(), $late->getId(), '2025-11-01');
+    $groups->updatePeriod($clubId, $period->getId(), '2025-11-01', '2025-12-31');
+    $groups->addMember($clubId, $group->getId(), $late->getId(), '2026-02-01');
+    $rows = $groups->periodsOfGroup($clubId, $group->getId());
+    check(count($rows) === 2 && $rows[0]['joinedOn'] === '2026-02-01' && $rows[1]['leftOn'] === '2025-12-31' && $groups->list($clubId)[0]['currentMembers'] === 1, 'group with a member who left and joined again');
+    $groups->delete($clubId, $group->getId());
+    check($groups->list($clubId) === [], 'group deleted');
+
     // fee run 2025 with pro-rata: Kai and Lea joined in October 2025 -> 3/12
     $run = svc(FeeRunService::class)->run($clubId, 2025, '2025-03-31', null, true);
     $amounts = array_column($run['included'], 'amount', 'name');

@@ -27,6 +27,8 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge, `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
+| `verein_groups` | Gruppen eines Vereins, z. B. Trainingsgruppen (keine Nextcloud-Gruppen, die meisten Mitglieder haben kein Konto) |
+| `verein_group_members` | je Aufenthalt eines Mitglieds in einer Gruppe eine Zeile mit Ein- und Austritt; Zeiträume derselben Person in derselben Gruppe dürfen sich nicht überschneiden |
 | `verein_audit_log` | Änderungsprotokoll: wer hat wann was geändert (siehe „Änderungsprotokoll“) |
 
 ## Rechte

@@ -1,0 +1,39 @@
+<?php
+/**
+ * SPDX-FileCopyrightText: 2026 The Nextcloud Vereinsverwaltung contributors <https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+namespace OCA\Verein\Db;
+
+use OCP\AppFramework\Db\QBMapper;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\IDBConnection;
+
+class ClubGroupMapper extends QBMapper {
+    public function __construct(IDBConnection $db) {
+        parent::__construct($db, 'verein_groups', ClubGroup::class);
+    }
+
+    public function find(int $id): ClubGroup {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')->from($this->getTableName())
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+        return $this->findEntity($qb);
+    }
+
+    /** @return ClubGroup[] by name */
+    public function findByClub(int $clubId): array {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select('*')->from($this->getTableName())
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, IQueryBuilder::PARAM_INT)))
+            ->orderBy('name', 'ASC');
+        return $this->findEntities($qb);
+    }
+
+    public function deleteByClub(int $clubId): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete($this->getTableName())
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+}

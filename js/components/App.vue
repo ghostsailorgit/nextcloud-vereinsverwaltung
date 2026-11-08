@@ -67,6 +67,7 @@ import { t } from '@nextcloud/l10n'
 import { clubState, currentClub, loadClubs, loadMe, setCurrentClub, can } from '../store/club'
 import Members from './Members.vue'
 import Finance from './Finance.vue'
+import Groups from './Groups.vue'
 // Lazy-load Statistics (includes Chart.js ~500KB) for better initial load
 const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
 import Roles from './Roles.vue'
@@ -86,6 +87,7 @@ export default {
     NcSelect,
     Members,
     Finance,
+    Groups,
     Statistics,
     Roles,
     SepaExport,
@@ -104,6 +106,7 @@ export default {
     const allTabs = computed(() => [
       { id: 'dashboard', label: t('verein', 'Dashboard'), emoji: '📊', show: can('verein.member.view') },
       { id: 'members', label: t('verein', 'Members'), emoji: '👥', show: can('verein.member.view') },
+      { id: 'groups', label: t('verein', 'Groups'), emoji: '🤸', show: can('verein.member.view') },
       { id: 'finance', label: t('verein', 'Finances'), emoji: '💰', show: can('verein.finance.read') },
       { id: 'roles', label: t('verein', 'Roles'), emoji: '🛡️', show: can('verein.role.manage') },
       { id: 'sepa', label: t('verein', 'SEPA export'), emoji: '🏦', show: can('verein.sepa.export') },
@@ -125,6 +128,7 @@ export default {
     const componentMap = {
       dashboard: 'Statistics',
       members: 'Members',
+      groups: 'Groups',
       finance: 'Finance',
       roles: 'Roles',
       sepa: 'SepaExport',
