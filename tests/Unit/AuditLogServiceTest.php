@@ -128,6 +128,10 @@ class AuditLogServiceTest extends TestCase {
 
     // --- redaction of sensitive fields (member data)
 
+    public function testAPhoneNumberIsNeverOnTheAllowList(): void {
+        $this->assertNotContains('phone', AuditLogService::safeFields()['member']);
+    }
+
     public function testRecordRedactsSensitiveMemberFieldsButKeepsOthers(): void {
         $stored = null;
         $this->mapper->method('insert')->willReturnCallback(function (AuditLogEntry $e) use (&$stored) {

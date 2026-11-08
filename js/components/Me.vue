@@ -20,6 +20,7 @@
           <dt>{{ t('verein', 'Date of birth') }}</dt><dd>{{ formatDate(data.person.birthDate) }}</dd>
           <dt>{{ t('verein', 'Postal address') }}</dt><dd>{{ address }}</dd>
           <dt>{{ t('verein', 'Email') }}</dt><dd>{{ data.person.email || '–' }}</dd>
+          <dt>{{ t('verein', 'Phone') }}</dt><dd>{{ data.person.phone || '–' }}</dd>
           <dt>IBAN</dt><dd>{{ data.person.iban || '–' }}</dd>
           <dt>BIC</dt><dd>{{ data.person.bic || '–' }}</dd>
           <dt>{{ t('verein', 'Nextcloud account') }}</dt><dd>{{ data.nextcloudAccount }}</dd>

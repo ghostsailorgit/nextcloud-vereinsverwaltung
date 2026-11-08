@@ -15,7 +15,7 @@
       </p>
       <p>{{ t('verein', 'Replaced or removed:') }}</p>
       <ul>
-        <li>{{ t('verein', 'Name, title, address, email and date of birth') }}</li>
+        <li>{{ t('verein', 'Name, title, address, email, phone number and date of birth') }}</li>
         <li>{{ t('verein', 'IBAN, BIC and the link to a Nextcloud account') }}</li>
         <li>{{ t('verein', 'the personal data in older entries of the audit log') }}</li>
       </ul>

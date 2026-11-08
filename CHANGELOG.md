@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.1.0] - 2026-11-08
+
+### ✨ Neu
+- **Telefonnummer** je Person: neues Feld im Mitgliederformular (freier Text, höchstens 50 Zeichen). Sie erscheint unter
+  „Meine Daten“, in der Datenauskunft und im CSV-Export; der Import erkennt Spalten wie Telefon, Telefonnummer, Tel, Mobil
+  oder Handy. Beim Anonymisieren wird sie entfernt, im Protokoll steht sie wie andere persönliche Angaben nie im Klartext.
+
+---
+
 ## [1.0.0] - 2026-10-13
 
 Erste Version für den Nextcloud App Store, funktional wie 0.22.0-beta.

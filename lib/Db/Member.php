@@ -28,6 +28,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCity(?string $city)
  * @method string getEmail()
  * @method void setEmail(string $email)
+ * @method ?string getPhone()
+ * @method void setPhone(?string $phone)
  * @method ?string getIban()
  * @method void setIban(?string $iban)
  * @method ?string getBic()
@@ -54,6 +56,7 @@ class Member extends Entity implements JsonSerializable {
     protected ?string $postalCode = null;
     protected ?string $city = null;
     protected string $email = '';
+    protected ?string $phone = null;
     protected ?string $iban = null;
     protected ?string $bic = null;
     protected ?string $birthDate = null;
@@ -174,6 +177,7 @@ class Member extends Entity implements JsonSerializable {
             'postalCode' => $this->postalCode,
             'city' => $this->city,
             'email' => $this->email,
+            'phone' => $this->phone,
             'iban' => $this->iban,
             'bic' => $this->bic,
             'birthDate' => $this->birthDate,

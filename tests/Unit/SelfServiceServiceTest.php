@@ -41,6 +41,7 @@ class SelfServiceServiceTest extends TestCase {
         $m->setName('Mustermann');
         $m->setFirstName('Max');
         $m->setBirthDate('1990-01-01');
+        $m->setPhone('0681 12345');
         $m->setIban('DE89370400440532013000');
         $m->setUserId('maxmuster');
         return $m;
@@ -89,6 +90,7 @@ class SelfServiceServiceTest extends TestCase {
         $this->assertTrue($data['linked']);
         $this->assertSame('Max Mustermann', $data['person']['fullName']);
         $this->assertSame('DE89370400440532013000', $data['person']['iban']);
+        $this->assertSame('0681 12345', $data['person']['phone']);
         $this->assertCount(2, $data['memberships']);
 
         $a = $data['memberships'][0];

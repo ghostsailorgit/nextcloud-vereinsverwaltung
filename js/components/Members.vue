@@ -98,6 +98,13 @@
           :label="t('verein', 'Email')"
           :placeholder="t('verein', 'max@example.com (optional)')"
         />
+        <NcTextField
+          :model-value="formData.phone"
+          @update:model-value="formData.phone = $event"
+          type="tel"
+          :label="t('verein', 'Phone')"
+          maxlength="50"
+        />
 
         <div class="account-link">
           <NcSelectUsers
@@ -371,6 +378,7 @@ const emptyFormData = () => ({
   foundingMember: false,
   feeExemptJoinYear: false,
   deceased: false,
+  phone: '',
   iban: '',
   bic: '',
   mandateReference: '',

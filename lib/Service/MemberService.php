@@ -109,7 +109,7 @@ class MemberService {
      * Creates a new person and their membership in the club.
      *
      * @param array $data Person keys: name, firstName, salutation, address,
-     *   street, postalCode, city, email, iban, bic, birthDate, deceased.
+     *   street, postalCode, city, email, phone, iban, bic, birthDate, deceased.
      *   Membership keys: role, joinDate, leaveDate, foundingMember, feeExemptJoinYear,
      *   mandateReference, mandateDate, mandateFile
      */
@@ -277,6 +277,7 @@ class MemberService {
         $member->setPostalCode(null);
         $member->setCity(null);
         $member->setEmail('');
+        $member->setPhone(null);
         $member->setIban(null);
         $member->setBic(null);
         $member->setBirthDate(null);
@@ -348,6 +349,7 @@ class MemberService {
         $member->setPostalCode($this->nullIfEmpty($data['postalCode'] ?? null));
         $member->setCity($this->nullIfEmpty($data['city'] ?? null));
         $member->setEmail((string)($data['email'] ?? ''));
+        $member->setPhone($this->nullIfEmpty($data['phone'] ?? null));
         $member->setIban($this->nullIfEmpty($data['iban'] ?? null));
         $member->setBic($this->nullIfEmpty($data['bic'] ?? null));
         $member->setBirthDate($this->nullIfEmpty($data['birthDate'] ?? null));

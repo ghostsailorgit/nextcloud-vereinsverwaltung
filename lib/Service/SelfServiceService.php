@@ -131,6 +131,7 @@ class SelfServiceService {
                 'postalCode' => $person->getPostalCode(),
                 'city' => $person->getCity(),
                 'email' => $person->getEmail(),
+                'phone' => $person->getPhone(),
                 'iban' => $person->getIban(),
                 'bic' => $person->getBic(),
                 'deceased' => $person->getDeceased(),
