@@ -271,8 +271,7 @@ class MemberImportService {
             'postalCode' => $this->nullIfEmpty($record['postalCode'] ?? null),
             'city' => $this->nullIfEmpty($record['city'] ?? null),
             'email' => $record['email'] ?? '',
-            // our CSV export protects a leading "+" with an apostrophe against spreadsheet formulas
-            'phone' => $this->nullIfEmpty(isset($record['phone']) ? preg_replace("/^'(?=[+\\-])/", '', trim($record['phone'])) : null),
+            'phone' => $this->nullIfEmpty($record['phone'] ?? null),
             'bic' => $this->nullIfEmpty(isset($record['bic']) ? strtoupper(str_replace(' ', '', $record['bic'])) : null),
             'iban' => $this->nullIfEmpty(isset($record['iban']) ? strtoupper(str_replace(' ', '', $record['iban'])) : null),
             'mandateReference' => $this->nullIfEmpty($record['mandateReference'] ?? null),
