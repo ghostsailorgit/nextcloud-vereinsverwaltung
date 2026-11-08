@@ -4,6 +4,16 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.4.0] - 2026-11-08
+
+### ✨ Neu
+- **Beiträge nach Alter:** Eine Beitragskategorie kann nach Alter gestaffelt sein, etwa 0 bis 5 Jahre frei, ab 6 Jahren 10 €, ab 18 Jahren 25 €. Der Beitragslauf
+  wählt die Stufe nach dem Alter, das ein Mitglied am Stichtag des Beitragsjahres erreicht hat (Standard 31.12., je Kategorie einstellbar). Mitglieder ohne
+  Geburtsdatum meldet er mit Grund, statt einen Betrag zu raten.
+- **Vorschau des Beitragslaufs:** Sie zeigt die Altersstufe und führt auf, wer gegenüber dem Vorjahr die Stufe gewechselt hat.
+
+---
+
 ## [1.3.0] - 2026-11-08
 
 ### ✨ Neu

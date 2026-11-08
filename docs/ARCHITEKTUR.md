@@ -23,7 +23,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
 | `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `anonymized_at` (siehe „Anonymisieren“) |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
-| `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag, eine Standardkategorie; 0 € = beitragsfrei) |
+| `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Jahresbetrag oder Altersstufen als JSON mit Stichtag, eine Standardkategorie; 0 € = beitragsfrei) |
 | `verein_fees` | Beiträge je Person und Verein; `period` (z. B. 2026) kennzeichnet Jahresbeiträge, `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
@@ -125,6 +125,10 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   eigenständige Mitglieder mit eigenen Beiträgen. Der SEPA-Export zieht ihre Beiträge je Einzugsdatum als eine Lastschrift vom Konto und mit dem Mandat
   des Zahlers ein (Verwendungszweck nennt die Personen), das Mahnwesen schreibt einen Brief an den Zahler (`FeePayer::of()`). Nur eine Ebene; ein
   ausgetretener oder deaktivierter Zahler zählt nicht mehr. Wer den Zahler aus dem Verein entfernt, löst die Bündelung.
+- **Beiträge nach Alter** (`FeeRate::$ageTiers`, `$ageCutoff`, `Service\AgeGrading`): Stufen als Liste aus „ab Alter“ und Betrag, die erste beginnt bei 0, sodass es
+  keine Lücken geben kann. Maßgeblich ist das am Stichtag des Beitragsjahres erreichte Alter (`MM-TT`, Standard 12-31). Ohne lesbares Geburtsdatum meldet der
+  Beitragslauf das Mitglied mit Grund. Der Betrag der Stufe läuft danach durch dieselbe Logik wie ein fester Betrag (0 = beitragsfrei, anteilig). Ein Wechsel
+  der Stufe innerhalb des Beitragsjahres (etwa ab dem Geburtsmonat) ist bewusst nicht vorgesehen.
 - **Ehrenmitglieder** (`Membership::$honoraryMember`, Häkchen im Mitgliederformular) bekommen im Beitragslauf keinen Beitrag. Wer
   freiwillig weiterzahlt (`$honoraryPaysFee`, zweites Häkchen), wird normal nach seiner Beitragskategorie abgerechnet.
 - **Eintrittsjahr beitragsfrei** (`Membership::$feeExemptJoinYear`, Häkchen im Mitgliederformular): komplett beitragsfrei,

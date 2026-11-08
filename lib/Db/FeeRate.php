@@ -21,6 +21,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setIsDefault(bool $isDefault)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
+ * @method ?string getAgeTiers()
+ * @method void setAgeTiers(?string $ageTiers)
+ * @method ?string getAgeCutoff()
+ * @method void setAgeCutoff(?string $ageCutoff)
  */
 class FeeRate extends Entity implements JsonSerializable {
     protected int $clubId = 0;
@@ -31,11 +35,21 @@ class FeeRate extends Entity implements JsonSerializable {
     protected ?float $amount = null;
     protected bool $isDefault = false;
     protected ?string $createdAt = null;
+    // JSON list of {fromAge, amount}, ascending and starting at 0; null = one amount for everybody
+    protected ?string $ageTiers = null;
+    // MM-DD: the day of the fee year the age counts on
+    protected ?string $ageCutoff = null;
 
     public function __construct() {
         $this->addType('clubId', 'integer');
         $this->addType('amount', 'float');
         $this->addType('isDefault', 'bool');
+    }
+
+    /** @return array<int, array{fromAge: int, amount: float}> */
+    public function getAgeTierList(): array {
+        $tiers = json_decode((string)$this->ageTiers, true);
+        return is_array($tiers) ? $tiers : [];
     }
 
     public function jsonSerialize(): array {
@@ -45,6 +59,8 @@ class FeeRate extends Entity implements JsonSerializable {
             'name' => $this->name,
             'amount' => (float)$this->amount,
             'isDefault' => $this->isDefault,
+            'ageTiers' => $this->getAgeTierList(),
+            'ageCutoff' => $this->ageCutoff,
         ];
     }
 }

@@ -78,7 +78,8 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who
    joined during the fee year pays months from the join month to December / 12 (missing/unreadable join date = full year).
    A membership with `feeExemptJoinYear` pays nothing at all for the year it was joined in (takes precedence over
-   `prorata`); every later year is billed normally without the flag being set again. Mass status changes
+   `prorata`); every later year is billed normally without the flag being set again. A category with age tiers charges by the age
+   on its cut-off day (`AgeGrading`); no readable birth date = reported, never a guessed amount. Mass status changes
    (`markPaidInClub`, `flagOverdueInClub`) are single SQL statements - row-by-row updates took minutes on the slow host.
    After a SEPA export the UI offers to mark exactly the exported fees (ids in `X-Sepa-Fee-Ids`) as paid.
 9. `IQueryBuilder::execute()` no longer exists: use `executeStatement()` / `executeQuery()`.

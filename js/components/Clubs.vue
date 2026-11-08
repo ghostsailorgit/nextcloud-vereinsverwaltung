@@ -114,7 +114,11 @@
           <tbody>
             <tr v-for="r in club.feeRates" :key="r.id">
               <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
-              <td>{{ formatMoney(r.amount) }}</td>
+              <td v-if="hasAgeTiers(r)">
+                {{ ageTierSummary(r) }}
+                <div class="hint">{{ t('verein', 'Age on {date} of the fee year', { date: ageCutoffLabel(r) }) }}</div>
+              </td>
+              <td v-else>{{ formatMoney(r.amount) }}</td>
               <td>
                 <div class="row-actions">
                   <NcButton variant="secondary" @click="editRate(r)">{{ t('verein', 'Edit') }}</NcButton>
@@ -132,7 +136,26 @@
       <h4>{{ rateForm.id ? t('verein', 'Edit fee category') : t('verein', 'Add fee category') }}</h4>
       <form class="grid" @submit.prevent="saveRate">
         <NcTextField :model-value="rateForm.name" @update:model-value="rateForm.name = $event" :label="t('verein', 'Name')" :placeholder="t('verein', 'e.g. adults')" required />
-        <NcTextField :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" placeholder="24" required />
+        <NcTextField v-if="!rateForm.byAge" :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" placeholder="24" required />
+        <label class="checkbox-field">
+          <input v-model="rateForm.byAge" type="checkbox" />
+          <span>{{ t('verein', 'Fee depends on age') }}</span>
+        </label>
+        <div v-if="rateForm.byAge" class="age-tiers">
+          <div v-for="(tier, index) in rateForm.tiers" :key="index" class="age-tier">
+            <NcTextField :model-value="String(tier.fromAge)" @update:model-value="tier.fromAge = $event" type="number" min="0" max="150" step="1" :label="t('verein', 'From age')" :disabled="index === 0" required />
+            <NcTextField :model-value="tier.amount" @update:model-value="tier.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" required />
+            <NcButton type="button" variant="tertiary" :disabled="index === 0" @click="rateForm.tiers.splice(index, 1)">{{ t('verein', 'Remove') }}</NcButton>
+          </div>
+          <div>
+            <NcButton type="button" variant="secondary" @click="rateForm.tiers.push({ fromAge: '', amount: '' })">{{ t('verein', 'Add age tier') }}</NcButton>
+          </div>
+          <div class="age-tier">
+            <NcTextField :model-value="rateForm.cutoffDay" @update:model-value="rateForm.cutoffDay = $event" type="number" min="1" max="31" step="1" :label="t('verein', 'Cut-off day')" required />
+            <NcTextField :model-value="rateForm.cutoffMonth" @update:model-value="rateForm.cutoffMonth = $event" type="number" min="1" max="12" step="1" :label="t('verein', 'Cut-off month')" required />
+          </div>
+          <p class="hint">{{ t('verein', 'The age a member has reached on this day of the fee year sets the fee. The annual fee run reports members without a date of birth instead of charging them.') }}</p>
+        </div>
         <label class="checkbox-field">
           <input v-model="rateForm.isDefault" type="checkbox" />
           <span>{{ t('verein', 'Default category') }}</span>
@@ -200,6 +223,7 @@ import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
 import { formatMoney } from '../format'
+import { hasAgeTiers, ageTierSummary, ageCutoffLabel } from '../feeRates'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
 
 const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId: '', isDefault: false })
@@ -309,12 +333,33 @@ export default {
     }
 
     // fee categories
-    const rateForm = reactive({ id: null, name: '', amount: '', isDefault: false })
-    const resetRateForm = () => Object.assign(rateForm, { id: null, name: '', amount: '', isDefault: false })
-    const editRate = (r) => Object.assign(rateForm, { id: r.id, name: r.name, amount: String(r.amount), isDefault: r.isDefault })
+    const emptyRate = () => ({ id: null, name: '', amount: '', isDefault: false, byAge: false, tiers: [{ fromAge: 0, amount: '' }], cutoffDay: '31', cutoffMonth: '12' })
+    const rateForm = reactive(emptyRate())
+    const resetRateForm = () => Object.assign(rateForm, emptyRate())
+    const editRate = (r) => {
+      const [month, day] = (r.ageCutoff || '12-31').split('-')
+      Object.assign(rateForm, {
+        ...emptyRate(),
+        id: r.id,
+        name: r.name,
+        amount: hasAgeTiers(r) ? '' : String(r.amount),
+        isDefault: r.isDefault,
+        byAge: hasAgeTiers(r),
+        tiers: hasAgeTiers(r) ? r.ageTiers.map(tier => ({ fromAge: tier.fromAge, amount: String(tier.amount) })) : emptyRate().tiers,
+        cutoffDay: String(Number(day)),
+        cutoffMonth: String(Number(month)),
+      })
+    }
     const saveRate = async () => {
       const ok = await run(async () => {
-        const payload = { name: rateForm.name, amount: rateForm.amount, isDefault: rateForm.isDefault }
+        const payload = {
+          name: rateForm.name,
+          amount: rateForm.amount,
+          isDefault: rateForm.isDefault,
+          // the API layer sends form fields, which cannot carry a list of objects
+          ageTiers: rateForm.byAge ? JSON.stringify(rateForm.tiers) : '',
+          ageCutoff: rateForm.byAge ? `${String(rateForm.cutoffMonth).padStart(2, '0')}-${String(rateForm.cutoffDay).padStart(2, '0')}` : null,
+        }
         if (rateForm.id) {
           await api.put(`clubs/${club.value.id}/fee-rates/${rateForm.id}`, payload)
         } else {
@@ -359,7 +404,7 @@ export default {
 
     return {
       t,
-      formatMoney,
+      formatMoney, hasAgeTiers, ageTierSummary, ageCutoffLabel,
       rateForm, saveRate, editRate, removeRate, resetRateForm,
       busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm
@@ -386,6 +431,9 @@ export default {
 /* NcSelect's own min-width (260px) is wider than a grid cell */
 .grid :deep(.v-select.select) { min-width: 0; width: 100%; }
 .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.age-tiers { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.age-tier { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.age-tier > * { flex: 1 1 120px; }
 .hint { color: var(--color-text-maxcontrast); }
 .accounts { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .accounts th, .accounts td { padding: 8px; text-align: left; border-bottom: 1px solid var(--color-border); }

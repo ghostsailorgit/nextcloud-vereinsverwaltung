@@ -64,11 +64,31 @@
                 <td>{{ e.name }}</td>
                 <td>
                   {{ e.category }}
+                  <span v-if="e.ageFrom !== undefined" class="prorata-note">
+                    · {{ t('verein', 'from age {age}', { age: e.ageFrom }) }}
+                  </span>
                   <span v-if="e.months" class="prorata-note">
                     · {{ t('verein', 'pro rata {months}/12 of {amount}', { months: e.months, amount: formatMoney(e.fullAmount) }) }}
                   </span>
                 </td>
                 <td class="num">{{ formatMoney(e.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details v-if="tierChanges.length">
+        <summary>{{ t('verein', 'Moved to another age tier ({count})', { count: tierChanges.length }) }}</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Previously') }}</th><th class="num">{{ t('verein', 'Now') }}</th></tr></thead>
+            <tbody>
+              <tr v-for="e in tierChanges" :key="e.memberId">
+                <td>{{ e.name }}</td>
+                <td>{{ e.category }}</td>
+                <td class="num">{{ formatMoney(e.previousAmount) }}</td>
+                <td class="num">{{ formatMoney(e.fullAmount ?? e.amount) }}</td>
               </tr>
             </tbody>
           </table>
@@ -91,7 +111,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
@@ -113,6 +133,7 @@ export default {
     const prorata = ref(false)
     const plan = ref(null)
     const busy = ref(false)
+    const tierChanges = computed(() => (plan.value?.included || []).filter(e => e.previousAmount !== undefined))
 
     const params = () => ({
       year: year.value,
@@ -159,7 +180,7 @@ export default {
     }
 
 
-    return { t, n, year, dueDate, description, prorata, plan, busy, preview, run, flagOverdue, formatMoney, formatDate }
+    return { t, n, year, dueDate, description, prorata, plan, tierChanges, busy, preview, run, flagOverdue, formatMoney, formatDate }
   }
 }
 </script>
