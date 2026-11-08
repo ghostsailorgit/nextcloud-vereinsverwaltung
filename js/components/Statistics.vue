@@ -38,7 +38,7 @@
       </div>
 
       <!-- Widget: Offene Gebühren -->
-      <div class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div v-if="canSeeFinance" class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
           <h3 class="stat-title">{{ t('verein', 'Unpaid fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
@@ -48,7 +48,7 @@
       </div>
 
       <!-- Widget: Bezahlte Gebühren -->
-      <div class="stat-widget is-success" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div v-if="canSeeFinance" class="stat-widget is-success" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
           <h3 class="stat-title">{{ t('verein', 'Paid fees') }}</h3>
           <span class="stat-icon success-icon">✓</span>
@@ -58,7 +58,7 @@
       </div>
 
       <!-- Widget: Fällige Gebühren -->
-      <div class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div v-if="canSeeFinance" class="stat-widget is-warning" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
           <h3 class="stat-title">{{ t('verein', 'Due fees') }}</h3>
           <span class="stat-icon warning-icon">📋</span>
@@ -68,7 +68,7 @@
       </div>
 
       <!-- Widget: Überfällige Gebühren -->
-      <div class="stat-widget is-error" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
+      <div v-if="canSeeFinance" class="stat-widget is-error" role="button" tabindex="0" @click="emit('navigate','finance')" @keydown.enter="emit('navigate','finance')">
         <div class="stat-header">
           <h3 class="stat-title">{{ t('verein', 'Overdue fees') }}</h3>
           <span class="stat-icon error-icon">⚠️</span>
@@ -81,7 +81,7 @@
     <!-- Charts -->
     <div v-if="!loading" class="charts-grid">
       <!-- Balkendiagramm: Gebührenstatus -->
-      <div class="chart-container">
+      <div v-if="canSeeFinance" class="chart-container">
         <h3 class="chart-title">💰 {{ t('verein', 'Fee status') }}</h3>
         <div class="chart-wrapper">
           <Bar
@@ -161,6 +161,7 @@ import { formatMoney, formatDate } from '../format'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import { extractErrorMessage } from '../errorMessage'
 import { absoluteUrl } from '../absoluteUrl'
+import { can } from '../store/club'
 
 // allow widgets to ask the parent to navigate to a different tab
 const emit = defineEmits(['navigate'])
@@ -204,6 +205,9 @@ interface UpcomingAnniversary {
   nextDate: string
   years: number
 }
+
+// members can be viewed without any right to the finances (e.g. a role limited to member management)
+const canSeeFinance = can('verein.finance.read')
 
 const loading = ref(true)
 const errorMessage = ref('')
@@ -334,8 +338,8 @@ const loadStatistics = async () => {
     }
 
     // Lade Gebühren-Statistiken
-    const feeStatsResponse = await api.getFeeStatistics()
-    if (feeStatsResponse.data.status === 'ok') {
+    const feeStatsResponse = canSeeFinance ? await api.getFeeStatistics() : null
+    if (feeStatsResponse?.data.status === 'ok') {
       const feeData = feeStatsResponse.data.data
 
       // Aktualisiere Statistiken

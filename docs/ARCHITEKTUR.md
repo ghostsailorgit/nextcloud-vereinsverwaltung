@@ -93,7 +93,8 @@ unterschriebene Mandatsdatei in Nextcloud Files selbst - Mandate haben eine eige
 betroffen: Freitext in Beitragsbeschreibungen. In der Oberfläche (Knopf „Anonymisieren“ in der Mitgliederliste, nur bei Ehemaligen und nur mit
 „Rollen verwalten“) muss vor dem Auslösen der vollständige Name eingetippt werden - ein normaler Bestätigungsdialog wird
 zu leicht weggeklickt. Über die API gibt es die Rückfrage bewusst nicht, das wäre nur Reibung ohne Nutzen. Der Knopf
-„Datenauskunft“ daneben lädt `GET /members/{id}/export` als JSON-Datei (für alle, die Mitglieder ansehen dürfen).
+„Datenauskunft“ daneben lädt `GET /members/{id}/export` als JSON-Datei (für alle, die Mitglieder ansehen dürfen; die Beiträge
+nur mit dem Recht „Finanzen ansehen“, sonst steht dort `feesOmitted`).
 
 ## Selbstauskunft („Meine Daten“) und Admin-Export
 Wer mit einer Person verknüpft ist, sieht seine eigenen Daten, Mitgliedschaften und Beiträge und kann sie als

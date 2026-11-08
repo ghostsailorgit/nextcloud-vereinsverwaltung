@@ -155,6 +155,21 @@ class SelfServiceServiceTest extends TestCase {
         $this->assertSame('Max Mustermann', $data['person']['fullName']);
     }
 
+    public function testForMemberIdCanLeaveTheFeesOut(): void {
+        $this->members->method('find')->with(5)->willReturn($this->person());
+        $this->memberships->method('findByMember')->with(5)->willReturn([$this->membership(1, 'member')]);
+        $this->clubs->method('find')->willReturn($this->club(1, 'Verein A'));
+        $this->fees->method('findByMember')->willReturn([]);
+
+        $without = $this->service->forMemberId(5, 1, false);
+        $this->assertArrayNotHasKey('fees', $without);
+        $this->assertTrue($without['feesOmitted']);
+
+        $with = $this->service->forMemberId(5, 1);
+        $this->assertArrayHasKey('fees', $with);
+        $this->assertArrayNotHasKey('feesOmitted', $with);
+    }
+
     public function testForMemberIdWorksForAPersonWithNoLinkedAccount(): void {
         $unlinked = $this->person();
         $unlinked->setUserId(null);
