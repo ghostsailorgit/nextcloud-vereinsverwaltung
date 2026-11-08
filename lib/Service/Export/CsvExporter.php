@@ -109,6 +109,8 @@ class CsvExporter {
             $this->l->t('Date left'),
             $this->l->t('Founding member'),
             $this->l->t('Fee-exempt in the year joined'),
+            $this->l->t('Honorary member'),
+            $this->l->t('Pays the fee voluntarily'),
             $this->l->t('Deceased'),
             $this->l->t('Created on'),
         ];
@@ -142,6 +144,8 @@ class CsvExporter {
                 $m['leaveDate'] ?? '',
                 !empty($m['foundingMember']) ? $yes : $no,
                 !empty($m['feeExemptJoinYear']) ? $yes : $no,
+                !empty($m['honoraryMember']) ? $yes : $no,
+                !empty($m['honoraryPaysFee']) ? $yes : $no,
                 !empty($m['deceased']) ? $yes : $no,
                 $m['createdAt'] ?? ($m['created_at'] ?? ''),
             ];

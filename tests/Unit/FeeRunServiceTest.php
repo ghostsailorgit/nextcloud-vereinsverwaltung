@@ -272,6 +272,23 @@ class FeeRunServiceTest extends TestCase {
         $this->assertSame(6.0, $inserted[0]->getAmount());
     }
 
+    public function testHonoraryMembersPayNothingUnlessTheyChooseTo(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Ehren', 'Frei');
+        $this->memberList[0]->getMembership()->setHonoraryMember(true);
+        $this->member(11, 'Ehren', 'Zahlt');
+        $this->memberList[1]->getMembership()->setHonoraryMember(true);
+        $this->memberList[1]->getMembership()->setHonoraryPaysFee(true);
+        $this->member(12, 'Normal', 'Mitglied');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Normal Mitglied', 'Ehren Zahlt'], $this->names($plan['included']));
+        $this->assertSame(['Ehren Frei' => 'Ehrenmitglied'], array_column($plan['skipped'], 'reason', 'name'));
+        $amounts = array_column($plan['included'], 'amount', 'name');
+        $this->assertSame(24.0, $amounts['Ehren Zahlt']);
+    }
+
     public function testFeeExemptJoinYearSkipsOnlyTheYearJoined(): void {
         $this->rate(1, 'Erwachsene', 24.0, true);
         // joined this fee year, exempt -> skipped; joined an earlier year, exempt -> billed normally

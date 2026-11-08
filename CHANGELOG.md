@@ -12,6 +12,11 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
   Protokoll hält die Anzahl fest. Beitragslauf, SEPA-Export und Mahnwesen berücksichtigen die Person nicht mehr.
 - Beim Löschen eines Vereins gehen auch die Beiträge ehemaliger Mitglieder verloren; der Dialog sagt das.
 
+### ✨ Neu
+- **Ehrenmitglieder:** neues Häkchen im Mitgliederformular. Ehrenmitglieder bekommen im Beitragslauf keinen Beitrag; ein zweites
+  Häkchen „Zahlt freiwillig Beitrag“ rechnet sie trotzdem normal nach ihrer Beitragskategorie ab. Beide Angaben stehen auch im
+  CSV-Export und werden beim Import erkannt.
+
 ---
 
 ## [1.1.1] - 2026-11-08

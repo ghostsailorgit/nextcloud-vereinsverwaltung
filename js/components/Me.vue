@@ -33,7 +33,7 @@
           <span :class="['badge', m.isFormer ? 'former' : 'active']">{{ m.isFormer ? t('verein', 'Former') : t('verein', 'Active') }}</span>
         </h3>
         <dl>
-          <dt>{{ t('verein', 'Position') }}</dt><dd>{{ roleLabel(m.role) }}<span v-if="m.foundingMember"> · {{ t('verein', 'Founding member') }} ★</span></dd>
+          <dt>{{ t('verein', 'Position') }}</dt><dd>{{ roleLabel(m.role) }}<span v-if="m.honoraryMember"> · {{ t('verein', 'Honorary member') }}</span><span v-if="m.foundingMember"> · {{ t('verein', 'Founding member') }} ★</span></dd>
           <dt>{{ t('verein', 'Member since') }}</dt>
           <dd>{{ formatDate(m.joinDate) }}<span v-if="m.membershipYears !== null"> ({{ n('verein', '%n year', '%n years', m.membershipYears) }})</span></dd>
           <dt v-if="m.leaveDate">{{ t('verein', 'Left on') }}</dt><dd v-if="m.leaveDate">{{ formatDate(m.leaveDate) }}</dd>

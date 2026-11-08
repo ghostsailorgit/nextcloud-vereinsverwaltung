@@ -121,6 +121,20 @@ class MemberServiceTest extends TestCase {
         $this->assertNull($member->getMembership()->getMandateFile());
     }
 
+    public function testPaysVoluntarilyOnlyCountsForHonoraryMembers(): void {
+        $this->members->method('insert')->willReturnCallback(function ($m) { $m->setId(55); return $m; });
+        $stored = [];
+        $this->memberships->method('insert')->willReturnCallback(function ($ms) use (&$stored) { $stored[] = $ms; return $ms; });
+
+        $this->service->create(3, ['name' => 'Muster', 'email' => '', 'honoraryMember' => 'true', 'honoraryPaysFee' => 'true']);
+        $this->service->create(3, ['name' => 'Beispiel', 'email' => '', 'honoraryPaysFee' => 'true']);
+
+        $this->assertTrue($stored[0]->getHonoraryMember());
+        $this->assertTrue($stored[0]->getHonoraryPaysFee());
+        $this->assertFalse($stored[1]->getHonoraryMember());
+        $this->assertFalse($stored[1]->getHonoraryPaysFee());
+    }
+
     public function testRemoveKeepsThePersonWhileAnotherClubStillHasThem(): void {
         $member = $this->person(8);
         $member->setMembership($this->membership(8, 1));
