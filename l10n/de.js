@@ -430,7 +430,7 @@ OC.L10N.register(
         "Remove from club": "Aus Verein entfernen",
         "Remove from the club": "Aus dem Verein entfernen",
         "Remove personal data irreversibly (only once the person has left every club or is deceased)": "Personenbezogene Daten unwiderruflich entfernen (nur wenn die Person überall ausgetreten oder verstorben ist)",
-        "Remove this member from the club? Paid fees stay on record in the fee list, open fees are cancelled; the person remains in other clubs.": "Soll dieses Mitglied aus dem Verein entfernt werden? Bezahlte Beiträge bleiben als Nachweis in der Beitragsliste, offene werden storniert; in anderen Vereinen bleibt die Person erhalten.",
+        "Remove this member from the club? Paid fees stay on record in the fee list, open fees are canceled; the person remains in other clubs.": "Soll dieses Mitglied aus dem Verein entfernt werden? Bezahlte Beiträge bleiben als Nachweis in der Beitragsliste, offene werden storniert; in anderen Vereinen bleibt die Person erhalten.",
         "Replaced or removed:": "Ersetzt bzw. entfernt werden:",
         "Reply-to address": "Antwortadresse",
         "Result": "Ergebnis",

@@ -85,7 +85,7 @@ const ACTIONS = {
   activate: t('verein', 'activated'),
   anonymize: t('verein', 'anonymized'),
   mark_paid: t('verein', 'marked as paid'),
-  cancel_open: t('verein', 'cancelled'),
+  cancel_open: t('verein', 'canceled'),
   flag_overdue: t('verein', 'marked as overdue'),
   dunning: t('verein', 'reminder sent'),
   dunning_email: t('verein', 'reminders sent by email'),
