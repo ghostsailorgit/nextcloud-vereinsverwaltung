@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.5.0] - 2026-11-08
+
+### ✨ Neu
+- **Gruppen:** Neuer Reiter für Gruppen innerhalb des Vereins, etwa Trainingsgruppen. Ein Mitglied kann in keiner, einer oder mehreren Gruppen sein. Ein- und
+  Austritt werden je Aufenthalt festgehalten, auch wenn jemand wieder eintritt. Die Mitgliederliste zeigt die aktuellen Gruppen und lässt sich danach filtern.
+  Die Gruppen stehen auch in „Meine Daten“ und in der Datenauskunft.
+
+---
+
 ## [1.4.0] - 2026-11-08
 
 ### ✨ Neu

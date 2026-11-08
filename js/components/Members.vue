@@ -260,6 +260,15 @@
         @trailing-button-click="searchQuery = ''"
       />
 
+      <NcSelect
+        v-if="groupOptions.length"
+        v-model="groupFilter"
+        class="member-search"
+        :options="groupOptions"
+        :input-label="t('verein', 'Group')"
+        :placeholder="t('verein', 'All groups')"
+      />
+
       <div class="category-filter">
         <button
           v-for="cat in categories"
@@ -284,6 +293,7 @@
               <th>{{ t('verein', 'Account') }}</th>
               <th>{{ t('verein', 'Age') }}</th>
               <th>{{ t('verein', 'Member since') }}</th>
+              <th v-if="groupOptions.length">{{ t('verein', 'Groups') }}</th>
               <th>{{ t('verein', 'Position') }}</th>
               <th>{{ t('verein', 'Actions') }}</th>
             </tr>
@@ -301,6 +311,7 @@
               </td>
               <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n year', '%n years', member.age) : '-' }}</td>
               <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n year', '%n years', member.membershipYears) : '-' }}</td>
+              <td v-if="groupOptions.length">{{ (member.groups || []).join(', ') || '–' }}</td>
               <td>
                 <!-- position plus the status where it is not simply "active" (one column less, so the list fits) -->
                 <div class="status-cell">
@@ -624,11 +635,14 @@ export default {
     })
 
     const searchQuery = ref('')
+    const groupFilter = ref(null)
+    const groupOptions = computed(() => [...new Set(members.value.flatMap(m => m.groups || []))].sort((a, b) => a.localeCompare(b)))
 
     const filteredMembers = computed(() => {
       let list = members.value
       if (category.value === 'active') list = list.filter(m => !m.isFormer)
       if (category.value === 'former') list = list.filter(m => m.isFormer)
+      if (groupFilter.value) list = list.filter(m => (m.groups || []).includes(groupFilter.value))
       return list.filter(m => matchesMemberSearch(m, searchQuery.value))
     })
 
@@ -812,6 +826,8 @@ export default {
       category,
       categories,
       searchQuery,
+      groupFilter,
+      groupOptions,
       payerOptions,
       payerName,
       filteredMembers,

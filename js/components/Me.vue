@@ -37,6 +37,14 @@
           <dt>{{ t('verein', 'Member since') }}</dt>
           <dd>{{ formatDate(m.joinDate) }}<span v-if="m.membershipYears !== null"> ({{ n('verein', '%n year', '%n years', m.membershipYears) }})</span></dd>
           <dt v-if="m.leaveDate">{{ t('verein', 'Left on') }}</dt><dd v-if="m.leaveDate">{{ formatDate(m.leaveDate) }}</dd>
+          <template v-if="m.groups && m.groups.length">
+            <dt>{{ t('verein', 'Groups') }}</dt>
+            <dd>
+              <div v-for="(g, i) in m.groups" :key="i">
+                {{ g.name }}: {{ g.leftOn ? t('verein', '{from} to {to}', { from: formatDate(g.joinedOn), to: formatDate(g.leftOn) }) : t('verein', 'since {date}', { date: formatDate(g.joinedOn) }) }}
+              </div>
+            </dd>
+          </template>
           <dt>{{ t('verein', 'SEPA mandate') }}</dt>
           <dd>
             <span v-if="m.mandate.date">{{ t('verein', 'Reference {reference}, signed on {date}', { reference: m.mandate.reference, date: formatDate(m.mandate.date) }) }}<span v-if="m.mandate.signedCopyOnFile"> ({{ t('verein', 'copy on file') }})</span></span>

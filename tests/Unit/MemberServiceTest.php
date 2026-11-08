@@ -187,6 +187,19 @@ class MemberServiceTest extends TestCase {
         $this->service->remove(1, 8);
     }
 
+    public function testRemoveDeletesTheGroupPeriodsInThatClub(): void {
+        $periods = $this->createMock(\OCA\Verein\Db\ClubGroupMemberMapper::class);
+        $service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, l10n: SourceL10n::fromAppLanguage('de'), groupPeriods: $periods);
+        $member = $this->person(8);
+        $member->setMembership($this->membership(8, 1));
+        $this->members->method('findInClub')->willReturn($member);
+        $this->memberships->method('findByMember')->willReturn([$this->membership(8, 2)]);
+
+        $periods->expects($this->once())->method('deleteByMemberAndClub')->with(8, 1);
+
+        $service->remove(1, 8);
+    }
+
     public function testRemoveDeletesThePersonWhenNoClubIsLeft(): void {
         $member = $this->person(8);
         $member->setMembership($this->membership(8, 1));

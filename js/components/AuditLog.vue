@@ -71,6 +71,8 @@ const TYPES = {
   fee: t('verein', 'Fee'),
   fee_run: t('verein', 'Annual fee run'),
   fee_rate: t('verein', 'Fee category'),
+  club_group: t('verein', 'Group'),
+  club_group_member: t('verein', 'Group membership'),
   club: t('verein', 'Club'),
   club_account: t('verein', 'Bank account'),
   user_role: t('verein', 'Role assignment'),

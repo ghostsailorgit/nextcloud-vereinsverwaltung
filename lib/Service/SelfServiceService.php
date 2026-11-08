@@ -33,7 +33,9 @@ class SelfServiceService {
         private MembershipMapper $memberships,
         private ClubMapper $clubs,
         private FeeMapper $fees,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null,
+        private ?\OCA\Verein\Db\ClubGroupMapper $groups = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -70,6 +72,24 @@ class SelfServiceService {
         return $data;
     }
 
+    /** @return array<int, array{name: string, joinedOn: string, leftOn: ?string}> */
+    private function groupsOf(int $memberId, int $clubId): array {
+        if ($this->groupPeriods === null || $this->groups === null) {
+            return [];
+        }
+        $names = [];
+        foreach ($this->groups->findByClub($clubId) as $group) {
+            $names[$group->getId()] = $group->getName();
+        }
+        $rows = [];
+        foreach ($this->groupPeriods->findByMember($memberId) as $period) {
+            if (isset($names[$period->getGroupId()])) {
+                $rows[] = ['name' => $names[$period->getGroupId()], 'joinedOn' => $period->getJoinedOn(), 'leftOn' => $period->getLeftOn()];
+            }
+        }
+        return $rows;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -101,6 +121,7 @@ class SelfServiceService {
                 'honoraryMember' => $membership->getHonoraryMember(),
                 'honoraryPaysFee' => $membership->getHonoraryPaysFee(),
                 'isFormer' => $view->isFormer(),
+                'groups' => $this->groupsOf($person->getId(), $club->getId()),
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [
                     'reference' => $membership->getEffectiveMandateReference(),

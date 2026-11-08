@@ -39,10 +39,12 @@ class BackupService {
         'verein_roles',
         'verein_user_roles',
         'verein_audit_log',
+        'verein_groups',
+        'verein_group_members',
     ];
 
     /** Tables that older backups do not contain; restoring such a backup leaves them untouched. */
-    public const OPTIONAL_TABLES = ['verein_audit_log'];
+    public const OPTIONAL_TABLES = ['verein_audit_log', 'verein_groups', 'verein_group_members'];
 
     /** Backups older than this are removed. */
     public const RETENTION_DAYS = 30;

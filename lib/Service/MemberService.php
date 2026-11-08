@@ -37,7 +37,8 @@ class MemberService {
         private IUserManager $userManager,
         private FeeRateMapper $feeRates,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -204,6 +205,7 @@ class MemberService {
             $this->auditLog?->record($clubId, 'fee', 0, 'cancel_open', ['count' => $cancelled]);
         }
         $this->membershipMapper->clearPayer($id, $clubId);
+        $this->groupPeriods?->deleteByMemberAndClub($id, $clubId);
         $membershipId = $member->getMembership()->getId();
         $this->membershipMapper->delete($member->getMembership());
         $this->auditLog?->record($clubId, 'membership', $membershipId, 'delete');

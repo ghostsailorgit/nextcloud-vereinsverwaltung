@@ -40,7 +40,9 @@ class ClubService {
         private FeeRateMapper $feeRates,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
-        private ?\OCA\Verein\Db\FeeMapper $fees = null
+        private ?\OCA\Verein\Db\FeeMapper $fees = null,
+        private ?\OCA\Verein\Db\ClubGroupMapper $groups = null,
+        private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -127,6 +129,8 @@ class ClubService {
         }
         // fees of members removed earlier are all that can be left of them
         $this->fees?->deleteByClub($id);
+        $this->groupPeriods?->deleteByClub($id);
+        $this->groups?->deleteByClub($id);
         $this->accountMapper->deleteByClub($id);
         $this->feeRates->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);

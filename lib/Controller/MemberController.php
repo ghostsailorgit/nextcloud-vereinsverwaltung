@@ -9,6 +9,7 @@ namespace OCA\Verein\Controller;
 use Exception;
 use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Service\ClubGroupService;
 use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCA\Verein\Service\SelfServiceService;
@@ -45,7 +46,8 @@ class MemberController extends Controller {
         private IUserSession $userSession,
         private IUserManager $userManager,
         private SelfServiceService $selfService,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?ClubGroupService $clubGroups = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
@@ -81,9 +83,10 @@ class MemberController extends Controller {
             } else {
                 $members = $this->memberService->findAll($this->clubId());
             }
+            $groups = $this->clubGroups?->currentGroupNames($this->clubId()) ?? [];
             return new JSONResponse([
                 'status' => 'ok',
-                'members' => array_map(fn ($m) => $this->present($m), $members)
+                'members' => array_map(fn ($m) => $this->present($m) + ['groups' => $groups[$m->getId()] ?? []], $members)
             ]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);

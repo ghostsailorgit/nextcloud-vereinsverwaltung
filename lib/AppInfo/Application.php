@@ -92,7 +92,8 @@ class Application extends App implements IBootstrap {
                 $container->query(IUserManager::class),
                 $container->query(FeeRateMapper::class),
                 $container->query(AuditLogService::class),
-                $container->query(IL10N::class)
+                $container->query(IL10N::class),
+                $container->query(\OCA\Verein\Db\ClubGroupMemberMapper::class)
             );
         });
 

@@ -45,6 +45,9 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - Everything user-facing is scoped to a club via a `clubId` request parameter. The frontend sends it
   automatically (`js/api.js` interceptor + `js/store/club.js`); direct `axios` calls must add it.
 
+- **Groups (`verein_groups`, `verein_group_members`, `ClubGroupService`)** inside a club, e.g. training groups: one row per stay, so joining again keeps the
+  history. Reading needs `verein.member.view`, changes `verein.member.manage`. Not Nextcloud groups: most members have no account.
+
 ## Rules that are easy to get wrong
 1. **Every route needs `#[RequirePermission('verein.x')]`** (club-scoped by default; `clubScoped: false`
    for global things). `tests/Unit/RoutePermissionsTest` fails for any unprotected route unless it is on its

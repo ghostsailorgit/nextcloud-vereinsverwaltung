@@ -230,4 +230,35 @@ class SelfServiceServiceTest extends TestCase {
         $this->assertCount(2, $unrestricted['memberships']);
         $this->assertCount(2, $unrestricted['fees']);
     }
+
+    public function testTheExportListsTheGroupsOfThatClubOnly(): void {
+        $groupPeriods = $this->createMock(\OCA\Verein\Db\ClubGroupMemberMapper::class);
+        $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
+        $service = new SelfServiceService($this->members, $this->memberships, $this->clubs, $this->fees, SourceL10n::fromAppLanguage('de'), $groupPeriods, $groups);
+
+        $own = new \OCA\Verein\Db\ClubGroup();
+        $own->setId(7);
+        $own->setName('Judo');
+        $groups->method('findByClub')->with(1)->willReturn([$own]);
+        $inOwn = new \OCA\Verein\Db\ClubGroupMember();
+        $inOwn->setGroupId(7);
+        $inOwn->setJoinedOn('2024-01-01');
+        $inOwn->setLeftOn('2024-06-30');
+        $inForeign = new \OCA\Verein\Db\ClubGroupMember();
+        $inForeign->setGroupId(99);
+        $inForeign->setJoinedOn('2025-01-01');
+        $groupPeriods->method('findByMember')->with(5)->willReturn([$inOwn, $inForeign]);
+
+        $club = new \OCA\Verein\Db\Club();
+        $club->setId(1);
+        $club->setName('Verein');
+        $this->members->method('find')->willReturn($this->person());
+        $this->memberships->method('findByMember')->willReturn([$this->membership(1, 'member')]);
+        $this->clubs->method('find')->willReturn($club);
+        $this->fees->method('findByMember')->willReturn([]);
+
+        $data = $service->forMemberId(5, 1);
+
+        $this->assertSame([['name' => 'Judo', 'joinedOn' => '2024-01-01', 'leftOn' => '2024-06-30']], $data['memberships'][0]['groups']);
+    }
 }
