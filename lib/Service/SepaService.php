@@ -217,6 +217,10 @@ class SepaService {
             $bic = self::compact($debtor->getBic());
             $cents = (int)round(((float)$fee->getAmount()) * 100);
             $mandateDate = $debtorMembership !== null ? substr(trim((string)$debtorMembership->getMandateDate()), 0, 10) : '';
+            if ($mandateDate === '' && $debtorMembership !== null && $debtorMembership->getMandateOnPaper()) {
+                // the mandate is part of the paper membership application, so it dates from joining
+                $mandateDate = substr(trim((string)$debtorMembership->getJoinDate()), 0, 10);
+            }
             // missing or unreadable due date: collect as soon as possible, as before
             $due = substr(trim((string)$fee->getDueDate()), 0, 10);
             $collectionDate = (self::isDate($due) && $due > $earliest) ? self::targetDayFrom($due) : $earliest;

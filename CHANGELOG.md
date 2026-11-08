@@ -10,7 +10,8 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 - **Beitragszahler:** Im Mitgliederformular lässt sich wählen, wer den Beitrag eines Mitglieds zahlt, etwa ein Elternteil für Partner und Kinder. Alle bleiben
   eigenständige Mitglieder mit eigenen Beiträgen. Der SEPA-Export zieht die Beiträge je Einzugsdatum als eine Lastschrift vom Konto des Zahlers ein, der
   Verwendungszweck nennt die Personen. Mahnschreiben gehen gesammelt an den Zahler.
-- **„SEPA-Mandat liegt in Papierform vor“:** neues Häkchen beim Mandat, auch im CSV-Export und Import. Ein Unterschriftsdatum braucht der SEPA-Export weiterhin.
+- **„SEPA-Mandat liegt in Papierform vor“:** neues Häkchen beim Mandat, auch im CSV-Export und Import. Ist kein Unterschriftsdatum eingetragen, nimmt der
+  SEPA-Export das Eintrittsdatum.
 
 ---
 
