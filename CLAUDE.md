@@ -38,9 +38,9 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - **Membership (`verein_memberships`)**: person x club - role (`member|treasurer|admin`=Vorstand),
   join/leave date, founding flag, `deactivated` (see rule 4), SEPA mandate (reference, signature date, signed file path).
   `Member` (entity) exposes the membership fields of the club it was loaded for via `setMembership()`.
-- **Fee categories (`verein_fee_rates`)** per club (name, yearly amount, one default; 0 = fee-free);
+- **Fee categories (`verein_fee_rates`)** per club (name, amount per payment, payment interval, one default; 0 = fee-free);
   a membership points to one via `fee_rate_id`, none = the club's default.
-- **Fees (`verein_fees`)** carry `club_id`; `period` (e.g. `2026`) marks annual membership fees. **Roles** (`verein_roles`) are global definitions, **assignments**
+- **Fees (`verein_fees`)** carry `club_id`; `period` (`2026`, `2026-H1`, `2026-Q1`, `2026-03`) marks fees of the fee run. **Roles** (`verein_roles`) are global definitions, **assignments**
   (`verein_user_roles`) are per club.
 - Everything user-facing is scoped to a club via a `clubId` request parameter. The frontend sends it
   automatically (`js/api.js` interceptor + `js/store/club.js`); direct `axios` calls must add it.
@@ -77,9 +77,10 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    `email` migration) or make the property default `null` (see `FeeRate::$amount`: a 0.00 fee-free category
    failed to insert until then; same for `AuditLogEntry::$entityId`, bulk actions log id 0; `tests/Unit/EntityInsertTest` pins both). Boolean fields need `addType('x', 'bool')` or an UPDATE that flips them fails with
    "Incorrect integer value".
-8. **Annual fee run** (`FeeRunService`): one fee per active member by category, idempotent per member+year
-   (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who
-   joined during the fee year pays months from the join month to December / 12 (missing/unreadable join date = full year).
+8. **Fee run** (`FeeRunService`): one fee per active member by category for the period of its payment interval containing the chosen month
+   (`FeePeriod`; the category amount is per payment, never converted), idempotent per member and covered months, so a change of interval
+   cannot bill a month twice (cancelled fees don't count), preview first, all-or-nothing in a transaction. Optional `prorata` per run: a member who
+   joined during the period pays months from the join month to its end / months of the period (missing/unreadable join date = full period).
    A membership with `feeExemptJoinYear` pays nothing at all for the year it was joined in (takes precedence over
    `prorata`); every later year is billed normally without the flag being set again. A category with age tiers charges by the age
    on its cut-off day (`AgeGrading`); no readable birth date = reported, never a guessed amount. Mass status changes

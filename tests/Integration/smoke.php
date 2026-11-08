@@ -65,6 +65,9 @@ if ($mode === 'run') {
     $rates->create($clubId, ['name' => 'Jugend', 'amount' => 12, 'isDefault' => false]);
     $rates->create($clubId, ['name' => 'Ehrenmitglied', 'amount' => 0, 'isDefault' => false]);
     check(count($rates->findByClub($clubId)) === 3, 'three fee categories incl. a fee-free one (amount 0 must insert)');
+    $monthly = $rates->create($clubId, ['name' => 'CI Monat', 'amount' => 5, 'billingInterval' => 'monthly']);
+    check(array_values(array_filter($rates->findByClub($clubId), fn ($r) => $r->getId() === $monthly->getId()))[0]->getBillingInterval() === 'monthly', 'payment interval stored');
+    $rates->delete($clubId, $monthly->getId());
     $tiered = $rates->create($clubId, ['name' => 'CI Staffel', 'ageTiers' => [['fromAge' => 0, 'amount' => 0], ['fromAge' => 18, 'amount' => 25.5]], 'ageCutoff' => '06-30']);
     $stored = array_values(array_filter($rates->findByClub($clubId), fn ($r) => $r->getId() === $tiered->getId()))[0];
     check($stored->getAgeCutoff() === '06-30' && $stored->getAgeTierList()[1]['amount'] == 25.5, 'age tiers and cut-off day stored');

@@ -106,11 +106,11 @@
     <div v-if="club && canManage" class="card">
       <h3>{{ t('verein', 'Fee categories') }}</h3>
       <p class="hint">
-        {{ t('verein', 'Each fee category has an annual fee. The default category applies to members without a category of their own (member form). An amount of 0 means fee-exempt (e.g. honorary members). The categories are used by the annual fee run (“Finances” tab).') }}
+        {{ t('verein', 'Each fee category has an amount and a payment interval; the amount applies to each payment (e.g. 5 € monthly or 60 € yearly). The default category applies to members without a category of their own (member form). An amount of 0 means fee-exempt (e.g. honorary members). The categories are used by the annual fee run (“Finances” tab).') }}
       </p>
       <div v-if="club.feeRates && club.feeRates.length" class="table-scroll">
         <table class="accounts">
-          <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Annual fee') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Fee') }}</th><th>{{ t('verein', 'Payment interval') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
           <tbody>
             <tr v-for="r in club.feeRates" :key="r.id">
               <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
@@ -119,6 +119,7 @@
                 <div class="hint">{{ t('verein', 'Age on {date} of the fee year', { date: ageCutoffLabel(r) }) }}</div>
               </td>
               <td v-else>{{ formatMoney(r.amount) }}</td>
+              <td>{{ intervalLabel(r.billingInterval) }}</td>
               <td>
                 <div class="row-actions">
                   <NcButton variant="secondary" @click="editRate(r)">{{ t('verein', 'Edit') }}</NcButton>
@@ -136,7 +137,8 @@
       <h4>{{ rateForm.id ? t('verein', 'Edit fee category') : t('verein', 'Add fee category') }}</h4>
       <form class="grid" @submit.prevent="saveRate">
         <NcTextField :model-value="rateForm.name" @update:model-value="rateForm.name = $event" :label="t('verein', 'Name')" :placeholder="t('verein', 'e.g. adults')" required />
-        <NcTextField v-if="!rateForm.byAge" :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" placeholder="24" required />
+        <NcTextField v-if="!rateForm.byAge" :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Amount per payment in €')" placeholder="24" required />
+        <NcSelect v-model="rateForm.billingInterval" :options="intervalChoices" :reduce="option => option.id" label="label" :input-label="t('verein', 'Payment interval')" :clearable="false" />
         <label class="checkbox-field">
           <input v-model="rateForm.byAge" type="checkbox" />
           <span>{{ t('verein', 'Fee depends on age') }}</span>
@@ -144,7 +146,7 @@
         <div v-if="rateForm.byAge" class="age-tiers">
           <div v-for="(tier, index) in rateForm.tiers" :key="index" class="age-tier">
             <NcTextField :model-value="String(tier.fromAge)" @update:model-value="tier.fromAge = $event" type="number" min="0" max="150" step="1" :label="t('verein', 'From age')" :disabled="index === 0" required />
-            <NcTextField :model-value="tier.amount" @update:model-value="tier.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Annual fee in €')" required />
+            <NcTextField :model-value="tier.amount" @update:model-value="tier.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Amount per payment in €')" required />
             <NcButton type="button" variant="tertiary" :disabled="index === 0" @click="rateForm.tiers.splice(index, 1)">{{ t('verein', 'Remove') }}</NcButton>
           </div>
           <div>
@@ -223,7 +225,7 @@ import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
 import { formatMoney } from '../format'
-import { hasAgeTiers, ageTierSummary, ageCutoffLabel } from '../feeRates'
+import { hasAgeTiers, ageTierSummary, ageCutoffLabel, intervalOptions, intervalLabel } from '../feeRates'
 import { clubState, currentClub, loadClubs, setCurrentClub, can } from '../store/club'
 
 const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId: '', isDefault: false })
@@ -333,7 +335,7 @@ export default {
     }
 
     // fee categories
-    const emptyRate = () => ({ id: null, name: '', amount: '', isDefault: false, byAge: false, tiers: [{ fromAge: 0, amount: '' }], cutoffDay: '31', cutoffMonth: '12' })
+    const emptyRate = () => ({ id: null, name: '', amount: '', isDefault: false, billingInterval: 'yearly', byAge: false, tiers: [{ fromAge: 0, amount: '' }], cutoffDay: '31', cutoffMonth: '12' })
     const rateForm = reactive(emptyRate())
     const resetRateForm = () => Object.assign(rateForm, emptyRate())
     const editRate = (r) => {
@@ -344,6 +346,7 @@ export default {
         name: r.name,
         amount: hasAgeTiers(r) ? '' : String(r.amount),
         isDefault: r.isDefault,
+        billingInterval: r.billingInterval,
         byAge: hasAgeTiers(r),
         tiers: hasAgeTiers(r) ? r.ageTiers.map(tier => ({ fromAge: tier.fromAge, amount: String(tier.amount) })) : emptyRate().tiers,
         cutoffDay: String(Number(day)),
@@ -356,6 +359,7 @@ export default {
           name: rateForm.name,
           amount: rateForm.amount,
           isDefault: rateForm.isDefault,
+          billingInterval: rateForm.billingInterval,
           // the API layer sends form fields, which cannot carry a list of objects
           ageTiers: rateForm.byAge ? JSON.stringify(rateForm.tiers) : '',
           ageCutoff: rateForm.byAge ? `${String(rateForm.cutoffMonth).padStart(2, '0')}-${String(rateForm.cutoffDay).padStart(2, '0')}` : null,
@@ -404,7 +408,7 @@ export default {
 
     return {
       t,
-      formatMoney, hasAgeTiers, ageTierSummary, ageCutoffLabel,
+      formatMoney, hasAgeTiers, ageTierSummary, ageCutoffLabel, intervalLabel, intervalChoices: intervalOptions(),
       rateForm, saveRate, editRate, removeRate, resetRateForm,
       busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm

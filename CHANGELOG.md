@@ -4,6 +4,16 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.6.0] - 2026-11-08
+
+### ✨ Neu
+- **Zahlungsintervalle:** Je Beitragskategorie lässt sich wählen, ob jährlich, halbjährlich, vierteljährlich oder monatlich gezahlt wird. Der eingetragene Betrag
+  gilt je Zahlung, also etwa 5 € monatlich oder 60 € jährlich; das gilt auch für Altersstufen.
+- **Beitragslauf:** Sobald es Kategorien mit kürzerem Intervall gibt, wählt man den Abrechnungsmonat und bei gemischten Intervallen, welche in den Lauf gehören.
+  Jeder Zeitraum wird einmal abgerechnet, auch wenn eine Kategorie zwischendurch das Intervall wechselt.
+
+---
+
 ## [1.5.0] - 2026-11-08
 
 ### ✨ Neu

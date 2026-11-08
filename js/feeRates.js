@@ -18,3 +18,13 @@ export const ageTierSummary = (rate) => rate.ageTiers.map((tier, index) => {
     ? t('verein', '{from}–{to}: {amount}', { from: tier.fromAge, to: next.fromAge - 1, amount })
     : t('verein', 'from {age}: {amount}', { age: tier.fromAge, amount })
 }).join(' · ')
+
+/** the payment intervals, longest first */
+export const intervalOptions = () => [
+  { id: 'yearly', label: t('verein', 'yearly') },
+  { id: 'half_yearly', label: t('verein', 'half-yearly') },
+  { id: 'quarterly', label: t('verein', 'quarterly') },
+  { id: 'monthly', label: t('verein', 'monthly') },
+]
+
+export const intervalLabel = (id) => intervalOptions().find(option => option.id === id)?.label ?? ''
