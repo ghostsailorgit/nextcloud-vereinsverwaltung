@@ -98,6 +98,13 @@
           :label="t('verein', 'Email')"
           :placeholder="t('verein', 'max@example.com (optional)')"
         />
+        <NcTextField
+          :model-value="formData.phone"
+          @update:model-value="formData.phone = $event"
+          type="tel"
+          :label="t('verein', 'Phone')"
+          maxlength="50"
+        />
 
         <div class="account-link">
           <NcSelectUsers
@@ -220,6 +227,18 @@
         </div>
       </div>
 
+      <NcTextField
+        :model-value="searchQuery"
+        @update:model-value="searchQuery = $event"
+        class="member-search"
+        :label="t('verein', 'Search members')"
+        :placeholder="t('verein', 'Name, email, phone, address or number')"
+        :show-trailing-button="searchQuery !== ''"
+        trailing-button-icon="close"
+        :trailing-button-label="t('verein', 'Clear search')"
+        @trailing-button-click="searchQuery = ''"
+      />
+
       <div class="category-filter">
         <button
           v-for="cat in categories"
@@ -239,6 +258,7 @@
               <th>{{ t('verein', '#') }}</th>
               <th>{{ t('verein', 'Name') }}</th>
               <th>{{ t('verein', 'Email') }}</th>
+              <th>{{ t('verein', 'Phone') }}</th>
               <th>{{ t('verein', 'City') }}</th>
               <th>{{ t('verein', 'Account') }}</th>
               <th>{{ t('verein', 'Age') }}</th>
@@ -252,6 +272,7 @@
               <td>{{ member.id }}</td>
               <td>{{ displayName(member) }}</td>
               <td>{{ member.email }}</td>
+              <td>{{ member.phone || '-' }}</td>
               <td>{{ member.city || '-' }}</td>
               <td>
                 <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'account no longer exists') }})</span></span>
@@ -324,7 +345,7 @@
           </tbody>
         </table>
       </div>
-      <p v-if="filteredMembers.length === 0" class="empty-state">{{ t('verein', 'No members in this category') }}</p>
+      <p v-if="filteredMembers.length === 0" class="empty-state">{{ searchQuery.trim() ? t('verein', 'No members found') : t('verein', 'No members in this category') }}</p>
     </div>
 
     <AnonymizeDialog
@@ -339,6 +360,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
+import { matchesMemberSearch } from '../memberSearch'
 import { showSuccess, showError, getFilePickerBuilder } from '@nextcloud/dialogs'
 import { extractErrorMessage } from '../errorMessage'
 import { t, n } from '@nextcloud/l10n'
@@ -371,6 +393,7 @@ const emptyFormData = () => ({
   foundingMember: false,
   feeExemptJoinYear: false,
   deceased: false,
+  phone: '',
   iban: '',
   bic: '',
   mandateReference: '',
@@ -565,10 +588,13 @@ export default {
       ]
     })
 
+    const searchQuery = ref('')
+
     const filteredMembers = computed(() => {
-      if (category.value === 'active') return members.value.filter(m => !m.isFormer)
-      if (category.value === 'former') return members.value.filter(m => m.isFormer)
-      return members.value
+      let list = members.value
+      if (category.value === 'active') list = list.filter(m => !m.isFormer)
+      if (category.value === 'former') list = list.filter(m => m.isFormer)
+      return list.filter(m => matchesMemberSearch(m, searchQuery.value))
     })
 
     const displayName = (member) => {
@@ -750,6 +776,7 @@ export default {
       salutationOptions,
       category,
       categories,
+      searchQuery,
       filteredMembers,
       displayName,
       roleLabel,
@@ -964,6 +991,11 @@ export default {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px var(--color-primary-light);
   }
+}
+
+.member-search {
+  max-width: 420px;
+  margin-bottom: 12px;
 }
 
 .category-filter {

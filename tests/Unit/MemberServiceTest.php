@@ -358,6 +358,7 @@ class MemberServiceTest extends TestCase {
         $member->setIban('DE89370400440532013000');
         $member->setUserId('maxmuster');
         $this->members->method('find')->with(8)->willReturn($member);
+        $member->setPhone('0681 12345');
         $left = $this->membership(8, 1);
         $left->setLeaveDate('2024-01-01');
         $this->memberships->method('findByMember')->with(8)->willReturn([$left]);
@@ -368,6 +369,7 @@ class MemberServiceTest extends TestCase {
         $this->assertSame('Anonymisiert', $result->getName());
         $this->assertNull($result->getFirstName());
         $this->assertSame('', $result->getEmail());
+        $this->assertNull($result->getPhone());
         $this->assertNull($result->getIban());
         $this->assertNull($result->getUserId());
         $this->assertNotNull($result->getAnonymizedAt());

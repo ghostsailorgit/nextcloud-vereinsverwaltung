@@ -80,7 +80,7 @@ if ($mode === 'run') {
     check(count($result['created']) === 3 && count($result['skipped']) === 2, 'import created 3, skipped 2');
 
     $members = svc(MemberService::class);
-    $late = $members->create($clubId, ['name' => 'CI Spät', 'firstName' => 'Lea', 'joinDate' => '2025-10-15', 'birthDate' => '1990-05-05', 'street' => 'Musterweg 4', 'postalCode' => '12345', 'city' => 'Musterstadt']);
+    $late = $members->create($clubId, ['name' => 'CI Spät', 'firstName' => 'Lea', 'phone' => '+49 170 1234567', 'joinDate' => '2025-10-15', 'birthDate' => '1990-05-05', 'street' => 'Musterweg 4', 'postalCode' => '12345', 'city' => 'Musterstadt']);
     $paused = $members->create($clubId, ['name' => 'CI Pause', 'firstName' => 'Paul', 'joinDate' => '2010-01-01']);
     $members->deactivate($clubId, $paused->getId());
     $former = $members->create($clubId, ['name' => 'CI Ehemalig', 'firstName' => 'Ella', 'joinDate' => '2000-01-01', 'leaveDate' => '2020-12-31', 'email' => 'ella@example.org']);
@@ -91,6 +91,7 @@ if ($mode === 'run') {
         $byName[$m->getName()] = $m;
     }
     check($byName['CI Müller']->getFirstName() === 'Jördis' && $byName['CI Müller']->getIban() === 'DE89370400440532013000', 'umlauts and normalised IBAN stored');
+    check($byName['CI Spät']->getPhone() === '+49 170 1234567', 'phone number stored (migration + entity)');
     check($byName['CI Müller']->getBirthDate() !== null && str_starts_with((string)$byName['CI Müller']->getBirthDate(), '1980-02-01'), 'German date stored as ISO');
 
     // fee run 2025 with pro-rata: Kai and Lea joined in October 2025 -> 3/12

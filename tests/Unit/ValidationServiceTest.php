@@ -24,6 +24,13 @@ class ValidationServiceTest extends TestCase {
         $this->assertTrue($result['valid']);
     }
 
+    public function testPhoneIsFreeTextUpToFiftyCharacters(): void {
+        $this->assertTrue($this->service->validateMember(['name' => 'Muster', 'phone' => '+49 (0) 171/123456 mobil'])['valid']);
+        $this->assertTrue($this->service->validateMember(['name' => 'Muster', 'phone' => str_repeat('ü', 50)])['valid']);
+        $result = $this->service->validateMember(['name' => 'Muster', 'phone' => str_repeat('1', 51)]);
+        $this->assertContains('Telefonnummer darf maximal 50 Zeichen lang sein', $result['errors']);
+    }
+
     public function testGivenEmailMustBeValid(): void {
         $result = $this->service->validateMember(['name' => 'Muster', 'email' => 'kein-mail']);
         $this->assertFalse($result['valid']);

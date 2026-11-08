@@ -57,6 +57,11 @@ class ValidationService {
             $errors[] = $this->l->t('Email is invalid');
         }
 
+        // free text ("0171 123456 (mobil)"), only the column length is a hard limit
+        if (mb_strlen(trim((string)($data['phone'] ?? ''))) > 50) {
+            $errors[] = $this->l->t('Phone number must not be longer than 50 characters');
+        }
+
         // IBAN validieren (wenn angegeben)
         if (!empty($iban) && !$this->validateIBAN($iban)) {
             $errors[] = $this->l->t('IBAN is invalid (e.g. DE89370400440532013000)');

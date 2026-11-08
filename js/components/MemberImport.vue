@@ -6,7 +6,7 @@
   <div class="member-import">
     <h2>{{ t('verein', 'Import members from CSV') }}</h2>
     <p class="hint">
-      {{ t('verein', 'The first line must contain the column headings. Recognized headings include Title, First name, Last name, Street, Postal code, City, Email, IBAN, BIC, Date of birth, Date joined, Date left, Position, Fee category, Mandate reference, Date of signature, Founding member and Deceased – so the app\'s own member export can be imported too. Separator: semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. Everything is checked first; nothing is saved until you confirm.') }}
+      {{ t('verein', 'The first line must contain the column headings. Recognized headings include Title, First name, Last name, Street, Postal code, City, Email, Phone, IBAN, BIC, Date of birth, Date joined, Date left, Position, Fee category, Mandate reference, Date of signature, Founding member and Deceased – so the app\'s own member export can be imported too. Separator: semicolon, comma or tab; dates as DD.MM.YYYY or YYYY-MM-DD. Everything is checked first; nothing is saved until you confirm.') }}
     </p>
 
     <div class="pick">

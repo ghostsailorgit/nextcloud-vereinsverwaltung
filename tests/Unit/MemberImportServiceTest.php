@@ -88,7 +88,7 @@ class MemberImportServiceTest extends TestCase {
             'createdAt' => '2026-01-01 10:00:00',
         ]]);
         $this->assertContains('Founding member', $export['headers']);
-        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][8]], 'labels, not the internal ids');
+        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][9]], 'labels, not the internal ids');
         $csv = implode(';', $export['headers']) . "\n" . implode(';', array_map('strval', $export['data'][0])) . "\n";
 
         $plan = $this->service->plan(self::CLUB, $csv, true);
@@ -105,6 +105,36 @@ class MemberImportServiceTest extends TestCase {
         $this->assertSame('2010-05-01', $data['joinDate']);
         $this->assertTrue($data['foundingMember']);
         $this->assertFalse($data['deceased']);
+    }
+
+    public function testAPhoneNumberWithPlusSurvivesExportAndImport(): void {
+        // the export puts an apostrophe in front of "+49 ..." (spreadsheet formula guard); it must not come back
+        $exporter = new CsvExporter();
+        $export = $exporter->formatMembers([[
+            'id' => 12, 'firstName' => 'Erika', 'name' => 'Mustermann', 'email' => '', 'phone' => '+49 170 1234567', 'role' => 'member',
+        ]]);
+        $file = $exporter->export($export['data'], $export['headers'], 'members')['content'];
+        $this->assertStringContainsString("'+49 170 1234567", $file);
+
+        $plan = $this->service->plan(self::CLUB, $file, true);
+
+        $this->assertSame([], $plan['ignoredColumns']);
+        $this->assertSame('+49 170 1234567', $plan['rows'][0]['data']['phone']);
+    }
+
+    public function testPhoneColumnNamesAndEmptyValue(): void {
+        foreach (['Telefon', 'Telefonnummer', 'Tel.', 'Handy', 'Mobil', 'Phone number'] as $heading) {
+            $plan = $this->service->plan(self::CLUB, "Name;$heading\nMuster;0681 12345\nBeispiel;\n", false);
+            $this->assertSame(['ok' => 2, 'error' => 0, 'duplicate' => 0], $plan['counts'], $heading);
+            $this->assertSame('0681 12345', $plan['rows'][0]['data']['phone'], $heading);
+            $this->assertNull($plan['rows'][1]['data']['phone'], $heading);
+        }
+    }
+
+    public function testATooLongPhoneNumberIsAnErrorInTheRow(): void {
+        $plan = $this->service->plan(self::CLUB, "Name;Telefon\nMuster;" . str_repeat('1', 51) . "\n", false);
+        $this->assertSame('error', $plan['rows'][0]['status']);
+        $this->assertContains('Telefonnummer darf maximal 50 Zeichen lang sein', $plan['rows'][0]['messages']);
     }
 
     public function testSpreadsheetStyleFileWithCommasGermanDatesAndOtherHeaderNames(): void {

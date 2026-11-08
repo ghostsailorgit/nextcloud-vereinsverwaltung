@@ -41,6 +41,7 @@ This list fixes one English term per concept. German is the shipped translation 
 | Geburtsdatum | **date of birth** | `birth date` |
 | Postleitzahl | **postal code** | |
 | E-Mail | **Email** | `e-mail` |
+| Telefon | **phone** | `telephone` |
 | Beitrag | **fee** (in letters: **membership fee**) | `dues` |
 | Beitragskategorie | **fee category** | `fee rate` |
 | beitragsfrei | **fee-exempt** | `fee-free` |

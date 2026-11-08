@@ -261,6 +261,7 @@ class MemberController extends Controller {
             'postalCode' => $this->request->getParam('postalCode'),
             'city' => $this->request->getParam('city'),
             'email' => (string)$this->request->getParam('email', ''),
+            'phone' => $this->request->getParam('phone'),
             'iban' => $this->request->getParam('iban'),
             'bic' => $this->request->getParam('bic'),
             'role' => (string)$this->request->getParam('role', 'member'),

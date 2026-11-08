@@ -80,7 +80,7 @@ erscheinen dort nicht.
 ## Anonymisieren
 Statt eine Person zu löschen (`POST /members/{id}/anonymize`, Recht „Rollen verwalten“, wie bei Deaktivieren; die
 Person muss laut `MemberController::anonymize()` Mitglied im aufrufenden Verein sein, sonst 404 - sonst könnte jeder
-Rolleninhaber irgendeines Vereins jede Person anonymisieren): Name, Anschrift, E-Mail, IBAN/BIC, Geburtsdatum und die
+Rolleninhaber irgendeines Vereins jede Person anonymisieren): Name, Anschrift, E-Mail, Telefon, IBAN/BIC, Geburtsdatum und die
 Konto-Verknüpfung werden durch Platzhalter ersetzt, `anonymized_at` wird gesetzt. Der Datensatz bleibt bestehen, damit
 Beiträge und SEPA-Historie weiter der (jetzt anonymen) Person zuzuordnen sind - eine harte Löschung würde die
 Aufbewahrungspflicht der Buchhaltung verletzen. Geht erst, wenn die Person in jedem Verein ausgetreten (oder

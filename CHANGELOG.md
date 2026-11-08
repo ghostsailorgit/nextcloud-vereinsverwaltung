@@ -4,6 +4,22 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.1.0] - 2026-11-08
+
+### ✨ Neu
+- **Telefonnummer** je Person: neues Feld im Mitgliederformular (freier Text, höchstens 50 Zeichen). Sie erscheint in der
+  Mitgliederliste, unter
+  „Meine Daten“, in der Datenauskunft und im CSV-Export; der Import erkennt Spalten wie Telefon, Telefonnummer, Tel, Mobil
+  oder Handy. Beim Anonymisieren wird sie entfernt, im Protokoll steht sie wie andere persönliche Angaben nie im Klartext.
+- **Suche in der Mitgliederliste:** nach Name, E-Mail, Telefon, Adresse oder Mitgliedsnummer, innerhalb der gewählten
+  Kategorie (Aktiv, Ehemalig, Alle). Mehrere Wörter dürfen in beliebiger Reihenfolge stehen, Groß-/Kleinschreibung und
+  Umlaute spielen keine Rolle („muller“ findet „Müller“).
+
+### 🔧 Technik
+- Abhängigkeiten nach neuen Hinweisen von `npm audit` aktualisiert (u. a. `dompurify`, `follow-redirects`, `vite`, `minimatch`).
+
+---
+
 ## [1.0.0] - 2026-10-13
 
 Erste Version für den Nextcloud App Store, funktional wie 0.22.0-beta.
