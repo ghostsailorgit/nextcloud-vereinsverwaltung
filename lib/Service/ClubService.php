@@ -39,7 +39,8 @@ class ClubService {
         private RoleMapper $roleMapper,
         private FeeRateMapper $feeRates,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?\OCA\Verein\Db\FeeMapper $fees = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -124,6 +125,8 @@ class ClubService {
         if ($this->membershipMapper->countByClub($id) > 0) {
             throw new ValidationException($this->l->t('The club still has members and cannot be deleted'));
         }
+        // fees of members removed earlier are all that can be left of them
+        $this->fees?->deleteByClub($id);
         $this->accountMapper->deleteByClub($id);
         $this->feeRates->deleteByClub($id);
         $this->userRoleMapper->deleteByClub($id);

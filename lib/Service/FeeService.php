@@ -83,7 +83,10 @@ class FeeService {
     ): Fee {
         $fee = $this->find($clubId, $id);
         $before = $fee->jsonSerialize();
-        $this->assertMemberOfClub($clubId, $memberId);
+        // a fee of someone who has left the club stays editable (e.g. it was paid after all)
+        if ($memberId !== $fee->getMemberId()) {
+            $this->assertMemberOfClub($clubId, $memberId);
+        }
 
         $fee->setMemberId($memberId);
         $fee->setAmount($amount);

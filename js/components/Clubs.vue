@@ -299,7 +299,7 @@ export default {
     }
 
     const deleteClub = async () => {
-      if (!(await confirmAction(t('verein', 'Delete club'), t('verein', 'Delete club “{name}”? Its bank accounts and role assignments will be lost.', { name: club.value.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Delete club'), t('verein', 'Delete club “{name}”? Its bank accounts, role assignments and the fees of former members will be lost.', { name: club.value.name }), { labelConfirm: t('verein', 'Delete'), severity: 'error' }))) return
       const ok = await run(async () => {
         await api.deleteClub(club.value.id)
         clubState.currentId = null

@@ -127,7 +127,7 @@ class MemberServiceTest extends TestCase {
         $this->members->method('findInClub')->willReturn($member);
         $this->memberships->method('findByMember')->with(8)->willReturn([$this->membership(8, 2)]);
 
-        $this->fees->expects($this->once())->method('deleteByMemberInClub')->with(8, 1);
+        $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
         $this->memberships->expects($this->once())->method('delete')->with($member->getMembership());
         $this->members->expects($this->never())->method('delete');
 
@@ -141,6 +141,7 @@ class MemberServiceTest extends TestCase {
         $this->memberships->method('findByMember')->willReturn([]);
 
         $this->members->expects($this->once())->method('delete')->with($member);
+        $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
 
         $this->service->remove(1, 8);
     }
@@ -359,6 +360,7 @@ class MemberServiceTest extends TestCase {
         $member->setUserId('maxmuster');
         $this->members->method('find')->with(8)->willReturn($member);
         $member->setPhone('0681 12345');
+        $this->fees->expects($this->once())->method('clearMemberName')->with(8);
         $left = $this->membership(8, 1);
         $left->setLeaveDate('2024-01-01');
         $this->memberships->method('findByMember')->with(8)->willReturn([$left]);

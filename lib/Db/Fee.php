@@ -26,6 +26,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setPaidDate(?string $paidDate)
  * @method ?string getPeriod()
  * @method void setPeriod(?string $period)
+ * @method ?string getMemberName()
+ * @method void setMemberName(?string $memberName)
  * @method ?string getDescription()
  * @method void setDescription(?string $description)
  * @method ?string getCreatedAt()
@@ -44,6 +46,8 @@ class Fee extends Entity implements JsonSerializable {
     protected string $status = 'open';
     protected string $dueDate = '';
     protected ?string $paidDate = null;
+    // only set once the member was removed from the club; otherwise the name comes from the member
+    protected ?string $memberName = null;
     protected ?string $description = null;
     protected ?string $period = null;
     protected ?string $createdAt = null;
@@ -60,6 +64,7 @@ class Fee extends Entity implements JsonSerializable {
         return [
             'id' => $this->id,
             'memberId' => $this->memberId,
+            'memberName' => $this->memberName,
             'clubId' => $this->clubId,
             'amount' => $this->amount,
             'status' => $this->status,

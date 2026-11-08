@@ -106,6 +106,9 @@ Vereins**, nicht die anderer Vereine der Person. Das Recht ist dasselbe wie für
 zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins ist (404 sonst).
 
 ## Beiträge
+- **Mitglied entfernen:** Die Beiträge bleiben als Nachweis in der Beitragsliste, mit dem Namen in `verein_fees.member_name`, auch
+  wenn die Person danach ganz gelöscht wird. Beitragslauf, SEPA-Export und Mahnwesen berücksichtigen sie nicht mehr; offene Beiträge
+  behalten ihren Status und lassen sich von Hand als bezahlt markieren oder stornieren. Beim Anonymisieren wird der Name entfernt.
 - **Kategorien** (Reiter „Verein“): z. B. Erwachsene 24 €, Jugend 12 €, Ehrenmitglied 0 €. Eine Kategorie ist der Standard;
   jede Mitgliedschaft kann im Mitgliederformular eine eigene Kategorie bekommen.
 - **Beitragslauf** (Reiter „Finanzen“): Jahr und Fälligkeit wählen, Vorschau ansehen, erzeugen. Aktive Mitglieder bekommen ihren

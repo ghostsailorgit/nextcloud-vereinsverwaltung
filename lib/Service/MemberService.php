@@ -197,7 +197,8 @@ class MemberService {
     public function remove(int $clubId, int $id): void {
         $member = $this->find($clubId, $id);
 
-        $this->feeMapper->deleteByMemberInClub($id, $clubId);
+        // the fees stay as a record; without a membership nothing collects them any more
+        $this->feeMapper->keepNameOfRemovedMember($id, $clubId, $member->getFullName());
         $membershipId = $member->getMembership()->getId();
         $this->membershipMapper->delete($member->getMembership());
         $this->auditLog?->record($clubId, 'membership', $membershipId, 'delete');
@@ -291,6 +292,7 @@ class MemberService {
         foreach ($clubIds ?: [null] as $clubId) {
             $this->auditLog?->record($clubId, 'member', $id, 'anonymize');
         }
+        $this->feeMapper->clearMemberName($id);
         $this->auditLog?->scrubEntity('member', $id);
         foreach ($memberships as $membership) {
             $this->auditLog?->scrubEntity('membership', $membership->getId());

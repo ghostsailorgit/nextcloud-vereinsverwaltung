@@ -684,7 +684,7 @@ export default {
     }
 
     const deleteMember = async (id) => {
-      if (!(await confirmAction(t('verein', 'Remove from the club'), t('verein', 'Remove this member from the club? Their fees in this club are deleted as well; the person remains in other clubs.'), { labelConfirm: t('verein', 'Remove'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Remove from the club'), t('verein', 'Remove this member from the club? Their fees stay on record in the fee list but will no longer be collected; the person remains in other clubs.'), { labelConfirm: t('verein', 'Remove'), severity: 'error' }))) return
 
       loading.value = true
       try {

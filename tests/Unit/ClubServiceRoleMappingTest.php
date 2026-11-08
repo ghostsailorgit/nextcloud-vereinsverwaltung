@@ -8,6 +8,7 @@ namespace OCA\Verein\Tests\Unit;
 use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MembershipMapper;
 use OCA\Verein\Db\RoleMapper;
@@ -37,6 +38,20 @@ class ClubServiceRoleMappingTest extends TestCase {
         $club->setName('Musterverein');
         $club->setRoleMapping($mapping);
         return $club;
+    }
+
+    public function testDeletingAClubAlsoRemovesTheFeesOfFormerMembers(): void {
+        $clubs = $this->createMock(ClubMapper::class);
+        $clubs->method('find')->willReturn($this->club(null));
+        $memberships = $this->createMock(MembershipMapper::class);
+        $memberships->method('countByClub')->willReturn(0);
+        $fees = $this->createMock(FeeMapper::class);
+        $fees->expects($this->once())->method('deleteByClub')->with(1);
+        $service = new ClubService($clubs, $this->createMock(ClubAccountMapper::class), $memberships,
+            $this->createMock(UserRoleMapper::class), $this->createMock(RoleService::class), new ValidationService(),
+            $this->createMock(RoleMapper::class), $this->createMock(FeeRateMapper::class), fees: $fees);
+
+        $service->delete(1);
     }
 
     public function testAnUnchangedMappingIsNotLogged(): void {
