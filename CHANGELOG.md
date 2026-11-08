@@ -15,6 +15,9 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
   Kategorie (Aktiv, Ehemalig, Alle). Mehrere Wörter dürfen in beliebiger Reihenfolge stehen, Groß-/Kleinschreibung und
   Umlaute spielen keine Rolle („muller“ findet „Müller“).
 
+### 🔧 Technik
+- Abhängigkeiten nach neuen Hinweisen von `npm audit` aktualisiert (u. a. `dompurify`, `follow-redirects`, `vite`, `minimatch`).
+
 ---
 
 ## [1.0.0] - 2026-10-13
