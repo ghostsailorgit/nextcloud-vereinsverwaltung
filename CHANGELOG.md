@@ -10,6 +10,9 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 - **Telefonnummer** je Person: neues Feld im Mitgliederformular (freier Text, höchstens 50 Zeichen). Sie erscheint unter
   „Meine Daten“, in der Datenauskunft und im CSV-Export; der Import erkennt Spalten wie Telefon, Telefonnummer, Tel, Mobil
   oder Handy. Beim Anonymisieren wird sie entfernt, im Protokoll steht sie wie andere persönliche Angaben nie im Klartext.
+- **Suche in der Mitgliederliste:** nach Name, E-Mail, Telefon, Adresse oder Mitgliedsnummer, innerhalb der gewählten
+  Kategorie (Aktiv, Ehemalig, Alle). Mehrere Wörter dürfen in beliebiger Reihenfolge stehen, Groß-/Kleinschreibung und
+  Umlaute spielen keine Rolle („muller“ findet „Müller“).
 
 ---
 
