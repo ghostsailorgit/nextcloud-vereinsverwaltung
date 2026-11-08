@@ -258,6 +258,7 @@
               <th>{{ t('verein', '#') }}</th>
               <th>{{ t('verein', 'Name') }}</th>
               <th>{{ t('verein', 'Email') }}</th>
+              <th>{{ t('verein', 'Phone') }}</th>
               <th>{{ t('verein', 'City') }}</th>
               <th>{{ t('verein', 'Account') }}</th>
               <th>{{ t('verein', 'Age') }}</th>
@@ -271,6 +272,7 @@
               <td>{{ member.id }}</td>
               <td>{{ displayName(member) }}</td>
               <td>{{ member.email }}</td>
+              <td>{{ member.phone || '-' }}</td>
               <td>{{ member.city || '-' }}</td>
               <td>
                 <span v-if="member.userId" :title="member.userId">{{ member.userDisplayName }}<span v-if="member.userExists === false" class="hint"> ({{ t('verein', 'account no longer exists') }})</span></span>
