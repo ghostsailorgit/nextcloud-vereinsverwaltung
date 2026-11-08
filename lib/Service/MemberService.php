@@ -110,7 +110,7 @@ class MemberService {
      *
      * @param array $data Person keys: name, firstName, salutation, address,
      *   street, postalCode, city, email, phone, iban, bic, birthDate, deceased.
-     *   Membership keys: role, joinDate, leaveDate, foundingMember, feeExemptJoinYear,
+     *   Membership keys: role, joinDate, leaveDate, foundingMember, feeExemptJoinYear, honoraryMember, honoraryPaysFee,
      *   mandateReference, mandateDate, mandateFile
      */
     public function create(int $clubId, array $data): Member {
@@ -197,7 +197,12 @@ class MemberService {
     public function remove(int $clubId, int $id): void {
         $member = $this->find($clubId, $id);
 
-        $this->feeMapper->deleteByMemberInClub($id, $clubId);
+        // the fees stay as a record; what is still open will not be collected any more
+        $this->feeMapper->keepNameOfRemovedMember($id, $clubId, $member->getFullName());
+        $cancelled = $this->feeMapper->cancelOpenOfMember($id, $clubId);
+        if ($cancelled > 0) {
+            $this->auditLog?->record($clubId, 'fee', 0, 'cancel_open', ['count' => $cancelled]);
+        }
         $membershipId = $member->getMembership()->getId();
         $this->membershipMapper->delete($member->getMembership());
         $this->auditLog?->record($clubId, 'membership', $membershipId, 'delete');
@@ -291,6 +296,7 @@ class MemberService {
         foreach ($clubIds ?: [null] as $clubId) {
             $this->auditLog?->record($clubId, 'member', $id, 'anonymize');
         }
+        $this->feeMapper->clearMemberName($id);
         $this->auditLog?->scrubEntity('member', $id);
         foreach ($memberships as $membership) {
             $this->auditLog?->scrubEntity('membership', $membership->getId());
@@ -362,6 +368,9 @@ class MemberService {
         $membership->setLeaveDate($this->nullIfEmpty($data['leaveDate'] ?? null));
         $membership->setFoundingMember($this->toBool($data['foundingMember'] ?? false));
         $membership->setFeeExemptJoinYear($this->toBool($data['feeExemptJoinYear'] ?? false));
+        $honorary = $this->toBool($data['honoraryMember'] ?? false);
+        $membership->setHonoraryMember($honorary);
+        $membership->setHonoraryPaysFee($honorary && $this->toBool($data['honoraryPaysFee'] ?? false));
         $membership->setMandateReference($this->nullIfEmpty($data['mandateReference'] ?? null));
         $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
         $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));

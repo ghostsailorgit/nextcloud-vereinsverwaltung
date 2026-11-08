@@ -121,13 +121,28 @@ class MemberServiceTest extends TestCase {
         $this->assertNull($member->getMembership()->getMandateFile());
     }
 
+    public function testPaysVoluntarilyOnlyCountsForHonoraryMembers(): void {
+        $this->members->method('insert')->willReturnCallback(function ($m) { $m->setId(55); return $m; });
+        $stored = [];
+        $this->memberships->method('insert')->willReturnCallback(function ($ms) use (&$stored) { $stored[] = $ms; return $ms; });
+
+        $this->service->create(3, ['name' => 'Muster', 'email' => '', 'honoraryMember' => 'true', 'honoraryPaysFee' => 'true']);
+        $this->service->create(3, ['name' => 'Beispiel', 'email' => '', 'honoraryPaysFee' => 'true']);
+
+        $this->assertTrue($stored[0]->getHonoraryMember());
+        $this->assertTrue($stored[0]->getHonoraryPaysFee());
+        $this->assertFalse($stored[1]->getHonoraryMember());
+        $this->assertFalse($stored[1]->getHonoraryPaysFee());
+    }
+
     public function testRemoveKeepsThePersonWhileAnotherClubStillHasThem(): void {
         $member = $this->person(8);
         $member->setMembership($this->membership(8, 1));
         $this->members->method('findInClub')->willReturn($member);
         $this->memberships->method('findByMember')->with(8)->willReturn([$this->membership(8, 2)]);
 
-        $this->fees->expects($this->once())->method('deleteByMemberInClub')->with(8, 1);
+        $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
+        $this->fees->expects($this->once())->method('cancelOpenOfMember')->with(8, 1);
         $this->memberships->expects($this->once())->method('delete')->with($member->getMembership());
         $this->members->expects($this->never())->method('delete');
 
@@ -141,6 +156,7 @@ class MemberServiceTest extends TestCase {
         $this->memberships->method('findByMember')->willReturn([]);
 
         $this->members->expects($this->once())->method('delete')->with($member);
+        $this->fees->expects($this->once())->method('keepNameOfRemovedMember')->with(8, 1, $member->getFullName());
 
         $this->service->remove(1, 8);
     }
@@ -359,6 +375,7 @@ class MemberServiceTest extends TestCase {
         $member->setUserId('maxmuster');
         $this->members->method('find')->with(8)->willReturn($member);
         $member->setPhone('0681 12345');
+        $this->fees->expects($this->once())->method('clearMemberName')->with(8);
         $left = $this->membership(8, 1);
         $left->setLeaveDate('2024-01-01');
         $this->memberships->method('findByMember')->with(8)->willReturn([$left]);

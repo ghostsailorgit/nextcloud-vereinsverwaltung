@@ -117,6 +117,16 @@ if ($mode === 'run') {
     $pdf = svc(PdfExporter::class)->exportDunningLetters($dunning->letters($clubId, $d['feeIds'], 14));
     check(str_starts_with($pdf['content'], '%PDF') && preg_match_all('/\/Type\s*\/Page[^s]/', $pdf['content']) === 2, 'dunning letters: a 2-page PDF (TCPDF installed)');
 
+    // removing a member keeps the fee with the name, also when the person is deleted (real SQL on every database)
+    $gone = $members->create($other->getId(), ['name' => 'CI Entfernt', 'firstName' => 'Eva', 'joinDate' => '2020-01-01']);
+    $goneFee = $fees->create($other->getId(), $gone->getId(), 9.0, 'open', '2026-01-01');
+    $members->remove($other->getId(), $gone->getId());
+    $kept = $fees->find($other->getId(), $goneFee->getId());
+    check($kept->getMemberName() === 'Eva CI Entfernt' && $kept->getStatus() === 'cancelled', 'fee of a removed member stays with the name, open fee cancelled');
+    svc(\OCA\Verein\Db\FeeMapper::class)->clearMemberName($gone->getId());
+    check($fees->find($other->getId(), $goneFee->getId())->getMemberName() === null, 'kept name can be cleared');
+    $fees->delete($other->getId(), $goneFee->getId());
+
     // audit log paging over real rows
     $log = svc(AuditLogMapper::class);
     $page1 = $log->findByClub($clubId, null, null, 5);

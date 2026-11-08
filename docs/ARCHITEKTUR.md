@@ -106,6 +106,9 @@ Vereins**, nicht die anderer Vereine der Person. Das Recht ist dasselbe wie für
 zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins ist (404 sonst).
 
 ## Beiträge
+- **Mitglied entfernen:** Die Beiträge bleiben als Nachweis in der Beitragsliste, mit dem Namen in `verein_fees.member_name`, auch
+  wenn die Person danach ganz gelöscht wird. Offene und überfällige Beiträge werden dabei storniert (Protokoll: Anzahl), also weder
+  eingezogen noch gemahnt; der Beitragslauf arbeitet ohnehin nur mit Mitgliedern des Vereins. Beim Anonymisieren wird der Name entfernt.
 - **Kategorien** (Reiter „Verein“): z. B. Erwachsene 24 €, Jugend 12 €, Ehrenmitglied 0 €. Eine Kategorie ist der Standard;
   jede Mitgliedschaft kann im Mitgliederformular eine eigene Kategorie bekommen.
 - **Beitragslauf** (Reiter „Finanzen“): Jahr und Fälligkeit wählen, Vorschau ansehen, erzeugen. Aktive Mitglieder bekommen ihren
@@ -116,6 +119,8 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   Dezember (Jahresbeitrag × Monate / 12, auf Cent gerundet). Eintritt im Januar, früher oder ohne Datum = ganzes Jahr, damit
   fehlende Daten nicht zu einem zu niedrigen Beitrag führen. Die Option gilt je Lauf, nicht je Verein (keine gespeicherte
   Einstellung); ein Austritt im Beitragsjahr wird nicht anteilig gerechnet (Ausgetretene bekommen keinen Beitrag).
+- **Ehrenmitglieder** (`Membership::$honoraryMember`, Häkchen im Mitgliederformular) bekommen im Beitragslauf keinen Beitrag. Wer
+  freiwillig weiterzahlt (`$honoraryPaysFee`, zweites Häkchen), wird normal nach seiner Beitragskategorie abgerechnet.
 - **Eintrittsjahr beitragsfrei** (`Membership::$feeExemptJoinYear`, Häkchen im Mitgliederformular): komplett beitragsfrei,
   aber nur für das Jahr des Eintritts - jedes weitere Jahr wird normal abgerechnet, auch ohne das Häkchen erneut zu setzen.
   Geht der anteiligen Berechnung vor, falls ein Lauf beides gleichzeitig hätte (`FeeRunService::plan()`).

@@ -95,7 +95,7 @@
           </thead>
           <tbody>
             <tr v-for="fee in fees" :key="fee.id" :class="{ editing: editingId === fee.id, [fee.status]: true }">
-              <td>{{ getMemberName(fee.memberId) }}</td>
+              <td>{{ getMemberName(fee) }}</td>
 
               <td v-if="editingId !== fee.id">{{ formatMoney(fee.amount) }}</td>
               <td v-if="editingId === fee.id" class="cell-field">
@@ -137,7 +137,7 @@
                     <NcButton @click="startEdit(fee)" variant="secondary">
                       {{ t('verein', 'Edit') }}
                     </NcButton>
-                    <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: getMemberName(fee.memberId) })" :disabled="loading">
+                    <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: getMemberName(fee) })" :disabled="loading">
                       <NcActionButton close-after-click @click="deleteFee(fee.id)">
                         {{ t('verein', 'Delete') }}
                       </NcActionButton>
@@ -302,9 +302,10 @@ export default {
       }
     }
 
-    const getMemberName = (memberId) => {
-      const member = members.value.find(m => m.id === memberId)
-      return member ? member.fullName : t('verein', 'Member #{id}', { id: memberId })
+    const getMemberName = (fee) => {
+      const member = members.value.find(m => m.id === fee.memberId)
+      if (member) return member.fullName
+      return fee.memberName ? t('verein', '{name} (removed)', { name: fee.memberName }) : t('verein', 'Member #{id}', { id: fee.memberId })
     }
 
     const getStatusLabel = (status) => {

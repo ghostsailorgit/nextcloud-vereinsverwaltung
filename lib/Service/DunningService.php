@@ -89,7 +89,7 @@ class DunningService {
         $total = 0.0;
         foreach ($dueByMember as $memberId => $fees) {
             $member = $membersById[$memberId] ?? null;
-            $name = $member !== null ? $member->getFullName() : $this->l->t('Person #%s', [$memberId]);
+            $name = $member !== null ? $member->getFullName() : ($fees[0]->getMemberName() ?: $this->l->t('Person #%s', [$memberId]));
             $skip = function (string $reason) use (&$skipped, $memberId, $name): void {
                 $skipped[] = ['memberId' => $memberId, 'name' => $name, 'reason' => $reason];
             };

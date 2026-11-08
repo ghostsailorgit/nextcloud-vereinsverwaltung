@@ -85,6 +85,7 @@ const ACTIONS = {
   activate: t('verein', 'activated'),
   anonymize: t('verein', 'anonymized'),
   mark_paid: t('verein', 'marked as paid'),
+  cancel_open: t('verein', 'canceled'),
   flag_overdue: t('verein', 'marked as overdue'),
   dunning: t('verein', 'reminder sent'),
   dunning_email: t('verein', 'reminders sent by email'),
@@ -97,6 +98,8 @@ const FIELDS = {
   email: t('verein', 'Email'), phone: t('verein', 'Phone'), iban: 'IBAN', bic: 'BIC', birthDate: t('verein', 'Date of birth'), age: t('verein', 'Age'),
   role: t('verein', 'Position'), joinDate: t('verein', 'Joined'), leaveDate: t('verein', 'Left'), foundingMember: t('verein', 'Founding member'),
   feeExemptJoinYear: t('verein', 'Fee-exempt in the year joined'),
+  honoraryMember: t('verein', 'Honorary member'),
+  honoraryPaysFee: t('verein', 'Pays the fee voluntarily'),
   deactivated: t('verein', 'Deactivated'), deceased: t('verein', 'Deceased'), userId: t('verein', 'Nextcloud account'), feeRateId: t('verein', 'Fee category'),
   mandateReference: t('verein', 'Mandate reference'), mandateDate: t('verein', 'Date of signature'), mandateFile: t('verein', 'Mandate file'), amount: t('verein', 'Amount'),
   status: t('verein', 'Status'), dueDate: t('verein', 'Due on'), description: t('verein', 'Comment'), period: t('verein', 'Fee year'), memberId: t('verein', 'Person'),
@@ -216,7 +219,7 @@ export default {
         if (c.withoutEmail) parts.push(n('verein', '%n without an email address', '%n without an email address', c.withoutEmail))
         return [{ text: parts.join(', ') }]
       }
-      if (e.action === 'mark_paid' || e.action === 'flag_overdue') {
+      if (e.action === 'mark_paid' || e.action === 'flag_overdue' || e.action === 'cancel_open') {
         return [{ text: n('verein', '%n fee', '%n fees', c.count) }]
       }
       const safe = safeFields.value[e.entityType] // undefined = type is not redacted at all

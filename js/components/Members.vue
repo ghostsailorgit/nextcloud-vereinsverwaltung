@@ -159,6 +159,14 @@
           <span>{{ t('verein', 'Fee-exempt in the year joined') }}</span>
         </label>
         <label class="checkbox-field">
+          <input v-model="formData.honoraryMember" type="checkbox" />
+          <span>{{ t('verein', 'Honorary member') }}</span>
+        </label>
+        <label v-if="formData.honoraryMember" class="checkbox-field">
+          <input v-model="formData.honoraryPaysFee" type="checkbox" />
+          <span>{{ t('verein', 'Pays the fee voluntarily') }}</span>
+        </label>
+        <label class="checkbox-field">
           <input v-model="formData.deceased" type="checkbox" />
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
@@ -292,6 +300,7 @@
                   class="status-badge deactivated"
                   :title="t('verein', 'No fees, no calendar events and no automatic permissions until the member is activated again')"
                 >{{ t('verein', 'Deactivated') }}</span>
+                <span v-if="member.honoraryMember" class="status-badge honorary">{{ member.honoraryPaysFee ? t('verein', 'Honorary member (pays)') : t('verein', 'Honorary member') }}</span>
                 <span v-if="member.foundingMember" class="status-badge founding" :title="t('verein', 'Founding member')">★</span>
                 </div>
               </td>
@@ -392,6 +401,8 @@ const emptyFormData = () => ({
   role: 'member',
   foundingMember: false,
   feeExemptJoinYear: false,
+  honoraryMember: false,
+  honoraryPaysFee: false,
   deceased: false,
   phone: '',
   iban: '',
@@ -684,7 +695,7 @@ export default {
     }
 
     const deleteMember = async (id) => {
-      if (!(await confirmAction(t('verein', 'Remove from the club'), t('verein', 'Remove this member from the club? Their fees in this club are deleted as well; the person remains in other clubs.'), { labelConfirm: t('verein', 'Remove'), severity: 'error' }))) return
+      if (!(await confirmAction(t('verein', 'Remove from the club'), t('verein', 'Remove this member from the club? Paid fees stay on record in the fee list, open fees are canceled; the person remains in other clubs.'), { labelConfirm: t('verein', 'Remove'), severity: 'error' }))) return
 
       loading.value = true
       try {
@@ -1120,6 +1131,11 @@ export default {
     background: var(--color-background-darker);
     color: var(--color-text-maxcontrast);
     font-style: italic;
+  }
+
+  &.honorary {
+    background: var(--color-background-darker);
+    color: var(--color-main-text);
   }
 
   &.founding {

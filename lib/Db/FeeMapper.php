@@ -112,11 +112,40 @@ class FeeMapper extends QBMapper {
         return $qb->executeStatement();
     }
 
-    public function deleteByMemberInClub(int $memberId, int $clubId): void {
+    /** The member leaves the club: the fees stay as a record and keep the name (the person may be deleted). */
+    public function keepNameOfRemovedMember(int $memberId, int $clubId, string $name): void {
         $qb = $this->db->getQueryBuilder();
-        $qb->delete($this->getTableName())
+        $qb->update($this->getTableName())
+            ->set('member_name', $qb->createNamedParameter($name))
             ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
             ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+
+    /** @return int number of fees cancelled */
+    public function cancelOpenOfMember(int $memberId, int $clubId): int {
+        $qb = $this->db->getQueryBuilder();
+        return $qb->update($this->getTableName())
+            ->set('status', $qb->createNamedParameter('cancelled'))
+            ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->in('status', $qb->createNamedParameter(['open', 'overdue'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)))
+            ->executeStatement();
+    }
+
+    /** Anonymizing a person also removes the name kept on fees of clubs they left earlier. */
+    public function clearMemberName(int $memberId): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->getTableName())
+            ->set('member_name', $qb->createNamedParameter(null, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_NULL))
+            ->where($qb->expr()->eq('member_id', $qb->createNamedParameter($memberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+
+    public function deleteByClub(int $clubId): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->delete($this->getTableName())
+            ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
             ->executeStatement();
     }
 

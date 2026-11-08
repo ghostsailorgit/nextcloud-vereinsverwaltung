@@ -98,6 +98,8 @@ class SelfServiceService {
                 'leaveDate' => $membership->getLeaveDate(),
                 'foundingMember' => $membership->getFoundingMember(),
                 'feeExemptJoinYear' => $membership->getFeeExemptJoinYear(),
+                'honoraryMember' => $membership->getHonoraryMember(),
+                'honoraryPaysFee' => $membership->getHonoraryPaysFee(),
                 'isFormer' => $view->isFormer(),
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [

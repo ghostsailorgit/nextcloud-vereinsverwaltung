@@ -190,8 +190,14 @@ class SepaService {
             $member = $clubMembers[$fee->getMemberId()] ?? null;
             $membership = $member?->getMembership();
             if ($member === null) {
-                // a fee of someone no longer in the club (membership removed): reported below as without mandate
-                $member = $this->memberMapper->find($fee->getMemberId());
+                // removed from the club: the fee stays on record but is not collected (the person may no longer exist)
+                $skipped[] = [
+                    'memberName' => $fee->getMemberName() ?: $this->l->t('Person #%s', [$fee->getMemberId()]),
+                    'amount' => $fee->getAmount(),
+                    'dueDate' => $fee->getDueDate(),
+                    'reason' => $this->l->t('no longer a member of this club'),
+                ];
+                continue;
             }
 
             $iban = self::compact($member->getIban());

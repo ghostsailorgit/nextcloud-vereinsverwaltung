@@ -109,6 +109,21 @@ class FeeServiceTest extends TestCase {
         }
     }
 
+    public function testAFeeOfARemovedMemberStaysEditable(): void {
+        $fee = new Fee();
+        $fee->setClubId(4);
+        $fee->setMemberId(77);
+        $fee->setMemberName('Paula Ausgetreten');
+        $this->fees->method('findInClub')->willReturn($fee);
+        $this->fees->method('update')->willReturnArgument(0);
+        $this->memberships->expects($this->never())->method('findByMemberAndClub');
+
+        $updated = $this->service->update(4, 1, 77, 5.0, 'paid', '2026-12-01');
+
+        $this->assertSame('paid', $updated->getStatus());
+        $this->assertSame('Paula Ausgetreten', $updated->getMemberName());
+    }
+
     public function testUpdateCannotMoveTheFeeToAMemberOfAnotherClub(): void {
         $fee = new Fee();
         $fee->setClubId(4);

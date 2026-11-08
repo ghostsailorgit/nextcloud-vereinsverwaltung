@@ -108,6 +108,10 @@ class FeeRunService {
                 $skip($this->l->t('deactivated'));
                 continue;
             }
+            if ($member->getHonoraryMember() && !$member->getHonoraryPaysFee()) {
+                $skip($this->l->t('honorary member'));
+                continue;
+            }
             $join = $member->getJoinDate();
             if (!empty($join) && (int)substr($join, 0, 4) > $year) {
                 $skip($this->l->t('joins after %s', [$year]));
