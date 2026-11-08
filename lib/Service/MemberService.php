@@ -203,6 +203,7 @@ class MemberService {
         if ($cancelled > 0) {
             $this->auditLog?->record($clubId, 'fee', 0, 'cancel_open', ['count' => $cancelled]);
         }
+        $this->membershipMapper->clearPayer($id, $clubId);
         $membershipId = $member->getMembership()->getId();
         $this->membershipMapper->delete($member->getMembership());
         $this->auditLog?->record($clubId, 'membership', $membershipId, 'delete');
@@ -374,7 +375,9 @@ class MemberService {
         $membership->setMandateReference($this->nullIfEmpty($data['mandateReference'] ?? null));
         $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
         $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));
+        $membership->setMandateOnPaper($this->toBool($data['mandateOnPaper'] ?? false));
         $this->applyFeeRate($membership, $data);
+        $this->applyPayer($membership, $data);
     }
 
     /**
@@ -383,6 +386,39 @@ class MemberService {
      *
      * @throws ValidationException
      */
+    /**
+     * Who pays this member's fees: an id sets it, an empty string clears it, no value leaves it as it is.
+     * Only one level: a payer cannot have a payer, and someone paying for others cannot get one.
+     *
+     * @throws ValidationException
+     */
+    private function applyPayer(Membership $membership, array $data): void {
+        if (!array_key_exists('payerMemberId', $data) || $data['payerMemberId'] === null) {
+            return;
+        }
+        $raw = trim((string)$data['payerMemberId']);
+        if ($raw === '' || $raw === '0') {
+            $membership->setPayerMemberId(null);
+            return;
+        }
+        $payerId = (int)$raw;
+        if ($payerId === $membership->getMemberId()) {
+            throw new ValidationException($this->l->t('A member cannot be their own payer'));
+        }
+        try {
+            $payer = $this->membershipMapper->findByMemberAndClub($payerId, $membership->getClubId());
+        } catch (DoesNotExistException $e) {
+            throw new ValidationException($this->l->t('The payer is not a member of this club'));
+        }
+        if ($payer->getPayerMemberId() !== null) {
+            throw new ValidationException($this->l->t('The chosen payer has their fees paid by someone else'));
+        }
+        if ($this->membershipMapper->countPayees($membership->getMemberId(), $membership->getClubId()) > 0) {
+            throw new ValidationException($this->l->t('This member pays for others and cannot have a payer'));
+        }
+        $membership->setPayerMemberId($payerId);
+    }
+
     private function applyFeeRate(Membership $membership, array $data): void {
         if (!array_key_exists('feeRateId', $data) || $data['feeRateId'] === null) {
             return;

@@ -26,6 +26,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setDeactivated(bool $deactivated)
  * @method bool getFoundingMember()
  * @method void setFoundingMember(bool $foundingMember)
+ * @method bool getMandateOnPaper()
+ * @method void setMandateOnPaper(bool $mandateOnPaper)
+ * @method ?int getPayerMemberId()
+ * @method void setPayerMemberId(?int $payerMemberId)
  * @method bool getHonoraryMember()
  * @method void setHonoraryMember(bool $honoraryMember)
  * @method bool getHonoraryPaysFee()
@@ -59,6 +63,9 @@ class Membership extends Entity implements JsonSerializable {
     // no annual fee, unless honoraryPaysFee says they keep paying of their own accord
     protected bool $honoraryMember = false;
     protected bool $honoraryPaysFee = false;
+    protected bool $mandateOnPaper = false;
+    // someone else in the club pays this member's fees, see FeePayer
+    protected ?int $payerMemberId = null;
     protected ?string $mandateReference = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
@@ -75,6 +82,8 @@ class Membership extends Entity implements JsonSerializable {
         $this->addType('feeExemptJoinYear', 'bool');
         $this->addType('honoraryMember', 'bool');
         $this->addType('honoraryPaysFee', 'bool');
+        $this->addType('mandateOnPaper', 'bool');
+        $this->addType('payerMemberId', 'integer');
         $this->addType('feeRateId', 'integer');
     }
 
@@ -100,6 +109,8 @@ class Membership extends Entity implements JsonSerializable {
             'feeExemptJoinYear' => $this->feeExemptJoinYear,
             'honoraryMember' => $this->honoraryMember,
             'honoraryPaysFee' => $this->honoraryPaysFee,
+            'mandateOnPaper' => $this->mandateOnPaper,
+            'payerMemberId' => $this->payerMemberId,
             'mandateReference' => $this->mandateReference,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,

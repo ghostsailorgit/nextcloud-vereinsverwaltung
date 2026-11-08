@@ -105,7 +105,7 @@ class SepaService {
                 $collected['transactions']
             ),
             'skippedCount' => count($collected['skipped']),
-            'feeIds' => array_column($collected['transactions'], 'feeId')
+            'feeIds' => array_merge(...array_column($collected['transactions'], 'feeIds'))
         ];
     }
 
@@ -186,6 +186,15 @@ class SepaService {
             $clubMembers[$m->getId()] = $m;
         }
 
+        // payers with someone to pay for: their debits are combined per collection date
+        $payers = [];
+        foreach ($clubMembers as $id => $m) {
+            if (FeePayer::of($id, $clubMembers) !== $id) {
+                $payers[FeePayer::of($id, $clubMembers)] = true;
+            }
+        }
+        $bundles = [];
+
         foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
             $member = $clubMembers[$fee->getMemberId()] ?? null;
             $membership = $member?->getMembership();
@@ -200,10 +209,18 @@ class SepaService {
                 continue;
             }
 
-            $iban = self::compact($member->getIban());
-            $bic = self::compact($member->getBic());
+            // account and mandate are those of whoever pays
+            $debtorId = FeePayer::of($member->getId(), $clubMembers);
+            $debtor = $clubMembers[$debtorId];
+            $debtorMembership = $debtor->getMembership();
+            $iban = self::compact($debtor->getIban());
+            $bic = self::compact($debtor->getBic());
             $cents = (int)round(((float)$fee->getAmount()) * 100);
-            $mandateDate = $membership !== null ? substr(trim((string)$membership->getMandateDate()), 0, 10) : '';
+            $mandateDate = $debtorMembership !== null ? substr(trim((string)$debtorMembership->getMandateDate()), 0, 10) : '';
+            if ($mandateDate === '' && $debtorMembership !== null && $debtorMembership->getMandateOnPaper()) {
+                // the mandate is part of the paper membership application, so it dates from joining
+                $mandateDate = substr(trim((string)$debtorMembership->getJoinDate()), 0, 10);
+            }
             // missing or unreadable due date: collect as soon as possible, as before
             $due = substr(trim((string)$fee->getDueDate()), 0, 10);
             $collectionDate = (self::isDate($due) && $due > $earliest) ? self::targetDayFrom($due) : $earliest;
@@ -219,13 +236,13 @@ class SepaService {
                 $reason = $this->l->t('IBAN is invalid');
             } elseif ($bic !== '' && !preg_match(self::BIC_PATTERN, $bic)) {
                 $reason = $this->l->t('BIC is invalid');
-            } elseif ($membership === null || $mandateDate === '') {
+            } elseif ($debtorMembership === null || $mandateDate === '') {
                 $reason = $this->l->t('no signed SEPA mandate recorded');
             } elseif (!self::isDate($mandateDate)) {
                 $reason = $this->l->t('date of signature of the mandate is invalid');
             } elseif ($mandateDate > $today) {
                 $reason = $this->l->t('date of signature of the mandate is in the future');
-            } elseif (!preg_match(self::ID_PATTERN, $membership->getEffectiveMandateReference())) {
+            } elseif (!preg_match(self::ID_PATTERN, $debtorMembership->getEffectiveMandateReference())) {
                 $reason = $this->l->t('mandate reference contains characters not allowed in SEPA (max. 35 letters, digits and simple special characters)');
             } elseif ($due > $latestDue && self::isDate($due)) {
                 $reason = $this->l->t('not due yet');
@@ -242,23 +259,51 @@ class SepaService {
             }
 
             $totalCents += $cents;
+            $reference = $this->paymentReference($fee->getDescription(), $fee->getDueDate());
+            $owner = $member->getFirstName() ?: $member->getName();
+            $bundleKey = isset($payers[$debtorId]) ? $debtorId . '|' . $collectionDate : null;
+            if ($bundleKey !== null && isset($bundles[$bundleKey])) {
+                $i = $bundles[$bundleKey];
+                $transactions[$i]['cents'] += $cents;
+                $transactions[$i]['amount'] = $transactions[$i]['cents'] / 100;
+                $transactions[$i]['feeIds'][] = $fee->getId();
+                $transactions[$i]['references'][$reference] = true;
+                $transactions[$i]['forMembers'][$owner] = true;
+                continue;
+            }
+            if ($bundleKey !== null) {
+                $bundles[$bundleKey] = count($transactions);
+            }
             $transactions[] = [
-                'name' => $member->getFullName(),
-                'memberName' => $member->getFullName(),
+                'name' => $debtor->getFullName(),
+                'memberName' => $debtor->getFullName(),
                 'iban' => $iban,
                 'bic' => $bic,
                 'amount' => $cents / 100,
                 'cents' => $cents,
                 'dueDate' => $fee->getDueDate(),
                 'collectionDate' => $collectionDate,
-                'mandateReference' => $membership->getEffectiveMandateReference(),
+                'mandateReference' => $debtorMembership->getEffectiveMandateReference(),
                 'mandateDate' => $mandateDate,
-                'memberId' => $member->getId(),
-                'hasEmail' => filter_var(trim((string)$member->getEmail()), FILTER_VALIDATE_EMAIL) !== false,
-                'reference' => $this->paymentReference($fee->getDescription(), $fee->getDueDate()),
-                'feeId' => $fee->getId()
+                'memberId' => $debtorId,
+                'hasEmail' => filter_var(trim((string)$debtor->getEmail()), FILTER_VALIDATE_EMAIL) !== false,
+                'reference' => $reference,
+                'feeId' => $fee->getId(),
+                'feeIds' => [$fee->getId()],
+                'references' => [$reference => true],
+                'forMembers' => [$owner => true],
             ];
         }
+
+        foreach ($transactions as &$t) {
+            $names = array_map('strval', array_keys($t['forMembers']));
+            $text = implode(', ', array_map('strval', array_keys($t['references'])));
+            // a debit covering several people says for whom, on the member's bank statement too
+            $t['reference'] = count($names) > 1 ? $this->doc->t('%1$s for %2$s', [$text, implode(', ', $names)]) : $text;
+            $t['forMembers'] = count($names) > 1 ? $names : [];
+            unset($t['references']);
+        }
+        unset($t);
 
         return ['transactions' => $transactions, 'skipped' => $skipped, 'totalCents' => $totalCents, 'earliestDate' => $earliest];
     }

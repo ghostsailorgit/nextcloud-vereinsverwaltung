@@ -150,6 +150,15 @@
           :input-label="t('verein', 'Fee category')"
           :placeholder="t('verein', 'Club default')"
         />
+        <NcSelect
+          :model-value="formData.payerMemberId || null"
+          :options="payerOptions"
+          :reduce="p => p.id"
+          label="label"
+          :input-label="t('verein', 'Paid by')"
+          :placeholder="t('verein', 'the member themselves')"
+          @update:model-value="formData.payerMemberId = $event ?? ''"
+        />
         <label class="checkbox-field">
           <input v-model="formData.foundingMember" type="checkbox" />
           <span>{{ t('verein', 'Founding member') }}</span>
@@ -196,6 +205,10 @@
         <label class="date-field">
           <span>{{ t('verein', 'Date of signature') }}</span>
           <input v-model="formData.mandateDate" type="date" class="form-input" />
+        </label>
+        <label class="checkbox-field">
+          <input v-model="formData.mandateOnPaper" type="checkbox" />
+          <span>{{ t('verein', 'SEPA mandate on paper') }}</span>
         </label>
         <div class="mandate-file">
           <span>{{ t('verein', 'Signed mandate (PDF)') }}</span>
@@ -300,6 +313,7 @@
                   class="status-badge deactivated"
                   :title="t('verein', 'No fees, no calendar events and no automatic permissions until the member is activated again')"
                 >{{ t('verein', 'Deactivated') }}</span>
+                <span v-if="member.payerMemberId" class="status-badge honorary">{{ t('verein', 'Paid by {name}', { name: payerName(member) }) }}</span>
                 <span v-if="member.honoraryMember" class="status-badge honorary">{{ member.honoraryPaysFee ? t('verein', 'Honorary member (pays)') : t('verein', 'Honorary member') }}</span>
                 <span v-if="member.foundingMember" class="status-badge founding" :title="t('verein', 'Founding member')">★</span>
                 </div>
@@ -403,6 +417,8 @@ const emptyFormData = () => ({
   feeExemptJoinYear: false,
   honoraryMember: false,
   honoraryPaysFee: false,
+  mandateOnPaper: false,
+  payerMemberId: '',
   deceased: false,
   phone: '',
   iban: '',
@@ -454,6 +470,13 @@ export default {
     const formData = reactive(emptyFormData())
     const canManage = computed(() => can('verein.member.manage'))
     const canManageRoles = computed(() => can('verein.role.manage'))
+
+    // who can pay for this member: active members who do not have a payer themselves
+    const payerOptions = computed(() => members.value
+      .filter(m => m.id !== editingId.value && !m.isFormer && !m.deactivated && !m.payerMemberId)
+      .map(m => ({ id: m.id, label: m.fullName }))
+      .sort((a, b) => a.label.localeCompare(b.label)))
+    const payerName = (member) => members.value.find(m => m.id === member.payerMemberId)?.fullName || ('#' + member.payerMemberId)
 
     // fee categories of the current club, for the membership section
     const feeRateOptions = computed(() =>
@@ -788,6 +811,8 @@ export default {
       category,
       categories,
       searchQuery,
+      payerOptions,
+      payerName,
       filteredMembers,
       displayName,
       roleLabel,

@@ -47,6 +47,29 @@ class MembershipMapper extends QBMapper {
         return (int)$qb->executeQuery()->fetchOne();
     }
 
+    /** How many memberships of the club are paid for by this member. */
+    public function countPayees(int $payerMemberId, int $clubId): int {
+        $qb = $this->db->getQueryBuilder();
+        $qb->select($qb->func()->count('*', 'n'))
+            ->from($this->getTableName())
+            ->where($qb->expr()->eq('payer_member_id', $qb->createNamedParameter($payerMemberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+        $result = $qb->executeQuery();
+        $count = (int)$result->fetchOne();
+        $result->closeCursor();
+        return $count;
+    }
+
+    /** The payer leaves the club: everyone they paid for is on their own again. */
+    public function clearPayer(int $payerMemberId, int $clubId): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->getTableName())
+            ->set('payer_member_id', $qb->createNamedParameter(null, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_NULL))
+            ->where($qb->expr()->eq('payer_member_id', $qb->createNamedParameter($payerMemberId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->andWhere($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+
     public function countByClub(int $clubId): int {
         $qb = $this->db->getQueryBuilder();
         $qb->select($qb->func()->count('*', 'cnt'))->from($this->getTableName())

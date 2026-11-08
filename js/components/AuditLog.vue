@@ -100,6 +100,8 @@ const FIELDS = {
   feeExemptJoinYear: t('verein', 'Fee-exempt in the year joined'),
   honoraryMember: t('verein', 'Honorary member'),
   honoraryPaysFee: t('verein', 'Pays the fee voluntarily'),
+  mandateOnPaper: t('verein', 'SEPA mandate on paper'),
+  payerMemberId: t('verein', 'Paid by'),
   deactivated: t('verein', 'Deactivated'), deceased: t('verein', 'Deceased'), userId: t('verein', 'Nextcloud account'), feeRateId: t('verein', 'Fee category'),
   mandateReference: t('verein', 'Mandate reference'), mandateDate: t('verein', 'Date of signature'), mandateFile: t('verein', 'Mandate file'), amount: t('verein', 'Amount'),
   status: t('verein', 'Status'), dueDate: t('verein', 'Due on'), description: t('verein', 'Comment'), period: t('verein', 'Fee year'), memberId: t('verein', 'Person'),

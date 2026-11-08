@@ -272,6 +272,8 @@ class MemberController extends Controller {
             'feeExemptJoinYear' => $this->request->getParam('feeExemptJoinYear', false),
             'honoraryMember' => $this->request->getParam('honoraryMember', false),
             'honoraryPaysFee' => $this->request->getParam('honoraryPaysFee', false),
+            'mandateOnPaper' => $this->request->getParam('mandateOnPaper', false),
+            'payerMemberId' => $this->request->getParam('payerMemberId'),
             'deceased' => $this->request->getParam('deceased', false),
             'mandateReference' => $this->request->getParam('mandateReference'),
             'mandateDate' => $this->request->getParam('mandateDate'),

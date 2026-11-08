@@ -125,7 +125,7 @@
           </thead>
           <tbody>
             <tr v-for="(txn, idx) in previewData.transactions" :key="idx">
-              <td>{{ txn.memberName }}</td>
+              <td>{{ txn.memberName }}<small v-if="txn.forMembers && txn.forMembers.length"><br>{{ t('verein', 'for {names}', { names: txn.forMembers.join(', ') }) }}</small></td>
               <td>{{ txn.iban }}</td>
               <td>{{ txn.mandateReference }} ({{ formatDate(txn.mandateDate) }})</td>
               <td>{{ formatMoney(txn.amount) }}</td>

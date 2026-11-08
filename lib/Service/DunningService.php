@@ -67,6 +67,12 @@ class DunningService {
         $dueBefore = date('Y-m-d', strtotime($today . ' -' . $overdueDays . ' days'));
         $lastLetterBefore = date('Y-m-d', strtotime($today . ' -' . $intervalDays . ' days'));
 
+        $membersById = [];
+        foreach ($this->members->findByClub($clubId) as $member) {
+            $membersById[$member->getId()] = $member;
+        }
+
+        // one letter per payer, covering the fees of everyone they pay for
         /** @var array<int, Fee[]> $dueByMember */
         $dueByMember = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
@@ -76,12 +82,7 @@ class DunningService {
             if (substr((string)$fee->getDueDate(), 0, 10) > $dueBefore || substr((string)$fee->getDueDate(), 0, 10) === '') {
                 continue;
             }
-            $dueByMember[$fee->getMemberId()][] = $fee;
-        }
-
-        $membersById = [];
-        foreach ($this->members->findByClub($clubId) as $member) {
-            $membersById[$member->getId()] = $member;
+            $dueByMember[FeePayer::of($fee->getMemberId(), $membersById)][] = $fee;
         }
 
         $included = [];
@@ -244,7 +245,7 @@ class DunningService {
                 || !in_array($fee->getStatus(), ['open', 'overdue'], true)) {
                 continue;
             }
-            $byMember[$fee->getMemberId()][] = $fee;
+            $byMember[FeePayer::of($fee->getMemberId(), $membersById)][] = $fee;
         }
 
         $letters = [];
@@ -261,7 +262,8 @@ class DunningService {
             foreach ($fees as $fee) {
                 $sum += (float)$fee->getAmount();
                 $rows[] = [
-                    'text' => $fee->getDescription() ?: $this->doc->t('Fee %s', [$fee->getPeriod() ?? '']),
+                    'text' => ($fee->getDescription() ?: $this->doc->t('Fee %s', [$fee->getPeriod() ?? '']))
+                        . ($fee->getMemberId() !== $memberId && isset($membersById[$fee->getMemberId()]) ? ' (' . $membersById[$fee->getMemberId()]->getFullName() . ')' : ''),
                     'dueDate' => Formats::date($this->doc, (string)$fee->getDueDate()),
                     'amount' => (float)$fee->getAmount(),
                 ];
