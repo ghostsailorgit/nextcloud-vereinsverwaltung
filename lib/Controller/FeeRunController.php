@@ -36,7 +36,9 @@ class FeeRunController extends Controller {
             (int)$this->request->getParam('year', 0),
             (string)$this->request->getParam('dueDate', ''),
             $this->request->getParam('description'),
-            $this->prorata()
+            $this->prorata(),
+            $this->month(),
+            $this->intervals()
         ));
     }
 
@@ -50,8 +52,21 @@ class FeeRunController extends Controller {
             (int)$this->request->getParam('year', 0),
             (string)$this->request->getParam('dueDate', ''),
             $this->request->getParam('description'),
-            $this->prorata()
+            $this->prorata(),
+            $this->month(),
+            $this->intervals()
         ));
+    }
+
+    private function month(): ?int {
+        $month = $this->request->getParam('month');
+        return $month === null || $month === '' ? null : (int)$month;
+    }
+
+    /** @return string[]|null null = every payment interval */
+    private function intervals(): ?array {
+        $raw = trim((string)$this->request->getParam('intervals', ''));
+        return $raw === '' ? null : explode(',', $raw);
     }
 
     private function prorata(): bool {

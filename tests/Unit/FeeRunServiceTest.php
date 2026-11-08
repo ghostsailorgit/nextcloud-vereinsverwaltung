@@ -439,6 +439,191 @@ class FeeRunServiceTest extends TestCase {
         $this->assertSame(15.0, $inserted[0]->getAmount());
     }
 
+    private function interval(int $rateIndex, string $interval): void {
+        $this->rateList[$rateIndex]->setBillingInterval($interval);
+    }
+
+    public function testTheAmountAppliesToEachPaymentOfTheMonth(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Anna', 'A');
+        $inserted = [];
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$inserted) {
+            $inserted[] = $f;
+            return $f;
+        });
+
+        $this->service->run(self::CLUB, 2026, '2026-03-31', null, false, 3);
+
+        $this->assertSame(5.0, $inserted[0]->getAmount());
+        $this->assertSame('2026-03', $inserted[0]->getPeriod());
+        $this->assertSame('Mitgliedsbeitrag 03/2026', $inserted[0]->getDescription());
+    }
+
+    public function testTheMonthDefaultsToTheOneOfTheDueDate(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Anna', 'A');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-11-15');
+
+        $this->assertSame('2026-11', $plan['included'][0]['period']);
+    }
+
+    /** @dataProvider periodsOfIntervals */
+    public function testTheMonthFallsIntoThePeriodOfTheInterval(string $interval, int $month, string $period, string $description): void {
+        $this->rate(1, 'Kategorie', 30.0, true);
+        $this->interval(0, $interval);
+        $this->member(10, 'Anna', 'A');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, $month);
+
+        $this->assertSame($period, $plan['included'][0]['period']);
+        $this->assertSame(30.0, $plan['included'][0]['amount']);
+        $this->assertSame($description, $plan['included'][0]['description']);
+    }
+
+    public static function periodsOfIntervals(): array {
+        return [
+            'yearly' => ['yearly', 7, '2026', 'Mitgliedsbeitrag 2026'],
+            'first half' => ['half_yearly', 6, '2026-H1', 'Mitgliedsbeitrag 1. Halbjahr 2026'],
+            'second half' => ['half_yearly', 7, '2026-H2', 'Mitgliedsbeitrag 2. Halbjahr 2026'],
+            'first quarter' => ['quarterly', 3, '2026-Q1', 'Mitgliedsbeitrag 1. Quartal 2026'],
+            'second quarter' => ['quarterly', 4, '2026-Q2', 'Mitgliedsbeitrag 2. Quartal 2026'],
+            'last quarter' => ['quarterly', 12, '2026-Q4', 'Mitgliedsbeitrag 4. Quartal 2026'],
+            'january' => ['monthly', 1, '2026-01', 'Mitgliedsbeitrag 01/2026'],
+            'december' => ['monthly', 12, '2026-12', 'Mitgliedsbeitrag 12/2026'],
+        ];
+    }
+
+    public function testACustomCommentIsUsedForEveryInterval(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Anna', 'A');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', 'Sonderlauf', false, 3);
+
+        $this->assertSame('Sonderlauf', $plan['included'][0]['description']);
+    }
+
+    public function testEachPeriodIsBilledOnce(): void {
+        $this->rate(1, 'Quartal', 15.0, true);
+        $this->interval(0, 'quarterly');
+        $this->member(10, 'Anna', 'A');
+        $this->existingFee(10, '2026-Q1');
+
+        $sameQuarter = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3);
+        $nextQuarter = $this->service->plan(self::CLUB, 2026, '2026-06-30', null, false, 4);
+
+        $this->assertSame([], $sameQuarter['included']);
+        $this->assertStringContainsString('2026-Q1', $sameQuarter['skipped'][0]['reason']);
+        $this->assertSame('2026-Q2', $nextQuarter['included'][0]['period']);
+    }
+
+    public function testACancelledPeriodCanBeBilledAgain(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Anna', 'A');
+        $this->existingFee(10, '2026-03', 'cancelled');
+
+        $this->assertCount(1, $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included']);
+    }
+
+    /** @dataProvider overlappingFees */
+    public function testAChangeOfIntervalCannotBillTheSameMonthsTwice(string $existing, string $interval, int $month, bool $billed): void {
+        $this->rate(1, 'Kategorie', 5.0, true);
+        $this->interval(0, $interval);
+        $this->member(10, 'Anna', 'A');
+        $this->existingFee(10, $existing);
+
+        $this->assertSame($billed, $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, $month)['included'] !== []);
+    }
+
+    public static function overlappingFees(): array {
+        return [
+            'paid the year, now monthly' => ['2026', 'monthly', 5, false],
+            'paid a month, now yearly' => ['2026-03', 'yearly', 5, false],
+            'paid a month, now that quarter' => ['2026-03', 'quarterly', 2, false],
+            'paid a month, now another quarter' => ['2026-03', 'quarterly', 4, true],
+            'paid the first half, now July' => ['2026-H1', 'monthly', 7, true],
+            'paid the second quarter, now February' => ['2026-Q2', 'monthly', 2, true],
+            'paid the second quarter, now May' => ['2026-Q2', 'monthly', 5, false],
+            'paid the second half, now March' => ['2026-H2', 'monthly', 3, true],
+            'paid November, now November' => ['2026-11', 'monthly', 11, false],
+            'paid the first half, now June' => ['2026-H1', 'monthly', 6, false],
+            'last year does not count' => ['2025', 'monthly', 5, true],
+            'last year\'s month does not count' => ['2025-05', 'monthly', 5, true],
+            'a manual fee with another text does not count' => ['Sonderbeitrag', 'yearly', 5, true],
+        ];
+    }
+
+    public function testARunCanLeaveOutPaymentIntervals(): void {
+        $this->rate(1, 'Jahr', 60.0, true);
+        $this->rate(2, 'Monat', 5.0);
+        $this->interval(1, 'monthly');
+        $this->member(10, 'Jahres', 'Zahler', 1);
+        $this->member(11, 'Monats', 'Zahler', 2);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3, ['monthly']);
+
+        $this->assertSame(['Monats Zahler'], $this->names($plan['included']));
+        $this->assertStringContainsString('Zahlungsintervall', $plan['skipped'][0]['reason']);
+        $this->assertSame(2, count($this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included']), 'no filter = all');
+    }
+
+    public function testSomebodyWhoJoinsAfterThePeriodIsNotBilled(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Spaeter', 'Eintritt', null, '2026-05-10');
+        $this->member(11, 'Im', 'Monat', null, '2026-03-20');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3);
+
+        $this->assertSame(['Im Monat'], $this->names($plan['included']));
+        $this->assertStringContainsString('2026-03', $plan['skipped'][0]['reason']);
+    }
+
+    public function testProrataCountsTheMonthsOfThePeriod(): void {
+        $this->rate(1, 'Quartal', 30.0, true);
+        $this->interval(0, 'quarterly');
+        $this->member(10, 'Februar', 'Eintritt', null, '2026-02-15');   // Feb + Mar of Q1
+        $this->member(11, 'Januar', 'Eintritt', null, '2026-01-15');    // whole quarter
+        $this->member(12, 'Vorjahr', 'Eintritt', null, '2025-02-15');   // whole quarter
+
+        $secondQuarter = $this->service->plan(self::CLUB, 2026, '2026-06-30', null, true, 4);
+        $this->assertSame(30.0, array_column($secondQuarter['included'], 'amount', 'name')['Februar Eintritt'], 'joined before this period');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true, 3);
+
+        $byName = array_column($plan['included'], null, 'name');
+        $this->assertSame(20.0, $byName['Februar Eintritt']['amount']);
+        $this->assertSame(2, $byName['Februar Eintritt']['months']);
+        $this->assertSame(3, $byName['Februar Eintritt']['periodMonths']);
+        $this->assertSame(30.0, $byName['Januar Eintritt']['amount']);
+        $this->assertArrayNotHasKey('months', $byName['Januar Eintritt']);
+        $this->assertSame(30.0, $byName['Vorjahr Eintritt']['amount']);
+    }
+
+    public function testAgeTiersAreAmountsPerPayment(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Vierzehn', 'Kind');
+        $this->born(0, '2012-03-03');
+
+        $this->assertSame(15.0, $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included'][0]['amount']);
+    }
+
+    public function testInvalidMonthOrIntervalIsRefused(): void {
+        foreach ([[13, null, 'Monat'], [0, null, 'Monat'], [3, ['weekly'], 'Zahlungsintervall']] as [$month, $intervals, $expected]) {
+            try {
+                $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, $month, $intervals);
+                $this->fail('accepted');
+            } catch (ValidationException $e) {
+                $this->assertStringContainsString($expected, $e->getMessage());
+            }
+        }
+    }
+
     public function testInvalidYearOrDateIsRejected(): void {
         try {
             $this->service->plan(self::CLUB, 1999, '2026-03-31');

@@ -20,13 +20,16 @@ use OCP\IL10N;
 use OCA\Verein\L10n\DocumentL10n;
 
 /**
- * The annual fee run: creates one membership fee per active member of a club
- * according to their fee category. Idempotent - a member who already has a
- * (non-cancelled) fee for that year is skipped - so a run can be repeated
- * after new members joined, and previewed before anything is written.
+ * The fee run: creates one membership fee per active member of a club according to
+ * their fee category, for the period of the category's payment interval that
+ * contains the chosen month (yearly categories: the whole year). The amount of the
+ * category is the amount of one payment. Idempotent - a member with a (non-cancelled)
+ * fee covering any month of that period is skipped, also after a change of interval -
+ * so a run can be repeated after new members joined, and previewed before anything
+ * is written.
  *
- * With $prorata, a member who joined during the fee year pays only for the
- * months from the join month (inclusive) to December, rounded to cents. A
+ * With $prorata, a member who joined during the period pays only for the months from
+ * the join month (inclusive) to its end, rounded to cents. A
  * membership with Membership::$feeExemptJoinYear pays nothing at all for the
  * year it was joined in (and this takes precedence over $prorata); every
  * year after that is billed normally.
@@ -58,7 +61,7 @@ class FeeRunService {
      * @return array{year: int, dueDate: string, description: string, prorata: bool, included: array, skipped: array, total: float}
      * @throws ValidationException
      */
-    public function plan(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false): array {
+    public function plan(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false, ?int $month = null, ?array $intervals = null): array {
         $this->clubs->find($clubId);
         if ($year < 2000 || $year > 2100) {
             throw new ValidationException($this->l->t('Year is invalid'));
@@ -67,13 +70,18 @@ class FeeRunService {
         if ($due === false || $due->format('Y-m-d') !== $dueDate) {
             throw new ValidationException($this->l->t('Due date is invalid'));
         }
-        $description = trim((string)$description);
-        if ($description === '') {
-            $description = $this->doc->t('Membership fee %s', [$year]);
+        $month ??= (int)$due->format('n');
+        if ($month < 1 || $month > 12) {
+            throw new ValidationException($this->l->t('Month is invalid'));
         }
-        if (mb_strlen($description) > 500) {
+        if ($intervals !== null && array_diff($intervals, array_keys(FeePeriod::INTERVALS)) !== []) {
+            throw new ValidationException($this->l->t('The payment interval is invalid'));
+        }
+        $customDescription = trim((string)$description);
+        if (mb_strlen($customDescription) > 500) {
             throw new ValidationException($this->l->t('Comment is too long'));
         }
+        $description = $customDescription !== '' ? $customDescription : $this->doc->t('Membership fee %s', [$year]);
 
         $ratesById = [];
         $default = null;
@@ -84,13 +92,17 @@ class FeeRunService {
             }
         }
 
-        // members that already have this year's fee (cancelled ones don't count)
-        $alreadyBilled = [];
+        // the months of this year each member already has a fee for (cancelled ones don't count)
+        $billedMonths = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
-            if ($fee->getPeriod() === (string)$year && $fee->getStatus() !== 'cancelled') {
-                $alreadyBilled[$fee->getMemberId()] = true;
+            $covered = FeePeriod::covered($fee->getPeriod());
+            if ($covered !== null && $covered['year'] === $year && $fee->getStatus() !== 'cancelled') {
+                foreach (range($covered['first'], $covered['last']) as $coveredMonth) {
+                    $billedMonths[$fee->getMemberId()][$coveredMonth] = true;
+                }
             }
         }
+
 
         $members = $this->members->findByClub($clubId);
         usort($members, fn ($a, $b) => strcasecmp($a->getName() . $a->getFirstName(), $b->getName() . $b->getFirstName()));
@@ -124,14 +136,24 @@ class FeeRunService {
                 $skip($this->l->t('fee-exempt in the year joined'));
                 continue;
             }
-            if (isset($alreadyBilled[$member->getId()])) {
-                $skip($this->l->t('fee %s already exists', [$year]));
-                continue;
-            }
 
             $rate = $this->rateFor($member->getMembership()?->getFeeRateId(), $ratesById, $default);
             if ($rate === null) {
                 $skip($this->l->t('no fee category'));
+                continue;
+            }
+            $interval = $rate->getBillingInterval();
+            if ($intervals !== null && !in_array($interval, $intervals, true)) {
+                $skip($this->l->t('payment interval not part of this run'));
+                continue;
+            }
+            $period = FeePeriod::of($interval, $year, $month);
+            if (!empty($join) && substr($join, 0, 7) > sprintf('%d-%02d', $year, $period['lastMonth'])) {
+                $skip($this->l->t('joins after %s', [$period['key']]));
+                continue;
+            }
+            if (array_intersect_key($billedMonths[$member->getId()] ?? [], array_flip(range($period['firstMonth'], $period['lastMonth']))) !== []) {
+                $skip($this->l->t('fee %s already exists', [$period['key']]));
                 continue;
             }
             $fullAmount = (float)$rate->getAmount();
@@ -151,8 +173,8 @@ class FeeRunService {
                 continue;
             }
 
-            $months = $prorata ? $this->monthsInYear($join, $year) : 12;
-            $amount = $months === 12 ? $fullAmount : round($fullAmount * $months / 12, 2);
+            $months = $prorata ? $this->monthsInPeriod($join, $year, $period) : $period['length'];
+            $amount = $months === $period['length'] ? $fullAmount : round($fullAmount * $months / $period['length'], 2);
             if ($amount <= 0) {
                 $skip($this->l->t('pro rata fee would be 0'));
                 continue;
@@ -163,10 +185,14 @@ class FeeRunService {
                 'name' => $member->getFullName(),
                 'category' => $rate->getName(),
                 'amount' => $amount,
+                'period' => $period['key'],
+                'interval' => $interval,
+                'description' => $customDescription !== '' ? $customDescription : $this->doc->t('Membership fee %s', [$this->periodLabel($interval, $year, $period)]),
             ] + $tierInfo;
-            if ($months !== 12) {
+            if ($months !== $period['length']) {
                 $entry['fullAmount'] = $fullAmount;
                 $entry['months'] = $months;
+                $entry['periodMonths'] = $period['length'];
             }
             $included[] = $entry;
             $total += $amount;
@@ -177,6 +203,7 @@ class FeeRunService {
             'dueDate' => $dueDate,
             'description' => $description,
             'prorata' => $prorata,
+            'month' => $month,
             'included' => $included,
             'skipped' => $skipped,
             'total' => round($total, 2),
@@ -189,8 +216,8 @@ class FeeRunService {
      * @return array the plan, plus 'created' (number of fees written)
      * @throws ValidationException
      */
-    public function run(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false): array {
-        $plan = $this->plan($clubId, $year, $dueDate, $description, $prorata);
+    public function run(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false, ?int $month = null, ?array $intervals = null): array {
+        $plan = $this->plan($clubId, $year, $dueDate, $description, $prorata, $month, $intervals);
 
         $this->db->beginTransaction();
         try {
@@ -202,8 +229,8 @@ class FeeRunService {
                 $fee->setAmount($entry['amount']);
                 $fee->setStatus('open');
                 $fee->setDueDate($dueDate . ' 00:00:00');
-                $fee->setDescription($plan['description']);
-                $fee->setPeriod((string)$year);
+                $fee->setDescription($entry['description']);
+                $fee->setPeriod($entry['period']);
                 $fee->setCreatedAt($now);
                 $fee->setUpdatedAt($now);
                 $this->fees->insert($fee);
@@ -217,6 +244,7 @@ class FeeRunService {
         $plan['created'] = count($plan['included']);
         $this->auditLog?->record($clubId, 'fee_run', 0, 'create', [
             'year' => $year,
+            'month' => $plan['month'],
             'dueDate' => $dueDate,
             'created' => $plan['created'],
             'total' => $plan['total'],
@@ -244,21 +272,33 @@ class FeeRunService {
     }
 
     /**
-     * Months of $year the membership is billable for: 12, or - if it began during
-     * $year - the join month and every month after it. A missing or unreadable
-     * join date counts as a full year (the member is not charged less by accident
-     * of bad data, and the preview shows the full amount).
+     * Months of the period the membership is billable for: all of them, or - if it
+     * began during the period - the join month and every month after it. A missing or
+     * unreadable join date counts as the full period (the member is not charged less by
+     * accident of bad data, and the preview shows the full amount).
+     *
+     * @param array{firstMonth: int, lastMonth: int, length: int} $period
      */
-    private function monthsInYear(?string $joinDate, int $year): int {
+    private function monthsInPeriod(?string $joinDate, int $year, array $period): int {
         if (empty($joinDate) || !preg_match('/^(\d{4})-(\d{2})/', $joinDate, $m)) {
-            return 12;
+            return $period['length'];
         }
-        $joinYear = (int)$m[1];
         $joinMonth = (int)$m[2];
-        if ($joinYear !== $year || $joinMonth < 1 || $joinMonth > 12) {
-            return 12;
+        // somebody who joins after the period does not get here (plan() skips them)
+        if ((int)$m[1] !== $year || $joinMonth <= $period['firstMonth']) {
+            return $period['length'];
         }
-        return 13 - $joinMonth;
+        return $period['lastMonth'] - $joinMonth + 1;
+    }
+
+    /** @param array{number: int} $period */
+    private function periodLabel(string $interval, int $year, array $period): string {
+        return match ($interval) {
+            'half_yearly' => $this->doc->t('half-year %1$s of %2$s', [$period['number'], $year]),
+            'quarterly' => $this->doc->t('quarter %1$s of %2$s', [$period['number'], $year]),
+            'monthly' => sprintf('%02d/%d', $period['number'], $year),
+            default => (string)$year,
+        };
     }
 
     /**

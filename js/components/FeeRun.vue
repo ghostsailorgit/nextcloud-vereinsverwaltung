@@ -6,13 +6,19 @@
   <div class="fee-run">
     <h2>{{ t('verein', 'Annual fee run') }}</h2>
     <p class="hint">
-      {{ t('verein', 'Creates the annual fee for all active members according to their fee category (“Club” tab). Members who already have a fee for the year are skipped, so the run can safely be repeated. Check the preview first.') }}
+      {{ t('verein', 'Creates the fee for all active members according to their fee category (“Club” tab) and its payment interval. Members who already have a fee for the period are skipped, so the run can safely be repeated. Check the preview first.') }}
     </p>
 
     <form class="params" @submit.prevent="preview">
       <label class="field">
         <span>{{ t('verein', 'Fee year') }}</span>
         <input v-model.number="year" type="number" min="2000" max="2100" class="form-input" required />
+      </label>
+      <label v-if="hasShortIntervals" class="field">
+        <span>{{ t('verein', 'Billing month') }}</span>
+        <select v-model.number="month" class="form-input" @change="plan = null">
+          <option v-for="m in monthOptions" :key="m.id" :value="m.id">{{ m.label }}</option>
+        </select>
       </label>
       <label class="field">
         <span>{{ t('verein', 'Due on') }}</span>
@@ -32,8 +38,20 @@
       >
         {{ t('verein', 'Pro rata for members who joined during the fee year (from the month they joined)') }}
       </NcCheckboxRadioSwitch>
+      <fieldset v-if="usedIntervals.length > 1" class="intervals">
+        <legend>{{ t('verein', 'Payment intervals in this run') }}</legend>
+        <NcCheckboxRadioSwitch
+          v-for="interval in usedIntervals"
+          :key="interval"
+          type="checkbox"
+          :model-value="selectedIntervals.includes(interval)"
+          @update:model-value="toggleInterval(interval, $event)"
+        >
+          {{ intervalLabel(interval) }}
+        </NcCheckboxRadioSwitch>
+      </fieldset>
       <div class="buttons">
-        <NcButton type="submit" variant="secondary" :disabled="busy">{{ t('verein', 'Preview') }}</NcButton>
+        <NcButton type="submit" variant="secondary" :disabled="busy || !selectedIntervals.length">{{ t('verein', 'Preview') }}</NcButton>
         <NcButton
           type="button"
           variant="primary"
@@ -64,11 +82,12 @@
                 <td>{{ e.name }}</td>
                 <td>
                   {{ e.category }}
+                  <span v-if="e.interval !== 'yearly'" class="prorata-note">· {{ e.period }}</span>
                   <span v-if="e.ageFrom !== undefined" class="prorata-note">
                     · {{ t('verein', 'from age {age}', { age: e.ageFrom }) }}
                   </span>
                   <span v-if="e.months" class="prorata-note">
-                    · {{ t('verein', 'pro rata {months}/12 of {amount}', { months: e.months, amount: formatMoney(e.fullAmount) }) }}
+                    · {{ t('verein', 'pro rata {months}/{total} of {amount}', { months: e.months, total: e.periodMonths, amount: formatMoney(e.fullAmount) }) }}
                   </span>
                 </td>
                 <td class="num">{{ formatMoney(e.amount) }}</td>
@@ -120,6 +139,8 @@ import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate } from '../format'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
+import { currentClub } from '../store/club'
+import { intervalOptions, intervalLabel } from '../feeRates'
 import { extractErrorMessage } from '../errorMessage'
 
 export default {
@@ -131,6 +152,23 @@ export default {
     const dueDate = ref(`${new Date().getFullYear()}-03-31`)
     const description = ref('')
     const prorata = ref(false)
+    const month = ref(new Date().getMonth() + 1)
+    const usedIntervals = computed(() => {
+      const used = new Set((currentClub.value?.feeRates || []).map(r => r.billingInterval))
+      return intervalOptions().map(o => o.id).filter(id => used.has(id))
+    })
+    const hasShortIntervals = computed(() => usedIntervals.value.some(id => id !== 'yearly'))
+    const deselected = ref([])
+    const selectedIntervals = computed(() => {
+      const list = usedIntervals.value.filter(id => !deselected.value.includes(id))
+      // a club without categories still gets a preview that explains what is missing
+      return usedIntervals.value.length ? list : ['yearly']
+    })
+    const toggleInterval = (interval, on) => {
+      deselected.value = on ? deselected.value.filter(id => id !== interval) : [...deselected.value, interval]
+      plan.value = null
+    }
+    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, label: formatDate(`2024-${String(i + 1).padStart(2, '0')}-01`, { month: 'long' }) }))
     const plan = ref(null)
     const busy = ref(false)
     const tierChanges = computed(() => (plan.value?.included || []).filter(e => e.previousAmount !== undefined))
@@ -139,7 +177,9 @@ export default {
       year: year.value,
       dueDate: dueDate.value,
       description: description.value,
-      prorata: prorata.value ? 1 : 0
+      prorata: prorata.value ? 1 : 0,
+      month: hasShortIntervals.value ? month.value : '',
+      intervals: usedIntervals.value.length > 1 ? selectedIntervals.value.join(',') : ''
     })
 
     const call = async (action) => {
@@ -180,7 +220,7 @@ export default {
     }
 
 
-    return { t, n, year, dueDate, description, prorata, plan, tierChanges, busy, preview, run, flagOverdue, formatMoney, formatDate }
+    return { t, n, year, month, monthOptions, hasShortIntervals, usedIntervals, selectedIntervals, toggleInterval, intervalLabel, dueDate, description, prorata, plan, tierChanges, busy, preview, run, flagOverdue, formatMoney, formatDate }
   }
 }
 </script>
@@ -198,6 +238,8 @@ export default {
 .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .prorata { grid-column: 1 / -1; }
+.intervals { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; border: none; padding: 0; margin: 0; }
+.intervals legend { padding: 0; margin-bottom: 4px; }
 .prorata-note { color: var(--color-text-maxcontrast); font-size: 0.9em; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 .result { margin-top: 16px; }

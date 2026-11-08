@@ -177,6 +177,7 @@ class ClubController extends Controller {
             'name' => $this->request->getParam('name'),
             'amount' => $this->request->getParam('amount'),
             'isDefault' => $this->request->getParam('isDefault', false),
+            'billingInterval' => $this->request->getParam('billingInterval'),
             'ageTiers' => $this->request->getParam('ageTiers'),
             'ageCutoff' => $this->request->getParam('ageCutoff'),
         ];

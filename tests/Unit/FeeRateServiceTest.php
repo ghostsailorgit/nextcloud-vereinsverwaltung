@@ -186,4 +186,32 @@ class FeeRateServiceTest extends TestCase {
 
         $this->assertSame('02-29', $rate->getAgeCutoff());
     }
+
+    public function testACategoryIsYearlyUnlessSaidOtherwise(): void {
+        $this->assertSame('yearly', $this->service->create(1, ['name' => 'Jahr', 'amount' => '60'])->getBillingInterval());
+        $this->assertSame('monthly', $this->service->create(1, ['name' => 'Monat', 'amount' => '5', 'billingInterval' => 'monthly'])->getBillingInterval());
+    }
+
+    public function testAnUpdateWithoutAnIntervalKeepsTheOldOne(): void {
+        $rate = $this->service->create(1, ['name' => 'Monat', 'amount' => '5', 'billingInterval' => 'monthly']);
+
+        $this->service->update(1, $rate->getId(), ['name' => 'Monat', 'amount' => '6']);
+
+        $this->assertSame('monthly', $rate->getBillingInterval());
+        $this->assertSame('monthly', $rate->jsonSerialize()['billingInterval']);
+    }
+
+    /** @dataProvider invalidIntervals */
+    public function testAnUnknownIntervalIsRefused(mixed $interval): void {
+        try {
+            $this->service->create(1, ['name' => 'X', 'amount' => '5', 'billingInterval' => $interval]);
+            $this->fail('accepted');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('Zahlungsintervall', $e->getMessage());
+        }
+    }
+
+    public static function invalidIntervals(): array {
+        return ['unknown' => ['weekly'], 'array' => [['monthly']], 'number' => [12]];
+    }
 }

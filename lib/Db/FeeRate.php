@@ -21,6 +21,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setIsDefault(bool $isDefault)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
+ * @method string getBillingInterval()
+ * @method void setBillingInterval(string $billingInterval)
  * @method ?string getAgeTiers()
  * @method void setAgeTiers(?string $ageTiers)
  * @method ?string getAgeCutoff()
@@ -35,6 +37,8 @@ class FeeRate extends Entity implements JsonSerializable {
     protected ?float $amount = null;
     protected bool $isDefault = false;
     protected ?string $createdAt = null;
+    // how often the category is paid; the amount applies to each payment (see FeePeriod::INTERVALS)
+    protected string $billingInterval = 'yearly';
     // JSON list of {fromAge, amount}, ascending and starting at 0; null = one amount for everybody
     protected ?string $ageTiers = null;
     // MM-DD: the day of the fee year the age counts on
@@ -59,6 +63,7 @@ class FeeRate extends Entity implements JsonSerializable {
             'name' => $this->name,
             'amount' => (float)$this->amount,
             'isDefault' => $this->isDefault,
+            'billingInterval' => $this->billingInterval,
             'ageTiers' => $this->getAgeTierList(),
             'ageCutoff' => $this->ageCutoff,
         ];

@@ -18,7 +18,7 @@ use OCP\IL10N;
 
 /**
  * Membership fee categories of a club ("Erwachsene", "Kinder", ...) with the
- * yearly amount each one pays, either one amount or by age (see AgeGrading). One
+ * amount each payment has, either one amount or by age (see AgeGrading), and how often it is paid (see FeePeriod). One
  * category can be the club's default, used for members without an explicit category.
  */
 class FeeRateService {
@@ -140,8 +140,16 @@ class FeeRateService {
         }
 
         $tiers = $this->parseAgeTiers($data['ageTiers'] ?? null);
+        $interval = $data['billingInterval'] ?? '';
+        if ($interval === '' || $interval === null) {
+            $interval = $rate->getBillingInterval();
+        }
+        if (!is_string($interval) || !isset(FeePeriod::INTERVALS[$interval])) {
+            throw new ValidationException($this->l->t('The payment interval is invalid'));
+        }
 
         $rate->setName($name);
+        $rate->setBillingInterval($interval);
         // with tiers the amount of each tier counts, not this one
         $rate->setAmount($tiers === [] ? $this->parseAmount($data['amount'] ?? '') : 0.0);
         $rate->setAgeTiers($tiers === [] ? null : json_encode($tiers));
