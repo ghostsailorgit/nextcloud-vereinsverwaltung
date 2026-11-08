@@ -284,7 +284,8 @@ class FeeRunService {
             return $period['length'];
         }
         $joinMonth = (int)$m[2];
-        if ((int)$m[1] !== $year || $joinMonth <= $period['firstMonth'] || $joinMonth > $period['lastMonth']) {
+        // somebody who joins after the period does not get here (plan() skips them)
+        if ((int)$m[1] !== $year || $joinMonth <= $period['firstMonth']) {
             return $period['length'];
         }
         return $period['lastMonth'] - $joinMonth + 1;

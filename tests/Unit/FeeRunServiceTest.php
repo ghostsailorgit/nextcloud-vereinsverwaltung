@@ -546,6 +546,10 @@ class FeeRunServiceTest extends TestCase {
             'paid a month, now that quarter' => ['2026-03', 'quarterly', 2, false],
             'paid a month, now another quarter' => ['2026-03', 'quarterly', 4, true],
             'paid the first half, now July' => ['2026-H1', 'monthly', 7, true],
+            'paid the second quarter, now February' => ['2026-Q2', 'monthly', 2, true],
+            'paid the second quarter, now May' => ['2026-Q2', 'monthly', 5, false],
+            'paid the second half, now March' => ['2026-H2', 'monthly', 3, true],
+            'paid November, now November' => ['2026-11', 'monthly', 11, false],
             'paid the first half, now June' => ['2026-H1', 'monthly', 6, false],
             'last year does not count' => ['2025', 'monthly', 5, true],
             'last year\'s month does not count' => ['2025-05', 'monthly', 5, true],
@@ -585,6 +589,9 @@ class FeeRunServiceTest extends TestCase {
         $this->member(10, 'Februar', 'Eintritt', null, '2026-02-15');   // Feb + Mar of Q1
         $this->member(11, 'Januar', 'Eintritt', null, '2026-01-15');    // whole quarter
         $this->member(12, 'Vorjahr', 'Eintritt', null, '2025-02-15');   // whole quarter
+
+        $secondQuarter = $this->service->plan(self::CLUB, 2026, '2026-06-30', null, true, 4);
+        $this->assertSame(30.0, array_column($secondQuarter['included'], 'amount', 'name')['Februar Eintritt'], 'joined before this period');
 
         $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true, 3);
 
