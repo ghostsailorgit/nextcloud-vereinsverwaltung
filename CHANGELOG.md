@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.10.0] - 2026-11-09
+
+### ✨ Neu
+- **Logo in E-Mails:** Im Reiter „Verein“ lässt sich die Adresse eines öffentlich erreichbaren Logos hinterlegen. Es erscheint am Ende der E-Mails des Vereins.
+
+---
+
 ## [1.9.0] - 2026-11-09
 
 ### ✨ Neu

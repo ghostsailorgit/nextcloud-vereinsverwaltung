@@ -57,4 +57,27 @@ class ClubServiceMailSenderTest extends TestCase {
         $this->expectException(ValidationException::class);
         $this->service()->update(1, ['name' => 'Musterverein', 'mailSenderName' => "Verein\r\nBcc: someone@example.org"]);
     }
+
+    public function testLogoAddressIsStoredAndCanBeRemoved(): void {
+        $club = $this->service()->update(1, ['name' => 'Musterverein', 'mailLogoUrl' => ' https://example.org/logo.png ']);
+        $this->assertSame('https://example.org/logo.png', $club->getMailLogoUrl());
+
+        $this->assertNull($this->service()->update(1, ['name' => 'Musterverein', 'mailLogoUrl' => ''])->getMailLogoUrl());
+    }
+
+    /** @dataProvider invalidLogos */
+    public function testInvalidLogoAddressIsRefused(string $url): void {
+        $this->expectException(ValidationException::class);
+        $this->service()->update(1, ['name' => 'Musterverein', 'mailLogoUrl' => $url]);
+    }
+
+    public static function invalidLogos(): array {
+        return [
+            'not https' => ['http://example.org/logo.png'],
+            'script' => ['javascript:alert(1)'],
+            'no address' => ['logo.png'],
+            'only the scheme' => ['https://'],
+            'too long' => ['https://example.org/' . str_repeat('a', 500)],
+        ];
+    }
 }

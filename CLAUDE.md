@@ -135,7 +135,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     (reminder letters, advance notice) goes through `ClubMailer`, i.e. only Nextcloud's `IMailer` (the mail server the Nextcloud
     admin configured; the club only sets sender name and reply-to) - never store SMTP credentials or build a mail transport in
     the app. Whoever cannot be reached by email is reported (reminders: `printFeeIds` for the PDF); SMTP errors go to the log,
-    not into responses. The membership confirmation (`WelcomeMailService`) is sent only on request for one member, never by creating or importing members, and shows a member's IBAN shortened only.
+    not into responses. A club's logo is an https address shown in the HTML part only (no upload, no public route). The membership confirmation (`WelcomeMailService`) is sent only on request for one member, never by creating or importing members, and shows a member's IBAN shortened only.
 18. **Member import** (`MemberImportService`): never maps a column to `userId` (it drives rights), a role other than member only
     with `verein.role.manage` (controller passes `mayAssignRoles`), duplicates only checked inside the importing club (don't leak
     other clubs), unexpected errors per row are reported as "internal error" (translated), never with the exception text.

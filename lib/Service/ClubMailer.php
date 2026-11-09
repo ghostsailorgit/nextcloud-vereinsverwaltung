@@ -52,6 +52,11 @@ class ClubMailer {
                 // escaped here; the line breaks (bank details, closing) are kept in the HTML part too
                 $template->addBodyText(nl2br(htmlspecialchars($paragraph, ENT_QUOTES)), $paragraph);
             }
+            $logo = (string)$club->getMailLogoUrl();
+            if ($logo !== '') {
+                // in the HTML part only (false = no line in the plain text part)
+                $template->addBodyText('<img src="' . htmlspecialchars($logo, ENT_QUOTES) . '" alt="' . htmlspecialchars($club->getName(), ENT_QUOTES) . '" style="max-width:200px;max-height:100px">', false);
+            }
             $template->addFooter($club->getName());
 
             $message = $this->mailer->createMessage();

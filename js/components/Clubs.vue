@@ -47,6 +47,16 @@
           :label="t('verein', 'Reply-to address')"
           :placeholder="t('verein', 'e.g. board@example.org')"
         />
+        <NcTextField
+          class="wide"
+          :model-value="form.mailLogoUrl"
+          @update:model-value="form.mailLogoUrl = $event"
+          type="url"
+          maxlength="500"
+          :label="t('verein', 'Address of the logo (optional)')"
+          :placeholder="t('verein', 'e.g. https://example.org/logo.png')"
+          :helper-text="t('verein', 'Shown at the end of the club’s emails. The image must be publicly reachable, e.g. on the club’s website. Many mail programs only show it after a confirmation.')"
+        />
         <h4 class="wide">{{ t('verein', 'Membership confirmation by email') }}</h4>
         <p class="wide hint">{{ t('verein', 'Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only.') }}</p>
         <NcTextField
@@ -259,7 +269,7 @@ export default {
     const busy = ref(false)
     const newClubName = ref('')
     const accountForm = reactive(emptyAccount())
-    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '', welcomeSubject: '', welcomeBody: '' })
+    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '', mailLogoUrl: '', welcomeSubject: '', welcomeBody: '' })
 
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
@@ -300,6 +310,7 @@ export default {
         documentsPath: c?.documentsPath || '',
         mailSenderName: c?.mailSenderName || '',
         mailReplyTo: c?.mailReplyTo || '',
+        mailLogoUrl: c?.mailLogoUrl || '',
         welcomeSubject: c?.welcomeSubject || '',
         welcomeBody: c?.welcomeBody || '',
         calendarGroups: (c?.calendarGroups || []).join(', ')
