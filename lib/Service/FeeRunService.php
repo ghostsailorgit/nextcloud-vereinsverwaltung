@@ -28,6 +28,10 @@ use OCA\Verein\L10n\DocumentL10n;
  * so a run can be repeated after new members joined, and previewed before anything
  * is written.
  *
+ * A category can also have a one-time admission fee: a separate fee (period "join", same due date, so
+ * SEPA collects it with the membership fee in one debit) for members who joined in the fee year,
+ * once per member. Bestandsmitglieder never get it.
+ *
  * With $prorata, a member who joined during the period pays only for the months from
  * the join month (inclusive) to its end, rounded to cents. A
  * membership with Membership::$feeExemptJoinYear pays nothing at all for the
@@ -94,7 +98,11 @@ class FeeRunService {
 
         // the months of this year each member already has a fee for (cancelled ones don't count)
         $billedMonths = [];
+        $joinFeeBilled = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
+            if ($fee->getPeriod() === FeePeriod::JOIN && $fee->getStatus() !== 'cancelled') {
+                $joinFeeBilled[$fee->getMemberId()] = true;
+            }
             $covered = FeePeriod::covered($fee->getPeriod());
             if ($covered !== null && $covered['year'] === $year && $fee->getStatus() !== 'cancelled') {
                 foreach (range($covered['first'], $covered['last']) as $coveredMonth) {
@@ -109,6 +117,7 @@ class FeeRunService {
 
         $included = [];
         $skipped = [];
+        $upcoming = [];
         $total = 0.0;
         foreach ($members as $member) {
             $skip = function (string $reason) use (&$skipped, $member): void {
@@ -152,6 +161,22 @@ class FeeRunService {
                 $skip($this->l->t('joins after %s', [$period['key']]));
                 continue;
             }
+            if ((float)$rate->getJoinFee() > 0 && !empty($join) && (int)substr($join, 0, 4) === $year && !isset($joinFeeBilled[$member->getId()])) {
+                $included[] = [
+                    'memberId' => $member->getId(),
+                    'name' => $member->getFullName(),
+                    'category' => $rate->getName(),
+                    'amount' => (float)$rate->getJoinFee(),
+                    'period' => FeePeriod::JOIN,
+                    'interval' => 'once',
+                    'description' => $this->doc->t('Admission fee'),
+                ];
+                $total += (float)$rate->getJoinFee();
+            }
+            $change = $this->upcomingTierChange($rate, $member->getBirthDate(), $year);
+            if ($change !== null) {
+                $upcoming[] = ['memberId' => $member->getId(), 'name' => $member->getFullName(), 'category' => $rate->getName()] + $change;
+            }
             if (array_intersect_key($billedMonths[$member->getId()] ?? [], array_flip(range($period['firstMonth'], $period['lastMonth']))) !== []) {
                 $skip($this->l->t('fee %s already exists', [$period['key']]));
                 continue;
@@ -187,7 +212,7 @@ class FeeRunService {
                 'amount' => $amount,
                 'period' => $period['key'],
                 'interval' => $interval,
-                'description' => $customDescription !== '' ? $customDescription : $this->doc->t('Membership fee %s', [$this->periodLabel($interval, $year, $period)]),
+                'description' => $this->feeDescription($customDescription, $rate, $this->periodLabel($interval, $year, $period)),
             ] + $tierInfo;
             if ($months !== $period['length']) {
                 $entry['fullAmount'] = $fullAmount;
@@ -206,6 +231,7 @@ class FeeRunService {
             'month' => $month,
             'included' => $included,
             'skipped' => $skipped,
+            'upcomingTierChanges' => $upcoming,
             'total' => round($total, 2),
         ];
     }
@@ -289,6 +315,36 @@ class FeeRunService {
             return $period['length'];
         }
         return $period['lastMonth'] - $joinMonth + 1;
+    }
+
+    /** The comment of this run, else the category's own text, else the standard text. */
+    private function feeDescription(string $custom, FeeRate $rate, string $label): string {
+        if ($custom !== '') {
+            return $custom;
+        }
+        $own = trim((string)$rate->getFeeText());
+        if ($own !== '') {
+            return str_ireplace(['{period}', '{zeitraum}'], $label, $own);
+        }
+        return $this->doc->t('Membership fee %s', [$label]);
+    }
+
+    /**
+     * Whether the member reaches another age tier next year, for the preview.
+     *
+     * @return array{amount: float, nextAmount: float, nextAgeFrom: int}|null
+     */
+    private function upcomingTierChange(FeeRate $rate, ?string $birthDate, int $year): ?array {
+        $tiers = $rate->getAgeTierList();
+        if ($tiers === []) {
+            return null;
+        }
+        $now = AgeGrading::tierFor($tiers, $birthDate, $year, $rate->getAgeCutoff());
+        $next = AgeGrading::tierFor($tiers, $birthDate, $year + 1, $rate->getAgeCutoff());
+        if ($now === null || $next === null || $now['fromAge'] === $next['fromAge']) {
+            return null;
+        }
+        return ['amount' => $now['amount'], 'nextAmount' => $next['amount'], 'nextAgeFrom' => $next['fromAge']];
     }
 
     /** @param array{number: int} $period */

@@ -78,11 +78,12 @@
           <table>
             <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
             <tbody>
-              <tr v-for="e in plan.included" :key="e.memberId">
+              <tr v-for="e in plan.included" :key="e.memberId + '-' + e.period">
                 <td>{{ e.name }}</td>
                 <td>
                   {{ e.category }}
-                  <span v-if="e.interval !== 'yearly'" class="prorata-note">· {{ e.period }}</span>
+                  <span v-if="e.interval === 'once'" class="prorata-note">· {{ t('verein', 'Admission fee') }}</span>
+                  <span v-else-if="e.interval !== 'yearly'" class="prorata-note">· {{ e.period }}</span>
                   <span v-if="e.ageFrom !== undefined" class="prorata-note">
                     · {{ t('verein', 'from age {age}', { age: e.ageFrom }) }}
                   </span>
@@ -108,6 +109,23 @@
                 <td>{{ e.category }}</td>
                 <td class="num">{{ formatMoney(e.previousAmount) }}</td>
                 <td class="num">{{ formatMoney(e.fullAmount ?? e.amount) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details v-if="plan.upcomingTierChanges.length">
+        <summary>{{ t('verein', 'Moving to another age tier next year ({count})', { count: plan.upcomingTierChanges.length }) }}</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ plan.year }}</th><th class="num">{{ plan.year + 1 }}</th></tr></thead>
+            <tbody>
+              <tr v-for="e in plan.upcomingTierChanges" :key="e.memberId">
+                <td>{{ e.name }}</td>
+                <td>{{ e.category }} <span class="prorata-note">· {{ t('verein', 'from age {age}', { age: e.nextAgeFrom }) }}</span></td>
+                <td class="num">{{ formatMoney(e.amount) }}</td>
+                <td class="num">{{ formatMoney(e.nextAmount) }}</td>
               </tr>
             </tbody>
           </table>

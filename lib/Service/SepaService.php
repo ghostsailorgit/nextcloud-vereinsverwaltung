@@ -261,8 +261,9 @@ class SepaService {
             $totalCents += $cents;
             $reference = $this->paymentReference($fee->getDescription(), $fee->getDueDate());
             $owner = $member->getFirstName() ?: $member->getName();
-            $bundleKey = isset($payers[$debtorId]) ? $debtorId . '|' . $collectionDate : null;
-            if ($bundleKey !== null && isset($bundles[$bundleKey])) {
+            // one debit per account and day: banks charge per debit
+            $bundleKey = $debtorId . '|' . $collectionDate;
+            if (isset($bundles[$bundleKey])) {
                 $i = $bundles[$bundleKey];
                 $transactions[$i]['cents'] += $cents;
                 $transactions[$i]['amount'] = $transactions[$i]['cents'] / 100;
@@ -271,9 +272,7 @@ class SepaService {
                 $transactions[$i]['forMembers'][$owner] = true;
                 continue;
             }
-            if ($bundleKey !== null) {
-                $bundles[$bundleKey] = count($transactions);
-            }
+            $bundles[$bundleKey] = count($transactions);
             $transactions[] = [
                 'name' => $debtor->getFullName(),
                 'memberName' => $debtor->getFullName(),

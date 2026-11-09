@@ -624,6 +624,144 @@ class FeeRunServiceTest extends TestCase {
         }
     }
 
+    private function joinFee(int $rateIndex, float $fee): void {
+        $this->rateList[$rateIndex]->setJoinFee($fee);
+    }
+
+    private function entriesOf(array $plan, string $name): array {
+        return array_values(array_filter($plan['included'], fn ($e) => $e['name'] === $name));
+    }
+
+    public function testWhoJoinsInTheFeeYearPaysTheAdmissionFeeOnceBesideTheFee(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->joinFee(0, 20.0);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-02-01');
+        $this->member(11, 'Alt', 'Mitglied', null, '2015-01-01');
+        $this->member(12, 'Ohne', 'Datum', null, null);
+        $inserted = [];
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$inserted) {
+            $inserted[] = $f;
+            return $f;
+        });
+
+        $result = $this->service->run(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(200.0, $result['total']);
+        $this->assertSame(4, $result['created']);
+        $this->assertCount(2, $this->entriesOf($result, 'Neu Mitglied'));
+        $this->assertCount(1, $this->entriesOf($result, 'Alt Mitglied'));
+        $this->assertCount(1, $this->entriesOf($result, 'Ohne Datum'));
+        $join = array_values(array_filter($inserted, fn (Fee $f) => $f->getPeriod() === 'join'));
+        $this->assertCount(1, $join);
+        $this->assertSame(20.0, $join[0]->getAmount());
+        $this->assertSame('Aufnahmegebühr', $join[0]->getDescription());
+        $this->assertSame('2026-03-31 00:00:00', $join[0]->getDueDate(), 'same due date, so SEPA collects both in one debit');
+    }
+
+    public function testTheAdmissionFeeIsNotBilledTwice(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->joinFee(0, 20.0);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-02-01');
+        $this->member(11, 'Storniert', 'Mitglied', null, '2026-02-01');
+        $this->existingFee(10, 'join');
+        $this->existingFee(11, 'join', 'cancelled');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertCount(1, $this->entriesOf($plan, 'Neu Mitglied'));
+        $this->assertCount(2, $this->entriesOf($plan, 'Storniert Mitglied'));
+    }
+
+    public function testAnAdmissionFeeDoesNotCountAsAFeeForAnyPeriod(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-02-01');
+        $this->existingFee(10, 'join');
+
+        $this->assertSame(5.0, $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included'][0]['amount']);
+    }
+
+    public function testAnAdmissionFeeIsDueEvenIfTheFeeItselfIsZeroOrAlreadyBilled(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->joinFee(0, 20.0);
+        $this->member(10, 'Klein', 'Kind', null, '2026-02-01');
+        $this->born(0, '2024-01-01');    // 0 € tier
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([20.0], array_column($plan['included'], 'amount'));
+        $this->assertStringContainsString('beitragsfrei', $plan['skipped'][0]['reason']);
+    }
+
+    public function testTheAdmissionFeeWaitsForTheRunOfThePeriodTheMemberJoined(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->joinFee(0, 20.0);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-05-01');
+
+        $this->assertSame([], $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included']);
+        $this->assertCount(2, $this->service->plan(self::CLUB, 2026, '2026-05-31', null, false, 5)['included']);
+    }
+
+    public function testExemptJoinYearAndHonoraryMembersPayNoAdmissionFee(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->joinFee(0, 20.0);
+        $this->member(10, 'Frei', 'Erstes', null, '2026-02-01', null, false, true);
+        $this->member(11, 'Ehren', 'Frei', null, '2026-02-01');
+        $this->memberList[1]->getMembership()->setHonoraryMember(true);
+
+        $this->assertSame([], $this->service->plan(self::CLUB, 2026, '2026-03-31')['included']);
+    }
+
+    public function testTheCategoryTextReplacesTheStandardText(): void {
+        $this->rate(1, 'Monatlich', 5.0, true);
+        $this->interval(0, 'monthly');
+        $this->rateList[0]->setFeeText('Vereinsbeitrag {Zeitraum} / {period}');
+        $this->member(10, 'Anna', 'A');
+
+        $this->assertSame('Vereinsbeitrag 03/2026 / 03/2026', $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3)['included'][0]['description']);
+    }
+
+    public function testTheCommentOfTheRunBeatsTheCategoryText(): void {
+        $this->rate(1, 'Jahr', 60.0, true);
+        $this->rateList[0]->setFeeText('Vereinsbeitrag');
+        $this->member(10, 'Anna', 'A');
+
+        $this->assertSame('Sonderlauf', $this->service->plan(self::CLUB, 2026, '2026-03-31', 'Sonderlauf')['included'][0]['description']);
+    }
+
+    public function testThePreviewAnnouncesTierChangesOfNextYearEvenIfThisYearIsBilled(): void {
+        $this->tieredRate(1, 'Verein', self::TIERS);
+        $this->member(10, 'Wird', 'Achtzehn');
+        $this->born(0, '2009-06-01');    // 17 in 2026, 18 in 2027
+        $this->member(11, 'Bleibt', 'Gleich');
+        $this->born(1, '2000-06-01');
+        $this->member(12, 'Ohne', 'Datum');
+        $this->member(13, 'Schon', 'Bezahlt');
+        $this->born(3, '2009-06-01');
+        $this->existingFee(13, '2026');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Schon Bezahlt', 'Wird Achtzehn'], $this->sortedNames($plan['upcomingTierChanges']));
+        $entry = array_column($plan['upcomingTierChanges'], null, 'name')['Wird Achtzehn'];
+        $this->assertSame([15.0, 25.0, 18], [$entry['amount'], $entry['nextAmount'], $entry['nextAgeFrom']]);
+    }
+
+    private function sortedNames(array $entries): array {
+        $names = array_column($entries, 'name');
+        sort($names);
+        return $names;
+    }
+
+    public function testNoUpcomingChangesWithoutAgeTiersOrForLeavers(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->member(10, 'Anna', 'A');
+        $this->born(0, '2009-06-01');
+
+        $this->assertSame([], $this->service->plan(self::CLUB, 2026, '2026-03-31')['upcomingTierChanges']);
+    }
+
     public function testInvalidYearOrDateIsRejected(): void {
         try {
             $this->service->plan(self::CLUB, 1999, '2026-03-31');

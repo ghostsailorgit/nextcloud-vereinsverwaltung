@@ -4,6 +4,19 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.7.0] - 2026-11-09
+
+### ✨ Neu
+- **Aufnahmegebühr:** Eine Beitragskategorie kann eine einmalige Aufnahmegebühr haben. Der Beitragslauf legt sie als eigenen Beitrag an, einmalig und nur für Mitglieder,
+  die im Beitragsjahr eingetreten sind.
+- **Eigener Verwendungszweck:** Je Kategorie lässt sich der Text für Beitrag und Lastschrift festlegen, `{period}` oder `{zeitraum}` wird durch den Abrechnungszeitraum ersetzt.
+- **Vorschau des Beitragslaufs:** Sie zeigt nun auch, wer im nächsten Jahr die Altersstufe wechselt.
+
+### 🔧 Geändert
+- **Eine Lastschrift je Konto und Tag:** Der SEPA-Export fasst nun alle Beiträge eines Mitglieds mit demselben Einzugsdatum zusammen, auch ohne Beitragszahler. Bisher entstand je Beitrag eine eigene Lastschrift.
+
+---
+
 ## [1.6.0] - 2026-11-08
 
 ### ✨ Neu

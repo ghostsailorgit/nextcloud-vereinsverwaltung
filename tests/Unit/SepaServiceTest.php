@@ -152,6 +152,20 @@ class SepaServiceTest extends TestCase {
         $this->assertSame(['Paula Ausgetreten' => 'nicht mehr Mitglied dieses Vereins'], array_column($preview['skipped'], 'reason', 'memberName'));
     }
 
+    public function testSeveralFeesOfOneMemberOnOneDayAreOneDebit(): void {
+        $this->person(1, 'Anna', 'Neu', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(11, 1, 60.0, 'Mitgliedsbeitrag 2026');
+        $this->fee(12, 1, 20.0, 'Aufnahmegebühr');
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertCount(1, $preview['transactions']);
+        $this->assertEquals(80.0, $preview['transactions'][0]['amount']);
+        $this->assertSame([11, 12], $preview['transactions'][0]['feeIds']);
+        $this->assertSame('Mitgliedsbeitrag 2026, Aufnahmegebühr', $preview['transactions'][0]['reference']);
+    }
+
     public function testAPayerIsDebitedOnceForEveryoneTheyPayFor(): void {
         $this->person(1, 'Anna', 'Muster', 'DE02120300000000202051');
         $this->mandate(1, '2021-01-05');
@@ -500,8 +514,8 @@ class SepaServiceTest extends TestCase {
 
         $this->assertSame('2026-04-10', $preview['collectionDate']);
         $this->assertSame(
-            [10 => '2026-04-10', 11 => '2026-04-10', 12 => '2026-04-20', 13 => '2026-04-24', 15 => '2026-04-10'],
-            array_column($preview['transactions'], 'collectionDate', 'feeId')
+            ['2026-04-10' => [10, 11, 15], '2026-04-20' => [12], '2026-04-24' => [13]],
+            array_column($preview['transactions'], 'feeIds', 'collectionDate')
         );
         $this->assertSame([['Anna Ok', 'noch nicht fällig']], array_map(fn ($s) => [$s['memberName'], $s['reason']], $preview['skipped']));
 
@@ -516,9 +530,9 @@ class SepaServiceTest extends TestCase {
                 $xp->evaluate('string(p:CtrlSum)', $pmt),
             ];
         }
-        $this->assertSame(['2026-04-10' => [3, '9.00'], '2026-04-20' => [1, '3.00'], '2026-04-24' => [1, '4.00']], $blocks);
+        $this->assertSame(['2026-04-10' => [1, '9.00'], '2026-04-20' => [1, '3.00'], '2026-04-24' => [1, '4.00']], $blocks);
         $this->assertSame('16.00', $this->value($dom, '//p:GrpHdr/p:CtrlSum'));
-        $this->assertSame('5', $this->value($dom, '//p:GrpHdr/p:NbOfTxs'));
+        $this->assertSame('3', $this->value($dom, '//p:GrpHdr/p:NbOfTxs'));
         if (is_file(self::SCHEMA)) {
             $this->assertTrue($dom->schemaValidate(self::SCHEMA));
         }

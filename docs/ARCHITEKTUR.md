@@ -127,6 +127,8 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   eigenständige Mitglieder mit eigenen Beiträgen. Der SEPA-Export zieht ihre Beiträge je Einzugsdatum als eine Lastschrift vom Konto und mit dem Mandat
   des Zahlers ein (Verwendungszweck nennt die Personen), das Mahnwesen schreibt einen Brief an den Zahler (`FeePayer::of()`). Nur eine Ebene; ein
   ausgetretener oder deaktivierter Zahler zählt nicht mehr. Wer den Zahler aus dem Verein entfernt, löst die Bündelung.
+- **Aufnahmegebühr** (`FeeRate::$joinFee`): eigener Beitrag mit `period` = `join`, einmal je Mitglied, nur für Eintritte im Beitragsjahr; Mitglieder, die im Eintrittsjahr beitragsfrei sind,
+  und Ehrenmitglieder zahlen sie nicht. Gleiches Fälligkeitsdatum wie der Mitgliedsbeitrag, damit beides eine Lastschrift wird.
 - **Zahlungsintervalle** (`FeeRate::$billingInterval`, `Service\FeePeriod`): Der Betrag der Kategorie gilt je Zahlung, es wird nichts umgerechnet. Der Beitragslauf rechnet den
   Zeitraum ab, in den der gewählte Monat fällt. Bereits abgerechnet ist ein Zeitraum, sobald ein nicht stornierter Beitrag einen seiner Monate abdeckt, damit ein
   Wechsel des Intervalls keine Monate doppelt berechnet.

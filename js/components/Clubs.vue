@@ -113,7 +113,10 @@
           <thead><tr><th>{{ t('verein', 'Fee category') }}</th><th>{{ t('verein', 'Fee') }}</th><th>{{ t('verein', 'Payment interval') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
           <tbody>
             <tr v-for="r in club.feeRates" :key="r.id">
-              <td>{{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span></td>
+              <td>
+                {{ r.name }} <span v-if="r.isDefault" class="badge">{{ t('verein', 'default') }}</span>
+                <div v-if="r.joinFee" class="hint">{{ t('verein', 'Admission fee: {amount}', { amount: formatMoney(r.joinFee) }) }}</div>
+              </td>
               <td v-if="hasAgeTiers(r)">
                 {{ ageTierSummary(r) }}
                 <div class="hint">{{ t('verein', 'Age on {date} of the fee year', { date: ageCutoffLabel(r) }) }}</div>
@@ -139,6 +142,8 @@
         <NcTextField :model-value="rateForm.name" @update:model-value="rateForm.name = $event" :label="t('verein', 'Name')" :placeholder="t('verein', 'e.g. adults')" required />
         <NcTextField v-if="!rateForm.byAge" :model-value="rateForm.amount" @update:model-value="rateForm.amount = $event" type="number" min="0" step="0.01" :label="t('verein', 'Amount per payment in €')" placeholder="24" required />
         <NcSelect v-model="rateForm.billingInterval" :options="intervalChoices" :reduce="option => option.id" label="label" :input-label="t('verein', 'Payment interval')" :clearable="false" />
+        <NcTextField :model-value="rateForm.joinFee" @update:model-value="rateForm.joinFee = $event" type="number" min="0" step="0.01" :label="t('verein', 'One-time admission fee in € (optional)')" :helper-text="t('verein', 'Charged once, in the fee run of the year a member joins.')" />
+        <NcTextField :model-value="rateForm.feeText" @update:model-value="rateForm.feeText = $event" maxlength="140" :label="t('verein', 'Own payment text (optional)')" :helper-text="t('verein', 'Replaces “Membership fee …” on the fee and the direct debit. {period} is replaced by the billing period.')" />
         <label class="checkbox-field">
           <input v-model="rateForm.byAge" type="checkbox" />
           <span>{{ t('verein', 'Fee depends on age') }}</span>
@@ -335,7 +340,7 @@ export default {
     }
 
     // fee categories
-    const emptyRate = () => ({ id: null, name: '', amount: '', isDefault: false, billingInterval: 'yearly', byAge: false, tiers: [{ fromAge: 0, amount: '' }], cutoffDay: '31', cutoffMonth: '12' })
+    const emptyRate = () => ({ id: null, name: '', amount: '', isDefault: false, billingInterval: 'yearly', joinFee: '', feeText: '', byAge: false, tiers: [{ fromAge: 0, amount: '' }], cutoffDay: '31', cutoffMonth: '12' })
     const rateForm = reactive(emptyRate())
     const resetRateForm = () => Object.assign(rateForm, emptyRate())
     const editRate = (r) => {
@@ -347,6 +352,8 @@ export default {
         amount: hasAgeTiers(r) ? '' : String(r.amount),
         isDefault: r.isDefault,
         billingInterval: r.billingInterval,
+        joinFee: r.joinFee ? String(r.joinFee) : '',
+        feeText: r.feeText || '',
         byAge: hasAgeTiers(r),
         tiers: hasAgeTiers(r) ? r.ageTiers.map(tier => ({ fromAge: tier.fromAge, amount: String(tier.amount) })) : emptyRate().tiers,
         cutoffDay: String(Number(day)),
@@ -360,6 +367,8 @@ export default {
           amount: rateForm.amount,
           isDefault: rateForm.isDefault,
           billingInterval: rateForm.billingInterval,
+          joinFee: rateForm.joinFee,
+          feeText: rateForm.feeText,
           // the API layer sends form fields, which cannot carry a list of objects
           ageTiers: rateForm.byAge ? JSON.stringify(rateForm.tiers) : '',
           ageCutoff: rateForm.byAge ? `${String(rateForm.cutoffMonth).padStart(2, '0')}-${String(rateForm.cutoffDay).padStart(2, '0')}` : null,

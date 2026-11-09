@@ -67,7 +67,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    reported with the reason, never dropped silently. Mandate reference falls back to `M<clubId>-<memberId>`.
    Sequence type is always RCUR (allowed since 2016). Data the bank would reject (amount <= 0, invalid IBAN/BIC, bad
    mandate date/reference) is skipped with a reason too; text goes through `SepaService::text()` (SEPA character set).
-   Fees are never collected before their due date (one `PmtInf` per collection date, fees due > 14 days after the
+   One debit per debtor and collection date (banks charge per debit), also for several fees of one person. Fees are never collected before their due date (one `PmtInf` per collection date, fees due > 14 days after the
    earliest date are skipped as "not due yet"). An optional requested collection date (never before the earliest) is used by
    preview, advance notice and file alike. The advance notice by email (`SepaPrenotificationService`) stays optional - the
    export must never require it. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing.

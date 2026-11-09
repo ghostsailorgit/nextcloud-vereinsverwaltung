@@ -21,6 +21,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setIsDefault(bool $isDefault)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
+ * @method ?float getJoinFee()
+ * @method void setJoinFee(?float $joinFee)
+ * @method ?string getFeeText()
+ * @method void setFeeText(?string $feeText)
  * @method string getBillingInterval()
  * @method void setBillingInterval(string $billingInterval)
  * @method ?string getAgeTiers()
@@ -37,6 +41,10 @@ class FeeRate extends Entity implements JsonSerializable {
     protected ?float $amount = null;
     protected bool $isDefault = false;
     protected ?string $createdAt = null;
+    // one-time admission fee of members who join in this category; null = none
+    protected ?float $joinFee = null;
+    // own payment text with {period}/{zeitraum} as a placeholder; null = the standard text
+    protected ?string $feeText = null;
     // how often the category is paid; the amount applies to each payment (see FeePeriod::INTERVALS)
     protected string $billingInterval = 'yearly';
     // JSON list of {fromAge, amount}, ascending and starting at 0; null = one amount for everybody
@@ -47,6 +55,7 @@ class FeeRate extends Entity implements JsonSerializable {
     public function __construct() {
         $this->addType('clubId', 'integer');
         $this->addType('amount', 'float');
+        $this->addType('joinFee', 'float');
         $this->addType('isDefault', 'bool');
     }
 
@@ -63,6 +72,8 @@ class FeeRate extends Entity implements JsonSerializable {
             'name' => $this->name,
             'amount' => (float)$this->amount,
             'isDefault' => $this->isDefault,
+            'joinFee' => $this->joinFee === null ? null : (float)$this->joinFee,
+            'feeText' => $this->feeText,
             'billingInterval' => $this->billingInterval,
             'ageTiers' => $this->getAgeTierList(),
             'ageCutoff' => $this->ageCutoff,

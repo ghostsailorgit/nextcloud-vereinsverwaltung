@@ -13,6 +13,9 @@ namespace OCA\Verein\Service;
 final class FeePeriod {
     public const YEARLY = 'yearly';
 
+    /** the period of a one-time admission fee: once per member, whatever the year */
+    public const JOIN = 'join';
+
     /** payment interval => months per payment */
     public const INTERVALS = ['yearly' => 12, 'half_yearly' => 6, 'quarterly' => 3, 'monthly' => 1];
 
