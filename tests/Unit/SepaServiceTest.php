@@ -12,6 +12,8 @@ use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\FeeRate;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
@@ -36,6 +38,7 @@ class SepaServiceTest extends TestCase {
 
     private FeeMapper&MockObject $fees;
     private MemberMapper&MockObject $members;
+    private FeeRateMapper&MockObject $feeRates;
     private ClubService&MockObject $clubService;
     private SepaService $service;
 
@@ -50,6 +53,8 @@ class SepaServiceTest extends TestCase {
     protected function setUp(): void {
         $this->fees = $this->createMock(FeeMapper::class);
         $this->members = $this->createMock(MemberMapper::class);
+        $this->feeRates = $this->createMock(FeeRateMapper::class);
+        $this->feeRates->method('findByClub')->willReturn([$this->rate(1, 'Erwachsene', true), $this->rate(2, 'Jugend', false)]);
         $clubs = $this->createMock(ClubMapper::class);
         $this->clubService = $this->createMock(ClubService::class);
 
@@ -83,7 +88,7 @@ class SepaServiceTest extends TestCase {
         $tz = $this->createMock(IDateTimeZone::class);
         $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
 
-        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'));
+        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates);
     }
 
     private function fee(int $id, int $memberId, float $amount, ?string $description = null, string $dueDate = '2026-03-01 00:00:00'): void {
@@ -113,6 +118,67 @@ class SepaServiceTest extends TestCase {
         $ms->setMandateDate($date);
         $ms->setMandateReference($reference);
         $this->membershipsByMember[$memberId] = $ms;
+    }
+
+    private function rate(int $id, string $name, bool $default): FeeRate {
+        $rate = new FeeRate();
+        $rate->setId($id);
+        $rate->setName($name);
+        $rate->setIsDefault($default);
+        return $rate;
+    }
+
+    private function bookingFixture(): void {
+        $this->person(1, 'Anna', 'Neu', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->person(2, 'Ben', 'Alt', 'DE02120300000000202051');
+        $this->mandate(2, '2021-01-05');
+        $this->membershipsByMember[2]->setFeeRateId(2);
+        $this->person(3, 'Cara', 'Ohne', null);
+        $this->mandate(3, '2021-01-05');
+        $this->fee(11, 1, 60.0, 'Beitrag 2026');
+        $this->openFees[0]->setPeriod('2026');
+        $this->fee(12, 1, 20.5, 'Aufnahme');
+        $this->openFees[1]->setPeriod('join');
+        $this->fee(13, 2, 30.0, 'Beitrag 2026');
+        $this->openFees[2]->setPeriod('2026');
+        $this->fee(14, 2, 5.0, 'Von Hand');
+        $this->fee(15, 3, 99.0, 'Beitrag 2026');
+        $this->openFees[4]->setPeriod('2026');
+    }
+
+    public function testTheBookingSummaryShowsWhatTheCollectionIsMadeOf(): void {
+        $this->bookingFixture();
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $date = $preview['collectionDate'];
+        $this->assertSame([
+            ['collectionDate' => $date, 'kind' => 'fee', 'category' => 'Erwachsene', 'count' => 1, 'cents' => 6000],
+            ['collectionDate' => $date, 'kind' => 'fee', 'category' => 'Jugend', 'count' => 1, 'cents' => 3000],
+            ['collectionDate' => $date, 'kind' => 'admission', 'category' => 'Erwachsene', 'count' => 1, 'cents' => 2050],
+            ['collectionDate' => $date, 'kind' => 'other', 'category' => '', 'count' => 1, 'cents' => 500],
+        ], $preview['bookings']);
+        $this->assertSame((int)round($preview['totalAmount'] * 100), array_sum(array_column($preview['bookings'], 'cents')), 'adds up to the file');
+    }
+
+    public function testTheBookingSummaryFileHasNoNames(): void {
+        $this->bookingFixture();
+
+        $summary = $this->service->bookingSummary(self::CLUB);
+
+        $this->assertCount(5, $summary['headers']);
+        $this->assertSame(['Erwachsene', 1, '60,00'], array_slice($summary['data'][0], 2));
+        $this->assertSame(['', 1, '5,00'], array_slice($summary['data'][3], 2));
+        $text = json_encode($summary, JSON_UNESCAPED_UNICODE);
+        foreach (['Anna', 'Neu', 'Ben', 'Alt', 'Cara', 'DE02'] as $private) {
+            $this->assertStringNotContainsString($private, $text);
+        }
+    }
+
+    public function testNothingToCollectMeansNoBookingSummary(): void {
+        $this->expectException(\OCA\Verein\Exception\ValidationException::class);
+        $this->service->bookingSummary(self::CLUB);
     }
 
     public function testOnlyMembersWithIbanAndMandateAreCollectedTheRestIsReportedWithReason(): void {

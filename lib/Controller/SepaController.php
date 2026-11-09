@@ -12,6 +12,8 @@ use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\ApiController;
+use OCP\App\IAppManager;
+use OCA\Verein\Service\Export\CsvExporter;
 use OCA\Verein\Service\SepaPrenotificationService;
 use OCA\Verein\Service\SepaService;
 
@@ -28,6 +30,8 @@ class SepaController extends ApiController {
         IRequest $request,
         SepaService $service,
         private SepaPrenotificationService $notice,
+        private CsvExporter $csv,
+        private IAppManager $appManager,
         private ?\OCA\Verein\Service\Clock $clock = null
     ) {
         parent::__construct($appName, $request);
@@ -78,11 +82,29 @@ class SepaController extends ApiController {
     public function preview(int $clubId, ?int $accountId = null, ?string $collectionDate = null): JSONResponse {
         try {
             $preview = $this->service->previewSepaExport($clubId, $accountId, $collectionDate);
+            // the hint to this separate app (by another developer) is pointless once it is in use
+            $preview['bookkeepingAppEnabled'] = $this->appManager->isEnabledForUser('vereinsbuchhaltung');
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
 
         return new JSONResponse($preview);
+    }
+
+    /**
+     * @NoAdminRequired
+     *
+     * What the collection is made up of, without names, as a CSV file (same fees and dates as preview/export).
+     */
+    #[RequirePermission('verein.sepa.export')]
+    public function bookingSummary(int $clubId, ?string $collectionDate = null): Response {
+        try {
+            $summary = $this->service->bookingSummary($clubId, $collectionDate);
+            $file = $this->csv->export($summary['data'], $summary['headers'], 'booking_summary_' . \OCA\Verein\Service\Clock::todayOf($this->clock));
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+        return new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
     }
 
     /**

@@ -70,7 +70,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    One debit per debtor and collection date (banks charge per debit), also for several fees of one person. Fees are never collected before their due date (one `PmtInf` per collection date, fees due > 14 days after the
    earliest date are skipped as "not due yet"). An optional requested collection date (never before the earliest) is used by
    preview, advance notice and file alike. The advance notice by email (`SepaPrenotificationService`) stays optional - the
-   export must never require it. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing.
+   export must never require it. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing. The preview and `POST /sepa/booking-summary` show what a collection is made up of (per date, type, category; never names).
 6. **Self-service is read-only** on purpose (a member changing their own IBAN would be a SEPA fraud risk).
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the
@@ -190,4 +190,5 @@ The plan lives in `ROADMAP.md` (done / next / ideas / known limitations). Data p
 admin data export, masking sensitive values in the audit log) is done (see rule 15) - built by the colleague it was
 assigned to (`feature/anonymisieren`); its UI (log tab, anonymize with typed-name confirmation, data export button) was
 added in 0.16.1 on the user's decision without him.
+No own bookkeeping: we build interfaces to the separate app Vereinsbuchhaltung (another developer, no public API yet) and point to it as an add-on; no merging of apps.
 Real-world data entry (bank account, creditor ID, real IBANs and mandates) happens in the running instance, not in the repo.

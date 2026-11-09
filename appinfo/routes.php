@@ -74,6 +74,7 @@ return [
         
         ['name' => 'sepa#export', 'url' => '/sepa/export', 'verb' => 'POST'],
         ['name' => 'sepa#preview', 'url' => '/sepa/preview', 'verb' => 'POST'],
+        ['name' => 'sepa#bookingSummary', 'url' => '/sepa/booking-summary', 'verb' => 'POST'],
         ['name' => 'sepa#notice', 'url' => '/sepa/notice', 'verb' => 'POST'],
 
         // Export endpoints

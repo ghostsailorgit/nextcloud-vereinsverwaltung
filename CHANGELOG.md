@@ -4,6 +4,14 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.11.0] - 2026-11-09
+
+### ✨ Neu
+- **Buchungsübersicht je Einzug:** Die Vorschau im Reiter „SEPA-Export“ zeigt, woraus sich die Gutschrift eines Einzugs zusammensetzt: je Einzugsdatum nach Beitrag, Aufnahmegebühr und sonstigen Beiträgen sowie nach Kategorie. Als CSV ohne Namen herunterladbar, etwa zum Aufteilen der Sammelgutschrift in der Buchhaltung.
+- **Hinweis auf die Zusatz-App „Vereinsbuchhaltung“** eines anderen Entwicklers, solange sie nicht aktiviert ist. Eine eigene Finanzbuchhaltung bauen wir nicht.
+
+---
+
 ## [1.10.0] - 2026-11-09
 
 ### ✨ Neu
