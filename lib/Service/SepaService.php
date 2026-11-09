@@ -7,6 +7,7 @@
 namespace OCA\Verein\Service;
 
 use OCA\Verein\Db\ClubAccount;
+use OCA\Verein\Db\ClubGroupMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\FeeRateMapper;
@@ -38,7 +39,8 @@ class SepaService {
         private ?Clock $clock = null,
         ?IL10N $l10n = null,
         ?DocumentL10n $documentL10n = null,
-        private ?FeeRateMapper $feeRates = null
+        private ?FeeRateMapper $feeRates = null,
+        private ?ClubGroupMapper $groups = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -59,6 +61,7 @@ class SepaService {
     private const MAX_DAYS_AHEAD = 14;
 
     private const BOOKING_FEE = 'fee';
+    private const BOOKING_GROUP = 'group';
     private const BOOKING_ADMISSION = 'admission';
     private const BOOKING_OTHER = 'other';
 
@@ -156,6 +159,7 @@ class SepaService {
         }
         $labels = [
             self::BOOKING_FEE => $this->l->t('Membership fee'),
+            self::BOOKING_GROUP => $this->l->t('Group fee'),
             self::BOOKING_ADMISSION => $this->l->t('Admission fee'),
             self::BOOKING_OTHER => $this->l->t('Other fee'),
         ];
@@ -240,6 +244,10 @@ class SepaService {
                 $defaultRateName = (string)$rate->getName();
             }
         }
+        $groupNames = [];
+        foreach ($this->groups?->findByClub($clubId) ?? [] as $group) {
+            $groupNames[$group->getId()] = $group->getName();
+        }
         $bookings = [];
 
         foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
@@ -307,9 +315,14 @@ class SepaService {
 
             $totalCents += $cents;
             $period = (string)$fee->getPeriod();
-            $kind = $period === FeePeriod::JOIN ? self::BOOKING_ADMISSION : ($period !== '' ? self::BOOKING_FEE : self::BOOKING_OTHER);
-            // a fee entered by hand belongs to no category; the others to the member's category (none set = the default one)
-            $category = $kind === self::BOOKING_OTHER ? '' : ($rateNames[(int)$membership?->getFeeRateId()] ?? $defaultRateName);
+            $kind = $fee->getGroupId() !== null ? self::BOOKING_GROUP
+                : ($period === FeePeriod::JOIN ? self::BOOKING_ADMISSION : ($period !== '' ? self::BOOKING_FEE : self::BOOKING_OTHER));
+            // a group's fee shows the group, one entered by hand no category, the others the member's (none set = the default one)
+            $category = match ($kind) {
+                self::BOOKING_GROUP => $groupNames[$fee->getGroupId()] ?? '',
+                self::BOOKING_OTHER => '',
+                default => $rateNames[(int)$membership?->getFeeRateId()] ?? $defaultRateName,
+            };
             $bookingKey = $collectionDate . '|' . $kind . '|' . $category;
             $bookings[$bookingKey] ??= ['collectionDate' => $collectionDate, 'kind' => $kind, 'category' => $category, 'count' => 0, 'cents' => 0];
             $bookings[$bookingKey]['count']++;
@@ -359,7 +372,7 @@ class SepaService {
         }
         unset($t);
 
-        $order = [self::BOOKING_FEE => 0, self::BOOKING_ADMISSION => 1, self::BOOKING_OTHER => 2];
+        $order = [self::BOOKING_FEE => 0, self::BOOKING_GROUP => 1, self::BOOKING_ADMISSION => 2, self::BOOKING_OTHER => 3];
         $bookings = array_values($bookings);
         usort($bookings, fn (array $a, array $b) => [$a['collectionDate'], $order[$a['kind']], $a['category']] <=> [$b['collectionDate'], $order[$b['kind']], $b['category']]);
 

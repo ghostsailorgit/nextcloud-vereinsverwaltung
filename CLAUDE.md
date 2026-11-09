@@ -47,6 +47,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 
 - **Groups (`verein_groups`, `verein_group_members`, `ClubGroupService`)** inside a club, e.g. training groups: one row per stay, so joining again keeps the
   history. Reading needs `verein.member.view`, changes `verein.member.manage`. Not Nextcloud groups: most members have no account.
+  `fee_rate_id` (only with `verein.club.manage`, never the default category): members at the end of the billing period pay it on top of their own fee; such fees have `verein_fees.group_id` and are idempotent per member, group and months on their own.
 
 ## Rules that are easy to get wrong
 1. **Every route needs `#[RequirePermission('verein.x')]`** (club-scoped by default; `clubScoped: false`

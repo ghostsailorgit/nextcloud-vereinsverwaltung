@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace OCA\Verein\Service;
 
+use OCA\Verein\Db\ClubGroupMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeRate;
 use OCA\Verein\Db\FeeRateMapper;
@@ -33,7 +34,8 @@ class FeeRateService {
         private MembershipMapper $memberships,
         private ClubMapper $clubs,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?ClubGroupMapper $groups = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -71,6 +73,9 @@ class FeeRateService {
         $before = $rate->jsonSerialize();
         $this->apply($rate, $data, $clubId, $id);
         if ($this->toBool($data['isDefault'] ?? false)) {
+            if ($this->usedByGroup($clubId, $id)) {
+                throw new ValidationException($this->l->t('A fee category used by a group cannot be the default'));
+            }
             $rate->setIsDefault(true);
         }
         $rate = $this->rates->update($rate);
@@ -95,6 +100,9 @@ class FeeRateService {
         if ($this->memberships->countByFeeRate($id) > 0) {
             throw new ValidationException($this->l->t('The fee category is still used by members'));
         }
+        if ($this->usedByGroup($clubId, $id)) {
+            throw new ValidationException($this->l->t('The fee category is still used by a group'));
+        }
         $wasDefault = $rate->getIsDefault();
         $this->rates->delete($rate);
         $this->auditLog?->record($clubId, 'fee_rate', $id, 'delete');
@@ -116,6 +124,15 @@ class FeeRateService {
             throw new DoesNotExistException($this->l->t('Fee category not found'));
         }
         return $rate;
+    }
+
+    private function usedByGroup(int $clubId, int $id): bool {
+        foreach ($this->groups?->findByClub($clubId) ?? [] as $group) {
+            if ($group->getFeeRateId() === $id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function makeOnlyDefault(FeeRate $default): void {

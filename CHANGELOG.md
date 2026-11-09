@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.12.0] - 2026-11-09
+
+### ✨ Neu
+- **Beiträge für Abteilungen:** Einer Gruppe lässt sich eine Beitragskategorie zuordnen. Wer am Ende des Abrechnungszeitraums in der Gruppe ist, zahlt sie zusätzlich zum eigenen Beitrag, mit Altersstaffel und eigenem Zahlungsintervall der Kategorie. Der Beitragslauf legt dafür je Gruppe einen eigenen Beitrag an, der SEPA-Export fasst alles je Zahler zu einer Lastschrift zusammen, und die Buchungsübersicht zeigt die Summen je Gruppe. Die Aufnahmegebühr bleibt beim Verein. Zuordnen darf, wer auch Beitragskategorien ändern darf.
+
+---
+
 ## [1.11.0] - 2026-11-09
 
 ### ✨ Neu

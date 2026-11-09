@@ -7,6 +7,8 @@ namespace OCA\Verein\Controller;
 
 use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Service\ClubGroupService;
+use OCA\Verein\Service\RBAC\RoleService;
+use OCP\IUserSession;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
@@ -20,7 +22,9 @@ class ClubGroupController extends Controller {
     public function __construct(
         $AppName,
         IRequest $request,
-        private ClubGroupService $groups
+        private ClubGroupService $groups,
+        private RoleService $roles,
+        private IUserSession $userSession
     ) {
         parent::__construct($AppName, $request);
     }
@@ -30,7 +34,14 @@ class ClubGroupController extends Controller {
     }
 
     private function groupParams(): array {
-        return ['name' => $this->request->getParam('name'), 'description' => $this->request->getParam('description')];
+        $params = ['name' => $this->request->getParam('name'), 'description' => $this->request->getParam('description')];
+        // what members are charged: only for those who may change fee categories, whoever else sends it changes nothing
+        $feeRateId = $this->request->getParam('feeRateId', false);
+        $uid = $this->userSession->getUser()?->getUID() ?? '';
+        if ($feeRateId !== false && $this->roles->userHasPermission($uid, 'verein.club.manage', $this->clubId())) {
+            $params['feeRateId'] = $feeRateId;
+        }
+        return $params;
     }
 
     private function respond(callable $action, int $status = 200): JSONResponse {
