@@ -117,8 +117,8 @@ export const api = {
   get(endpoint, config) {
     return instance.get(endpoint, config)
   },
-  post(endpoint, data) {
-    return instance.post(endpoint, data)
+  post(endpoint, data, config) {
+    return instance.post(endpoint, data, config)
   },
   put(endpoint, data) {
     return instance.put(endpoint, data)

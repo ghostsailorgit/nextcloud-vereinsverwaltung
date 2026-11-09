@@ -135,6 +135,7 @@
         <NcButton variant="secondary" @click="openCalendarApp">{{ t('verein', 'Open the Calendar app') }}</NcButton>
       </div>
     </div>
+    <AssociationReport />
   </div>
 </template>
 
@@ -156,6 +157,7 @@ import {
 } from 'chart.js'
 import api from '../api'
 import Alert from './Alert.vue'
+import AssociationReport from './AssociationReport.vue'
 import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate } from '../format'
 import NcButton from '@nextcloud/vue/components/NcButton'

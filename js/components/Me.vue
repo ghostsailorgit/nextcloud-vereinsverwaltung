@@ -21,6 +21,7 @@
           <dt>{{ t('verein', 'Postal address') }}</dt><dd>{{ address }}</dd>
           <dt>{{ t('verein', 'Email') }}</dt><dd>{{ data.person.email || '–' }}</dd>
           <dt>{{ t('verein', 'Phone') }}</dt><dd>{{ data.person.phone || '–' }}</dd>
+          <template v-if="data.person.gender"><dt>{{ t('verein', 'Gender') }}</dt><dd>{{ { M: t('verein', 'Male'), W: t('verein', 'Female'), D: t('verein', 'Non-binary'), O: t('verein', 'Not specified') }[data.person.gender] }}</dd></template>
           <dt>IBAN</dt><dd>{{ data.person.iban || '–' }}</dd>
           <dt>BIC</dt><dd>{{ data.person.bic || '–' }}</dd>
           <dt>{{ t('verein', 'Nextcloud account') }}</dt><dd>{{ data.nextcloudAccount }}</dd>

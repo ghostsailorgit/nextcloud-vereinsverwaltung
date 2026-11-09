@@ -59,6 +59,8 @@ return [
         ['name' => 'clubGroup#addMember', 'url' => '/groups/{id}/members', 'verb' => 'POST'],
         ['name' => 'clubGroup#updateMember', 'url' => '/group-members/{periodId}', 'verb' => 'PUT'],
         ['name' => 'clubGroup#removeMember', 'url' => '/group-members/{periodId}', 'verb' => 'DELETE'],
+        ['name' => 'associationReport#show', 'url' => '/association-report', 'verb' => 'GET'],
+        ['name' => 'associationReport#xml', 'url' => '/association-report/xml', 'verb' => 'POST'],
         ['name' => 'feeRun#preview', 'url' => '/fee-run/preview', 'verb' => 'POST'],
         ['name' => 'feeRun#run', 'url' => '/fee-run', 'verb' => 'POST'],
         ['name' => 'dunning#preview', 'url' => '/dunning/preview', 'verb' => 'POST'],

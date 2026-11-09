@@ -89,6 +89,13 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | PUT | `/group-members/{periodId}` | `verein.member.manage` |
 | DELETE | `/group-members/{periodId}` | `verein.member.manage` |
 
+## AssociationReport
+
+| Methode | Pfad | Erforderliches Recht |
+|---|---|---|
+| GET | `/association-report` | `verein.member.view` |
+| POST | `/association-report/xml` | `verein.member.view` |
+
 ## Beitragslauf
 
 | Methode | Pfad | Erforderliches Recht |

@@ -78,6 +78,27 @@ class MemberImportServiceTest extends TestCase {
         $this->assertSame(2, $plan['rows'][0]['line']);
     }
 
+    /** @dataProvider genders */
+    public function testGenderIsRecognized(string $value, ?string $stored, bool $warned): void {
+        $csv = "Nachname;Geschlecht\nMustermann;$value\n";
+
+        $row = $this->service->plan(self::CLUB, $csv, true)['rows'][0];
+
+        $this->assertSame($stored, $row['data']['gender']);
+        $this->assertSame($warned, ($row['warnings'] ?? []) !== []);
+    }
+
+    public static function genders(): array {
+        return [
+            'letter' => ['w', 'W', false],
+            'word' => ['Männlich', 'M', false],
+            'divers' => ['divers', 'D', false],
+            'no information' => ['ohne Angabe', 'O', false],
+            'empty' => ['', null, false],
+            'unknown' => ['xyz', null, true],
+        ];
+    }
+
     public function testTheEnglishExportCanBeImportedAgainToo(): void {
         // headers exactly as CsvExporter writes them for an English-speaking user (no translation table = English)
         $export = (new CsvExporter())->formatMembers([[
@@ -88,7 +109,7 @@ class MemberImportServiceTest extends TestCase {
             'createdAt' => '2026-01-01 10:00:00',
         ]]);
         $this->assertContains('Founding member', $export['headers']);
-        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][9]], 'labels, not the internal ids');
+        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][10]], 'labels, not the internal ids');
         $csv = implode(';', $export['headers']) . "\n" . implode(';', array_map('strval', $export['data'][0])) . "\n";
 
         $plan = $this->service->plan(self::CLUB, $csv, true);

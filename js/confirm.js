@@ -16,15 +16,17 @@ import { t } from '@nextcloud/l10n'
  * @param {string} text the question, with the consequences
  * @param {object} [options]
  * @param {string} [options.labelConfirm] text of the confirm button, name the action (e.g. "Löschen")
- * @param {'info'|'warning'|'error'} [options.severity] 'error' for destructive actions (red confirm button)
+ * @param {'warning'|'error'} [options.severity] 'error' for destructive actions (red); everything else stays neutral
  * @return {Promise<boolean>}
  */
 export async function confirmAction(name, text, { labelConfirm = t('verein', 'Confirm'), severity = 'warning' } = {}) {
   let confirmed = false
   try {
-    await getDialogBuilder(name)
-      .setText(text)
-      .setSeverity(severity)
+    const dialog = getDialogBuilder(name).setText(text)
+    if (severity === 'error') {
+      dialog.setSeverity('error')
+    }
+    await dialog
       .setButtons([
         { label: t('verein', 'Cancel'), variant: 'tertiary', callback: () => {} },
         { label: labelConfirm, variant: severity === 'error' ? 'error' : 'primary', callback: () => { confirmed = true } },

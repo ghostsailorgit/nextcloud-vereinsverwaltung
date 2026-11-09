@@ -72,6 +72,15 @@
           <input v-model="formData.birthDate" type="date" class="form-input" />
         </label>
 
+        <NcSelect
+          v-model="formData.gender"
+          :options="genderOptions"
+          :reduce="option => option.id"
+          label="label"
+          :input-label="t('verein', 'Gender')"
+          :placeholder="t('verein', 'Select…')"
+        />
+
         <h3 class="form-subheader">{{ t('verein', 'Address') }}</h3>
         <NcTextField
           :model-value="formData.street"
@@ -124,6 +133,15 @@
         </div>
 
         <h3 class="form-subheader">{{ t('verein', 'Membership') }}</h3>
+        <NcSelect
+          v-if="!editingId && allGroups.length"
+          v-model="newMemberGroups"
+          :options="allGroups"
+          label="name"
+          multiple
+          :input-label="t('verein', 'Groups')"
+          :placeholder="t('verein', 'Select…')"
+        />
         <label class="date-field">
           <span>{{ t('verein', 'Date joined') }}</span>
           <input v-model="formData.joinDate" type="date" class="form-input" />
@@ -433,6 +451,7 @@ const emptyFormData = () => ({
   payerMemberId: '',
   deceased: false,
   phone: '',
+  gender: null,
   iban: '',
   bic: '',
   mandateReference: '',
@@ -608,6 +627,7 @@ export default {
     }
 
     onMounted(async () => {
+      loadGroups()
       await fetchMembers()
     })
 
@@ -634,6 +654,35 @@ export default {
       ]
     })
 
+    const genderOptions = [
+      { id: 'M', label: t('verein', 'Male') },
+      { id: 'W', label: t('verein', 'Female') },
+      { id: 'D', label: t('verein', 'Non-binary') },
+      { id: 'O', label: t('verein', 'Not specified') },
+    ]
+    const allGroups = ref([])
+    const newMemberGroups = ref([])
+    const loadGroups = async () => {
+      if (!canManage.value) return
+      try {
+        allGroups.value = (await api.get('groups')).data.data
+      } catch (e) {
+        allGroups.value = []
+      }
+    }
+    // the member exists by now, so a group that fails is reported without losing the rest
+    const addToGroups = async (memberId, joinDate) => {
+      const d = new Date()
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      for (const group of newMemberGroups.value) {
+        try {
+          await api.post(`groups/${group.id}/members`, { memberId, joinedOn: String(joinDate || today).substring(0, 10) })
+        } catch (error) {
+          showError(extractErrorMessage(error, t('verein', 'The member could not be added to group {name}', { name: group.name })))
+        }
+      }
+      newMemberGroups.value = []
+    }
     const searchQuery = ref('')
     const groupFilter = ref(null)
     const groupOptions = computed(() => [...new Set(members.value.flatMap(m => m.groups || []))].sort((a, b) => a.localeCompare(b)))
@@ -666,6 +715,7 @@ export default {
           if (alertRef.value) alertRef.value.open()
         } else {
           showSuccess(editingId.value ? t('verein', 'Member updated') : t('verein', 'Member added'))
+          if (!editingId.value && newMemberGroups.value.length) await addToGroups(response.data.data.id, formData.joinDate)
           cancelEdit()
           await fetchMembers()
         }
@@ -826,6 +876,9 @@ export default {
       category,
       categories,
       searchQuery,
+      genderOptions,
+      allGroups,
+      newMemberGroups,
       groupFilter,
       groupOptions,
       payerOptions,
