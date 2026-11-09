@@ -110,6 +110,42 @@
         </div>
       </div>
 
+      <div v-if="bookingGroups.length" class="notice-box">
+        <h4>{{ t('verein', 'Booking summary') }}</h4>
+        <p class="hint">{{ t('verein', 'The bank usually shows a collection as one credit per collection date. This summary shows what it is made up of, without names, so you can split it in your bookkeeping.') }}</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{{ t('verein', 'Type of fee') }}</th>
+                <th>{{ t('verein', 'Fee category') }}</th>
+                <th>{{ t('verein', 'Number of fees') }}</th>
+                <th>{{ t('verein', 'Amount') }}</th>
+              </tr>
+            </thead>
+            <tbody v-for="group in bookingGroups" :key="group.date">
+              <tr v-for="row in group.rows" :key="row.kind + row.category">
+                <td>{{ bookingKindLabel(row.kind) }}</td>
+                <td>{{ row.category || '–' }}</td>
+                <td>{{ row.count }}</td>
+                <td>{{ formatMoney(row.cents / 100) }}</td>
+              </tr>
+              <tr class="booking-total">
+                <td colspan="3">{{ t('verein', 'Total of the collection on {date}', { date: formatDate(group.date) }) }}</td>
+                <td>{{ formatMoney(group.cents / 100) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-buttons">
+          <NcButton variant="secondary" @click="downloadBookingSummary">{{ t('verein', 'Download booking summary (CSV)') }}</NcButton>
+        </div>
+        <p v-if="!previewData.bookkeepingAppEnabled" class="hint bookkeeping-hint">
+          {{ t('verein', 'A separate Nextcloud app by another developer is available for bookkeeping:') }}
+          <a href="https://apps.nextcloud.com/apps/vereinsbuchhaltung" target="_blank" rel="noopener noreferrer">Vereinsbuchhaltung</a>
+        </p>
+      </div>
+
       <h4>{{ t('verein', 'Transactions:') }}</h4>
       <div class="table-scroll">
         <table>
@@ -180,6 +216,19 @@ export default {
       const ids = new Set((this.previewData?.transactions || []).filter(t => t.hasEmail).map(t => t.memberId))
       return ids.size
     },
+    bookingGroups() {
+      const groups = []
+      for (const row of this.previewData?.bookings || []) {
+        let group = groups[groups.length - 1]
+        if (group?.date !== row.collectionDate) {
+          group = { date: row.collectionDate, cents: 0, rows: [] }
+          groups.push(group)
+        }
+        group.rows.push(row)
+        group.cents += row.cents
+      }
+      return groups
+    },
     daysUntilCollection() {
       if (!this.previewData?.collectionDate) return 0
       const [y, m, d] = this.previewData.collectionDate.split('-').map(Number)
@@ -198,6 +247,33 @@ export default {
     formatDate,
     accountLabel(account) {
       return (account.label ? account.label + ' – ' : '') + account.iban
+    },
+    bookingKindLabel(kind) {
+      return { fee: t('verein', 'Membership fee'), admission: t('verein', 'Admission fee'), other: t('verein', 'Other fee') }[kind]
+    },
+    async blobErrorMessage(error, fallback) {
+      if (error.response?.data instanceof Blob) {
+        try {
+          return JSON.parse(await error.response.data.text()).message || fallback
+        } catch (parseError) {
+          return fallback // response wasn't JSON
+        }
+      }
+      return extractErrorMessage(error, fallback)
+    },
+    async downloadBookingSummary() {
+      try {
+        const response = await axios.post(generateUrl('/apps/verein/sepa/booking-summary'), this.requestParams(), { responseType: 'blob' })
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `booking_summary_${new Date().toISOString().split('T')[0]}.csv`
+        a.click()
+        window.URL.revokeObjectURL(url)
+        showSuccess(t('verein', 'Booking summary downloaded'))
+      } catch (error) {
+        showError(await this.blobErrorMessage(error, t('verein', 'Error creating the booking summary')))
+      }
     },
     requestParams() {
       const params = { clubId: clubState.currentId, accountId: this.accountId }
@@ -273,18 +349,7 @@ export default {
         }
       } catch (error) {
         console.error('Error generating SEPA:', error)
-        let message = t('verein', 'Error creating the SEPA file')
-        if (error.response?.data instanceof Blob) {
-          try {
-            const parsed = JSON.parse(await error.response.data.text())
-            message = parsed.message || message
-          } catch (parseError) {
-            // response wasn't JSON, keep the fallback message
-          }
-        } else {
-          message = extractErrorMessage(error, message)
-        }
-        showError(message)
+        showError(await this.blobErrorMessage(error, t('verein', 'Error creating the SEPA file')))
       }
     }
   }
@@ -338,6 +403,10 @@ export default {
 .notice-box { background: var(--color-main-background); border-radius: 4px; padding: 15px; margin-bottom: 20px; }
 .notice-box h4 { margin-top: 0; }
 .notice-result p { margin: 8px 0 0; }
+
+.booking-total td { font-weight: bold; }
+.bookkeeping-hint { margin: 12px 0 0; }
+.bookkeeping-hint a { text-decoration: underline; }
 
 .mark-paid { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
 .mark-paid p { margin: 0; flex: 1 1 320px; }

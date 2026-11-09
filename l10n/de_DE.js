@@ -968,7 +968,17 @@ OC.L10N.register(
         "{name} was anonymized": "{name} wurde anonymisiert",
         "{user} is already linked to {name}": "{user} ist bereits mit {name} verknüpft",
         "{what} exported as CSV": "{what} als CSV exportiert",
-        "{what} exported as PDF": "{what} als PDF exportiert"
+        "{what} exported as PDF": "{what} als PDF exportiert",
+        "Membership fee": "Mitgliedsbeitrag",
+        "Other fee": "Sonstiger Beitrag",
+        "Type of fee": "Art des Beitrags",
+        "Booking summary": "Buchungsübersicht",
+        "The bank usually shows a collection as one credit per collection date. This summary shows what it is made up of, without names, so you can split it in your bookkeeping.": "Die Bank zeigt einen Einzug meist als eine Gutschrift je Einzugsdatum. Diese Übersicht zeigt ohne Namen, woraus sie besteht, damit du sie in deiner Buchhaltung aufteilen kannst.",
+        "Download booking summary (CSV)": "Buchungsübersicht herunterladen (CSV)",
+        "Booking summary downloaded": "Buchungsübersicht heruntergeladen",
+        "Error creating the booking summary": "Fehler beim Erstellen der Buchungsübersicht",
+        "Total of the collection on {date}": "Summe des Einzugs am {date}",
+        "A separate Nextcloud app by another developer is available for bookkeeping:": "Für die Buchhaltung gibt es eine eigene Nextcloud-App eines anderen Entwicklers:"
     },
     "nplurals=2; plural=(n != 1);"
 );

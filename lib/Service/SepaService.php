@@ -9,6 +9,7 @@ namespace OCA\Verein\Service;
 use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeMapper;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\L10n\Formats;
@@ -36,7 +37,8 @@ class SepaService {
         private ClubService $clubService,
         private ?Clock $clock = null,
         ?IL10N $l10n = null,
-        ?DocumentL10n $documentL10n = null
+        ?DocumentL10n $documentL10n = null,
+        private ?FeeRateMapper $feeRates = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -55,6 +57,10 @@ class SepaService {
      * (own payment block); later ones stay open for a later export - banks do not take collections far ahead.
      */
     private const MAX_DAYS_AHEAD = 14;
+
+    private const BOOKING_FEE = 'fee';
+    private const BOOKING_ADMISSION = 'admission';
+    private const BOOKING_OTHER = 'other';
 
     private ValidationService $validation;
 
@@ -131,7 +137,38 @@ class SepaService {
                 unset($t['cents']);
                 return $t;
             }, $collected['transactions']),
+            'bookings' => $collected['bookings'],
             'skipped' => $collected['skipped']
+        ];
+    }
+
+    /**
+     * What the collection is made up of, for splitting its one credit on the bank statement in the bookkeeping: the same
+     * fees as the file, per collection date, type of fee and fee category. No names, so it can be passed on.
+     *
+     * @return array{headers: string[], data: array<int, array<int, string|int>>}
+     * @throws ValidationException if nothing can be collected
+     */
+    public function bookingSummary(int $clubId, ?string $collectionDate = null): array {
+        $bookings = $this->collectFees($clubId, $collectionDate)['bookings'];
+        if ($bookings === []) {
+            throw new ValidationException($this->l->t('No unpaid or overdue fees for the SEPA export'));
+        }
+        $labels = [
+            self::BOOKING_FEE => $this->l->t('Membership fee'),
+            self::BOOKING_ADMISSION => $this->l->t('Admission fee'),
+            self::BOOKING_OTHER => $this->l->t('Other fee'),
+        ];
+        return [
+            'headers' => [$this->l->t('Collection date'), $this->l->t('Type of fee'), $this->l->t('Fee category'), $this->l->t('Number of fees'), $this->l->t('Amount')],
+            'data' => array_map(fn (array $b) => [
+                Formats::date($this->l, $b['collectionDate']),
+                $labels[$b['kind']],
+                $b['category'],
+                $b['count'],
+                // decimal comma: the file is semicolon-separated, a spreadsheet would read 60.50 as a date or as text
+                number_format($b['cents'] / 100, 2, ',', ''),
+            ], $bookings),
         ];
     }
 
@@ -156,7 +193,7 @@ class SepaService {
      * A requested collection date (e.g. the one an advance notice to the members named) replaces the earliest possible
      * one; it may not be earlier than that and is moved to the next TARGET2 day if needed.
      *
-     * @return array{transactions: array, skipped: array, totalCents: int, earliestDate: string}
+     * @return array{transactions: array, bookings: array, skipped: array, totalCents: int, earliestDate: string}
      * @throws ValidationException for a requested date that is unreadable, too early or more than a year ahead
      */
     private function collectFees(int $clubId, ?string $requestedDate = null): array {
@@ -194,6 +231,16 @@ class SepaService {
             }
         }
         $bundles = [];
+
+        $rateNames = [];
+        $defaultRateName = '';
+        foreach ($this->feeRates?->findByClub($clubId) ?? [] as $rate) {
+            $rateNames[$rate->getId()] = (string)$rate->getName();
+            if ($rate->getIsDefault()) {
+                $defaultRateName = (string)$rate->getName();
+            }
+        }
+        $bookings = [];
 
         foreach ($this->feeMapper->findByStatusesInClub(['open', 'overdue'], $clubId) as $fee) {
             $member = $clubMembers[$fee->getMemberId()] ?? null;
@@ -259,6 +306,14 @@ class SepaService {
             }
 
             $totalCents += $cents;
+            $period = (string)$fee->getPeriod();
+            $kind = $period === FeePeriod::JOIN ? self::BOOKING_ADMISSION : ($period !== '' ? self::BOOKING_FEE : self::BOOKING_OTHER);
+            // a fee entered by hand belongs to no category; the others to the member's category (none set = the default one)
+            $category = $kind === self::BOOKING_OTHER ? '' : ($rateNames[(int)$membership?->getFeeRateId()] ?? $defaultRateName);
+            $bookingKey = $collectionDate . '|' . $kind . '|' . $category;
+            $bookings[$bookingKey] ??= ['collectionDate' => $collectionDate, 'kind' => $kind, 'category' => $category, 'count' => 0, 'cents' => 0];
+            $bookings[$bookingKey]['count']++;
+            $bookings[$bookingKey]['cents'] += $cents;
             $reference = $this->paymentReference($fee->getDescription(), $fee->getDueDate());
             $owner = $member->getFirstName() ?: $member->getName();
             // one debit per account and day: banks charge per debit
@@ -304,7 +359,11 @@ class SepaService {
         }
         unset($t);
 
-        return ['transactions' => $transactions, 'skipped' => $skipped, 'totalCents' => $totalCents, 'earliestDate' => $earliest];
+        $order = [self::BOOKING_FEE => 0, self::BOOKING_ADMISSION => 1, self::BOOKING_OTHER => 2];
+        $bookings = array_values($bookings);
+        usort($bookings, fn (array $a, array $b) => [$a['collectionDate'], $order[$a['kind']], $a['category']] <=> [$b['collectionDate'], $order[$b['kind']], $b['category']]);
+
+        return ['transactions' => $transactions, 'bookings' => $bookings, 'skipped' => $skipped, 'totalCents' => $totalCents, 'earliestDate' => $earliest];
     }
 
     private function paymentReference(?string $description, string $dueDate): string {
