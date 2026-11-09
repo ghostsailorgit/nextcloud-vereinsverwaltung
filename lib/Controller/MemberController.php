@@ -14,6 +14,7 @@ use OCA\Verein\Service\MemberService;
 use OCA\Verein\Service\RBAC\RoleService;
 use OCA\Verein\Service\SelfServiceService;
 use OCA\Verein\Service\ValidationService;
+use OCA\Verein\Service\WelcomeMailService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
@@ -47,7 +48,8 @@ class MemberController extends Controller {
         private IUserManager $userManager,
         private SelfServiceService $selfService,
         ?IL10N $l10n = null,
-        private ?ClubGroupService $clubGroups = null
+        private ?ClubGroupService $clubGroups = null,
+        private ?WelcomeMailService $welcomeMail = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
@@ -364,6 +366,21 @@ class MemberController extends Controller {
         try {
             $member = $this->memberService->deactivate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * Sends the club's membership confirmation to this member. Only on request: creating a member sends nothing by itself.
+     *
+     * @NoAdminRequired
+     */
+    #[RequirePermission('verein.member.manage')]
+    public function sendWelcome($id) {
+        try {
+            $this->welcomeMail->send($this->clubId(), (int)$id);
+            return new JSONResponse(['status' => 'ok']);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }

@@ -302,6 +302,17 @@ class ClubService {
         $club->setMailSenderName($senderName);
         $club->setMailReplyTo($replyTo);
 
+        $welcomeSubject = $this->nullIfEmpty($data['welcomeSubject'] ?? null);
+        if ($welcomeSubject !== null && (mb_strlen($welcomeSubject) > 200 || preg_match('/[\r\n]/', $welcomeSubject))) {
+            throw new ValidationException($this->l->t('The subject may have at most 200 characters and no line breaks'));
+        }
+        $welcomeBody = $this->nullIfEmpty($data['welcomeBody'] ?? null);
+        if ($welcomeBody !== null && mb_strlen($welcomeBody) > 10000) {
+            throw new ValidationException($this->l->t('The text may have at most 10,000 characters'));
+        }
+        $club->setWelcomeSubject($welcomeSubject);
+        $club->setWelcomeBody($welcomeBody);
+
         $groups = $data['calendarGroups'] ?? [];
         if (is_string($groups)) {
             $groups = preg_split('/[\s,;]+/', $groups, -1, PREG_SPLIT_NO_EMPTY);

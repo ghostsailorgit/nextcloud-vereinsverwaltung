@@ -115,6 +115,11 @@
           maxlength="50"
         />
 
+        <label v-if="!editingId && canSendWelcome && formData.email" class="welcome-check">
+          <input v-model="sendWelcomeOnCreate" type="checkbox" />
+          <span>{{ t('verein', 'Send membership confirmation by email') }}</span>
+        </label>
+
         <div class="account-link">
           <NcSelectUsers
             v-model="selectedUser"
@@ -367,6 +372,13 @@
                       @click="deactivateMember(member.id)"
                     >
                       {{ t('verein', 'Deactivate') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      v-if="canManage && canSendWelcome && member.email"
+                      close-after-click
+                      @click="sendWelcome(member)"
+                    >
+                      {{ t('verein', 'Send membership confirmation') }}
                     </NcActionButton>
                     <NcActionButton
                       close-after-click
@@ -683,6 +695,20 @@ export default {
       }
       newMemberGroups.value = []
     }
+    const canSendWelcome = computed(() => !!(currentClub.value?.welcomeSubject && currentClub.value?.welcomeBody))
+    const sendWelcomeOnCreate = ref(false)
+    const postWelcome = async (id) => {
+      try {
+        await api.post(`members/${id}/welcome-mail`, {})
+        showSuccess(t('verein', 'Membership confirmation sent'))
+      } catch (error) {
+        showError(extractErrorMessage(error, t('verein', 'The membership confirmation could not be sent')))
+      }
+    }
+    const sendWelcome = async (member) => {
+      if (!(await confirmAction(t('verein', 'Send membership confirmation'), t('verein', 'Send the membership confirmation to {email}?', { email: member.email }), { labelConfirm: t('verein', 'Send') }))) return
+      await postWelcome(member.id)
+    }
     const searchQuery = ref('')
     const groupFilter = ref(null)
     const groupOptions = computed(() => [...new Set(members.value.flatMap(m => m.groups || []))].sort((a, b) => a.localeCompare(b)))
@@ -716,6 +742,8 @@ export default {
         } else {
           showSuccess(editingId.value ? t('verein', 'Member updated') : t('verein', 'Member added'))
           if (!editingId.value && newMemberGroups.value.length) await addToGroups(response.data.data.id, formData.joinDate)
+          if (!editingId.value && sendWelcomeOnCreate.value && formData.email) await postWelcome(response.data.data.id)
+          sendWelcomeOnCreate.value = false
           cancelEdit()
           await fetchMembers()
         }
@@ -876,6 +904,9 @@ export default {
       category,
       categories,
       searchQuery,
+      canSendWelcome,
+      sendWelcomeOnCreate,
+      sendWelcome,
       genderOptions,
       allGroups,
       newMemberGroups,

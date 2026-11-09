@@ -25,6 +25,10 @@ use OCP\AppFramework\Db\Entity;
  * @method void setRoleMapping(?string $roleMapping)
  * @method ?string getCalendarUri()
  * @method void setCalendarUri(?string $calendarUri)
+ * @method ?string getWelcomeSubject()
+ * @method void setWelcomeSubject(?string $welcomeSubject)
+ * @method ?string getWelcomeBody()
+ * @method void setWelcomeBody(?string $welcomeBody)
  * @method ?string getMailSenderName()
  * @method void setMailSenderName(?string $mailSenderName)
  * @method ?string getMailReplyTo()
@@ -45,6 +49,8 @@ class Club extends Entity implements JsonSerializable {
     protected ?string $roleMapping = null;
     protected ?string $mailSenderName = null;
     protected ?string $mailReplyTo = null;
+    protected ?string $welcomeSubject = null;
+    protected ?string $welcomeBody = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -84,6 +90,8 @@ class Club extends Entity implements JsonSerializable {
             'documentsPath' => $this->documentsPath,
             'mailSenderName' => $this->mailSenderName,
             'mailReplyTo' => $this->mailReplyTo,
+            'welcomeSubject' => $this->welcomeSubject,
+            'welcomeBody' => $this->welcomeBody,
             'calendarGroups' => $this->getCalendarGroupsArray(),
             'roleMapping' => (object)$this->getRoleMappingArray(),
         ];

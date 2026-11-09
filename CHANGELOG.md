@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.9.0] - 2026-11-09
+
+### ✨ Neu
+- **Mitgliedsbestätigung per E-Mail:** Der Verein legt Betreff und Text mit Platzhaltern für Mitglieds- und Vereinsdaten fest. Verschickt wird nur auf Wunsch, beim Anlegen per Häkchen oder über das Menü des Mitglieds, beim Import nie. Die IBAN des Mitglieds erscheint nur gekürzt.
+
+---
+
 ## [1.8.0] - 2026-11-09
 
 ### ✨ Neu
