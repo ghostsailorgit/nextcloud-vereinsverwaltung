@@ -24,10 +24,10 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `anonymized_at` (siehe „Anonymisieren“) |
 | `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Betrag je Zahlung oder Altersstufen als JSON mit Stichtag, Zahlungsintervall, eine Standardkategorie; 0 € = beitragsfrei) |
-| `verein_fees` | Beiträge je Person und Verein; `period` kennzeichnet Beiträge aus dem Beitragslauf (2026, 2026-H1, 2026-Q1 oder 2026-03), `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen |
+| `verein_fees` | Beiträge je Person und Verein; `period` kennzeichnet Beiträge aus dem Beitragslauf (2026, 2026-H1, 2026-Q1 oder 2026-03), `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen; `group_id`: Gruppe, zu der ein Beitrag gehört (leer = eigener Beitrag des Mitglieds) |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
-| `verein_groups` | Gruppen eines Vereins, z. B. Trainingsgruppen (keine Nextcloud-Gruppen, die meisten Mitglieder haben kein Konto) |
+| `verein_groups` | Gruppen eines Vereins, z. B. Trainingsgruppen (keine Nextcloud-Gruppen, die meisten Mitglieder haben kein Konto); `fee_rate_id`: Beitragskategorie, die Mitglieder der Gruppe zusätzlich zahlen |
 | `verein_group_members` | je Aufenthalt eines Mitglieds in einer Gruppe eine Zeile mit Ein- und Austritt; Zeiträume derselben Person in derselben Gruppe dürfen sich nicht überschneiden |
 | `verein_audit_log` | Änderungsprotokoll: wer hat wann was geändert (siehe „Änderungsprotokoll“) |
 

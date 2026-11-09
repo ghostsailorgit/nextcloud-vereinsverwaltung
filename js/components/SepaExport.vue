@@ -249,7 +249,7 @@ export default {
       return (account.label ? account.label + ' – ' : '') + account.iban
     },
     bookingKindLabel(kind) {
-      return { fee: t('verein', 'Membership fee'), admission: t('verein', 'Admission fee'), other: t('verein', 'Other fee') }[kind]
+      return { fee: t('verein', 'Membership fee'), group: t('verein', 'Group fee'), admission: t('verein', 'Admission fee'), other: t('verein', 'Other fee') }[kind]
     },
     async blobErrorMessage(error, fallback) {
       if (error.response?.data instanceof Blob) {

@@ -24,11 +24,15 @@ class FeeRateServiceTest extends TestCase {
     /** @var array<int, FeeRate> */
     private array $store = [];
     private int $nextId = 1;
+    /** @var \OCA\Verein\Db\ClubGroup[] */
+    private array $groupList = [];
 
     protected function setUp(): void {
         $this->rates = $this->createMock(FeeRateMapper::class);
         $this->memberships = $this->createMock(MembershipMapper::class);
         $clubs = $this->createMock(ClubMapper::class);
+        $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
+        $groups->method('findByClub')->willReturnCallback(fn () => $this->groupList);
 
         $this->rates->method('findByClub')->willReturnCallback(
             fn (int $club) => array_values(array_filter($this->store, fn (FeeRate $r) => $r->getClubId() === $club))
@@ -47,7 +51,7 @@ class FeeRateServiceTest extends TestCase {
             return $r;
         });
 
-        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs, l10n: SourceL10n::fromAppLanguage('de'));
+        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs, l10n: SourceL10n::fromAppLanguage('de'), groups: $groups);
     }
 
     public function testTheFirstCategoryBecomesTheDefault(): void {
@@ -102,6 +106,32 @@ class FeeRateServiceTest extends TestCase {
 
         $this->expectException(DoesNotExistException::class);
         $this->service->update(2, $rate->getId(), ['name' => 'Kinder', 'amount' => '1']);
+    }
+
+    private function usedByGroup(int $rateId): void {
+        $g = new \OCA\Verein\Db\ClubGroup();
+        $g->setClubId(1);
+        $g->setFeeRateId($rateId);
+        $this->groupList[] = $g;
+    }
+
+    public function testACategoryOfAGroupCannotBeDeleted(): void {
+        $this->service->create(1, ['name' => 'Erwachsene', 'amount' => '24']);
+        $rate = $this->service->create(1, ['name' => 'Fußball', 'amount' => '8']);
+        $this->memberships->method('countByFeeRate')->willReturn(0);
+        $this->usedByGroup($rate->getId());
+
+        $this->expectExceptionMessage('noch von einer Gruppe verwendet');
+        $this->service->delete(1, $rate->getId());
+    }
+
+    public function testACategoryOfAGroupCannotBecomeTheDefault(): void {
+        $this->service->create(1, ['name' => 'Erwachsene', 'amount' => '24']);
+        $rate = $this->service->create(1, ['name' => 'Fußball', 'amount' => '8']);
+        $this->usedByGroup($rate->getId());
+
+        $this->expectExceptionMessage('kann nicht Standard sein');
+        $this->service->update(1, $rate->getId(), ['name' => 'Fußball', 'amount' => '8', 'isDefault' => true]);
     }
 
     public function testACategoryInUseCannotBeDeleted(): void {

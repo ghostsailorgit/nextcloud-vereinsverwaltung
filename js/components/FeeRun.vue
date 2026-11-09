@@ -78,10 +78,11 @@
           <table>
             <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Amount') }}</th></tr></thead>
             <tbody>
-              <tr v-for="e in plan.included" :key="e.memberId + '-' + e.period">
+              <tr v-for="e in plan.included" :key="e.memberId + '-' + e.period + '-' + (e.groupId || 0)">
                 <td>{{ e.name }}</td>
                 <td>
                   {{ e.category }}
+                  <span v-if="e.groupName" class="prorata-note">· {{ t('verein', 'Group') }} {{ e.groupName }}</span>
                   <span v-if="e.interval === 'once'" class="prorata-note">· {{ t('verein', 'Admission fee') }}</span>
                   <span v-else-if="e.interval !== 'yearly'" class="prorata-note">· {{ e.period }}</span>
                   <span v-if="e.ageFrom !== undefined" class="prorata-note">
@@ -104,7 +105,7 @@
           <table>
             <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Previously') }}</th><th class="num">{{ t('verein', 'Now') }}</th></tr></thead>
             <tbody>
-              <tr v-for="e in tierChanges" :key="e.memberId">
+              <tr v-for="(e, idx) in tierChanges" :key="idx">
                 <td>{{ e.name }}</td>
                 <td>{{ e.category }}</td>
                 <td class="num">{{ formatMoney(e.previousAmount) }}</td>
@@ -121,7 +122,7 @@
           <table>
             <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Fee category') }}</th><th class="num">{{ plan.year }}</th><th class="num">{{ plan.year + 1 }}</th></tr></thead>
             <tbody>
-              <tr v-for="e in plan.upcomingTierChanges" :key="e.memberId">
+              <tr v-for="(e, idx) in plan.upcomingTierChanges" :key="idx">
                 <td>{{ e.name }}</td>
                 <td>{{ e.category }} <span class="prorata-note">· {{ t('verein', 'from age {age}', { age: e.nextAgeFrom }) }}</span></td>
                 <td class="num">{{ formatMoney(e.amount) }}</td>
@@ -138,7 +139,7 @@
           <table>
             <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Reason') }}</th></tr></thead>
             <tbody>
-              <tr v-for="s in plan.skipped" :key="s.memberId"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
+              <tr v-for="(s, idx) in plan.skipped" :key="idx"><td>{{ s.name }}</td><td>{{ s.reason }}</td></tr>
             </tbody>
           </table>
         </div>

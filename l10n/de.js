@@ -978,7 +978,16 @@ OC.L10N.register(
         "Booking summary downloaded": "Buchungsübersicht heruntergeladen",
         "Error creating the booking summary": "Fehler beim Erstellen der Buchungsübersicht",
         "Total of the collection on {date}": "Summe des Einzugs am {date}",
-        "A separate Nextcloud app by another developer is available for bookkeeping:": "Für die Buchhaltung gibt es eine eigene Nextcloud-App eines anderen Entwicklers:"
+        "A separate Nextcloud app by another developer is available for bookkeeping:": "Für die Buchhaltung gibt es eine eigene Nextcloud-App eines anderen Entwicklers:",
+        "Group %1$s: %2$s": "Gruppe %1$s: %2$s",
+        "Fee %1$s %2$s": "Beitrag %1$s %2$s",
+        "Group fee": "Gruppenbeitrag",
+        "Fee of the group (optional)": "Beitrag der Gruppe (optional)",
+        "Members of the group pay this fee category in addition to their own. An admission fee of this category is not charged.": "Mitglieder der Gruppe zahlen diese Kategorie zusätzlich zu ihrer eigenen. Eine Aufnahmegebühr dieser Kategorie wird nicht berechnet.",
+        "The fee category was not found": "Die Kategorie wurde nicht gefunden",
+        "The default fee category cannot be the fee of a group": "Die Standardkategorie kann nicht der Beitrag einer Gruppe sein",
+        "The fee category is still used by a group": "Die Kategorie wird noch von einer Gruppe verwendet",
+        "A fee category used by a group cannot be the default": "Eine Kategorie, die eine Gruppe verwendet, kann nicht Standard sein"
     },
     "nplurals=2; plural=(n != 1);"
 );

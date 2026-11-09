@@ -6,6 +6,10 @@
 namespace OCA\Verein\Tests\Unit;
 
 use OCA\Verein\L10n\SourceL10n;
+use OCA\Verein\Db\ClubGroup;
+use OCA\Verein\Db\ClubGroupMapper;
+use OCA\Verein\Db\ClubGroupMember;
+use OCA\Verein\Db\ClubGroupMemberMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
@@ -35,6 +39,10 @@ class FeeRunServiceTest extends TestCase {
     private array $memberList = [];
     /** @var Fee[] */
     private array $existingFees = [];
+    /** @var ClubGroup[] */
+    private array $groupList = [];
+    /** @var ClubGroupMember[] */
+    private array $stayList = [];
 
     protected function setUp(): void {
         $this->rates = $this->createMock(FeeRateMapper::class);
@@ -43,11 +51,16 @@ class FeeRunServiceTest extends TestCase {
         $this->db = $this->createMock(IDBConnection::class);
         $clubs = $this->createMock(ClubMapper::class);
 
+        $groups = $this->createMock(ClubGroupMapper::class);
+        $groups->method('findByClub')->willReturnCallback(fn () => $this->groupList);
+        $periods = $this->createMock(ClubGroupMemberMapper::class);
+        $periods->method('findByClub')->willReturnCallback(fn () => $this->stayList);
+
         $this->rates->method('findByClub')->willReturnCallback(fn () => $this->rateList);
         $this->members->method('findByClub')->willReturnCallback(fn () => $this->memberList);
         $this->fees->method('findByClub')->willReturnCallback(fn () => $this->existingFees);
 
-        $this->service = new FeeRunService($this->rates, $this->members, $this->fees, $clubs, $this->db, l10n: SourceL10n::fromAppLanguage('de'));
+        $this->service = new FeeRunService($this->rates, $this->members, $this->fees, $clubs, $this->db, l10n: SourceL10n::fromAppLanguage('de'), groups: $groups, groupPeriods: $periods);
     }
 
     private function rate(int $id, string $name, float $amount, bool $default = false): void {
@@ -87,6 +100,175 @@ class FeeRunServiceTest extends TestCase {
 
     private function names(array $entries): array {
         return array_column($entries, 'name');
+    }
+
+    private function group(int $id, string $name, ?int $rateId): void {
+        $g = new ClubGroup();
+        $g->setId($id);
+        $g->setClubId(self::CLUB);
+        $g->setName($name);
+        $g->setFeeRateId($rateId);
+        $this->groupList[] = $g;
+    }
+
+    private function stay(int $groupId, int $memberId, string $from, ?string $to = null): void {
+        $s = new ClubGroupMember();
+        $s->setGroupId($groupId);
+        $s->setMemberId($memberId);
+        $s->setJoinedOn($from);
+        $s->setLeftOn($to);
+        $this->stayList[] = $s;
+    }
+
+    private function departmentFixture(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->rate(2, 'Fußball', 30.0);
+        $this->group(5, 'Abt. Fußball', 2);
+        $this->member(10, 'Anna', 'Adult');
+    }
+
+    public function testAMemberOfADepartmentPaysItsFeeOnTop(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2020-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([24.0, 30.0], array_column($plan['included'], 'amount'));
+        $this->assertSame(5, $plan['included'][1]['groupId']);
+        $this->assertSame('Abt. Fußball', $plan['included'][1]['groupName']);
+        $this->assertSame('Beitrag Abt. Fußball 2026', $plan['included'][1]['description']);
+        $this->assertSame(54.0, $plan['total']);
+    }
+
+    public function testAGroupWithoutACategoryCostsNothing(): void {
+        $this->departmentFixture();
+        $this->group(6, 'Lauftreff', null);
+        $this->stay(6, 10, '2020-01-01');
+
+        $this->assertCount(1, $this->service->plan(self::CLUB, 2026, '2026-03-31')['included']);
+    }
+
+    public function testOwnAndGroupFeesAreRepeatedIndependently(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2020-01-01');
+        $this->existingFee(10, '2026');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+        $this->assertSame([30.0], array_column($plan['included'], 'amount'), 'own fee exists, the group fee does not');
+
+        $this->existingFees[0]->setGroupId(5);
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+        $this->assertSame([24.0], array_column($plan['included'], 'amount'), 'group fee exists, the own fee does not');
+        $this->assertStringContainsString('Abt. Fußball', $plan['skipped'][0]['reason']);
+    }
+
+    public function testACancelledGroupFeeCanBeBilledAgain(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2020-01-01');
+        $this->existingFee(10, '2026', 'cancelled');
+        $this->existingFees[0]->setGroupId(5);
+
+        $this->assertCount(2, $this->service->plan(self::CLUB, 2026, '2026-03-31')['included']);
+    }
+
+    /** @dataProvider stays */
+    public function testWhoIsInTheGroupAtTheEndOfThePeriodPays(string $from, ?string $to, int $fees): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, $from, $to);
+
+        $this->assertCount($fees, $this->service->plan(self::CLUB, 2026, '2026-03-31')['included']);
+    }
+
+    public static function stays(): array {
+        return [
+            'still in' => ['2026-05-01', null, 2],
+            'left in the last month' => ['2020-01-01', '2026-12-10', 2],
+            'left earlier' => ['2020-01-01', '2026-06-30', 1],
+            'left a year ago' => ['2020-01-01', '2025-12-31', 1],
+            'joins next year' => ['2027-01-01', null, 1],
+        ];
+    }
+
+    public function testRejoiningOnTheSameDayIsBilledOnce(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2020-01-01', '2026-12-15');
+        $this->stay(5, 10, '2026-12-15');
+
+        $this->assertCount(2, $this->service->plan(self::CLUB, 2026, '2026-03-31')['included']);
+    }
+
+    public function testProRataCountsFromJoiningTheGroup(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2026-07-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, true);
+
+        $this->assertSame([24.0, 15.0], array_column($plan['included'], 'amount'));
+    }
+
+    public function testWhoPaysNoFeeAtAllPaysNoGroupFeeEither(): void {
+        $this->departmentFixture();
+        $this->member(11, 'Ex', 'Mitglied', null, '2010-01-01', '2025-12-31');
+        $this->member(12, 'Frei', 'Jahr', null, '2026-01-01', null, false, true);
+        $this->stay(5, 11, '2020-01-01');
+        $this->stay(5, 12, '2026-01-01');
+        $this->stay(5, 10, '2020-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['Anna Adult', 'Anna Adult'], $this->names($plan['included']));
+    }
+
+    public function testAProblemWithTheOwnCategoryDoesNotStopTheGroupFee(): void {
+        $this->rate(2, 'Fußball', 30.0);
+        $this->group(5, 'Abt. Fußball', 2);
+        $this->member(10, 'Anna', 'Adult');
+        $this->stay(5, 10, '2020-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([30.0], array_column($plan['included'], 'amount'));
+        $this->assertCount(1, $plan['skipped']);
+    }
+
+    public function testTheAdmissionFeeOfAGroupCategoryIsNotCharged(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->rate(2, 'Fußball', 30.0);
+        $this->rateList[1]->setJoinFee(50.0);
+        $this->group(5, 'Abt. Fußball', 2);
+        $this->member(10, 'Neu', 'Mitglied', null, '2026-02-01');
+        $this->stay(5, 10, '2026-02-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([24.0, 30.0], array_column($plan['included'], 'amount'));
+    }
+
+    public function testTheCategoryIntervalDecidesThePeriodOfTheGroupFee(): void {
+        $this->departmentFixture();
+        $this->rateList[1]->setBillingInterval('quarterly');
+        $this->stay(5, 10, '2020-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3);
+        $this->assertSame('2026-Q1', $plan['included'][1]['period']);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3, ['yearly']);
+        $this->assertSame([24.0], array_column($plan['included'], 'amount'));
+        $this->assertStringContainsString('Abt. Fußball', $plan['skipped'][0]['reason']);
+    }
+
+    public function testARunStoresWhichGroupAFeeBelongsTo(): void {
+        $this->departmentFixture();
+        $this->stay(5, 10, '2020-01-01');
+        $written = [];
+        $this->fees->method('insert')->willReturnCallback(function (Fee $f) use (&$written) {
+            $written[] = $f;
+            return $f;
+        });
+
+        $this->service->run(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([null, 5], array_map(fn (Fee $f) => $f->getGroupId(), $written));
     }
 
     public function testEveryActiveMemberGetsTheirCategoryOrTheDefault(): void {

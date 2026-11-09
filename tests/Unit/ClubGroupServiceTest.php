@@ -10,6 +10,8 @@ use OCA\Verein\Db\ClubGroupMapper;
 use OCA\Verein\Db\ClubGroupMember;
 use OCA\Verein\Db\ClubGroupMemberMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeRate;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Db\Membership;
@@ -31,9 +33,13 @@ class ClubGroupServiceTest extends TestCase {
     /** @var array<int, Member[]> */
     private array $members = [self::CLUB => [], self::OTHER_CLUB => []];
     private int $nextId = 1;
+    /** @var FeeRate[] */
+    private array $feeRateList = [];
     private ClubGroupService $service;
 
     protected function setUp(): void {
+        $rates = $this->createMock(FeeRateMapper::class);
+        $rates->method('findByClub')->willReturnCallback(fn (int $c) => array_values(array_filter($this->feeRateList, fn ($r) => $r->getClubId() === $c)));
         $groups = $this->createMock(ClubGroupMapper::class);
         $groups->method('find')->willReturnCallback(fn (int $id) => $this->groups[$id] ?? throw new DoesNotExistException('none'));
         $groups->method('findByClub')->willReturnCallback(fn (int $c) => array_values(array_filter($this->groups, fn ($g) => $g->getClubId() === $c)));
@@ -73,7 +79,7 @@ class ClubGroupServiceTest extends TestCase {
         $this->member(self::CLUB, 12, 'Ella', 'Ehemalig', '2020-12-31');
         $this->member(self::OTHER_CLUB, 20, 'Fremd', 'Mitglied');
 
-        $this->service = new ClubGroupService($groups, $periods, $members, $this->createMock(ClubMapper::class), l10n: SourceL10n::fromAppLanguage('de'));
+        $this->service = new ClubGroupService($groups, $periods, $members, $this->createMock(ClubMapper::class), l10n: SourceL10n::fromAppLanguage('de'), feeRates: $rates);
     }
 
     private function member(int $club, int $id, string $first, string $name, ?string $left = null): void {
@@ -92,6 +98,49 @@ class ClubGroupServiceTest extends TestCase {
 
     private function group(string $name = 'Judo Kinder', int $club = self::CLUB): ClubGroup {
         return $this->service->create($club, ['name' => $name, 'description' => '']);
+    }
+
+    private function feeRate(int $club, int $id, bool $default = false): void {
+        $r = new FeeRate();
+        $r->setId($id);
+        $r->setClubId($club);
+        $r->setName('Kategorie ' . $id);
+        $r->setIsDefault($default);
+        $this->feeRateList[] = $r;
+    }
+
+    public function testAGroupCanGetAFeeCategoryAndLoseItAgain(): void {
+        $this->feeRate(self::CLUB, 7);
+        $group = $this->group('Fußball');
+
+        $group = $this->service->update(self::CLUB, $group->getId(), ['name' => 'Fußball', 'feeRateId' => '7']);
+        $this->assertSame(7, $group->getFeeRateId());
+
+        $group = $this->service->update(self::CLUB, $group->getId(), ['name' => 'Fußball']);
+        $this->assertSame(7, $group->getFeeRateId(), 'not sent = unchanged');
+
+        $group = $this->service->update(self::CLUB, $group->getId(), ['name' => 'Fußball', 'feeRateId' => '']);
+        $this->assertNull($group->getFeeRateId());
+    }
+
+    /** @dataProvider unusableRates */
+    public function testAGroupCannotUseThisCategory(mixed $value, string $message): void {
+        $this->feeRate(self::CLUB, 7, true);
+        $this->feeRate(self::OTHER_CLUB, 8);
+        $group = $this->group('Fußball');
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage($message);
+        $this->service->update(self::CLUB, $group->getId(), ['name' => 'Fußball', 'feeRateId' => $value]);
+    }
+
+    public static function unusableRates(): array {
+        return [
+            'the default one' => ['7', 'Standardkategorie'],
+            'of another club' => ['8', 'nicht gefunden'],
+            'does not exist' => ['99', 'nicht gefunden'],
+            'not a number' => [['7'], 'nicht gefunden'],
+        ];
     }
 
     public function testAGroupNeedsAUniqueNameWithinTheClub(): void {

@@ -12,6 +12,7 @@ use OCA\Verein\Db\ClubGroupMapper;
 use OCA\Verein\Db\ClubGroupMember;
 use OCA\Verein\Db\ClubGroupMemberMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\NotFoundException;
@@ -38,7 +39,8 @@ class ClubGroupService {
         private MemberMapper $members,
         private ClubMapper $clubs,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?FeeRateMapper $feeRates = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -252,6 +254,26 @@ class ClubGroupService {
         }
         $group->setName($name);
         $group->setDescription($description === '' ? null : $description);
+        // the controller passes this only for those who may change fee categories
+        if (array_key_exists('feeRateId', $data)) {
+            $group->setFeeRateId($this->feeRateId($group->getClubId(), $data['feeRateId']));
+        }
+    }
+
+    /** @throws ValidationException if it is not a category of this club, or the default one (everybody would pay it twice) */
+    private function feeRateId(int $clubId, mixed $value): ?int {
+        if ($value === null || $value === '' || $value === 0 || $value === '0') {
+            return null;
+        }
+        foreach ($this->feeRates?->findByClub($clubId) ?? [] as $rate) {
+            if (is_scalar($value) && (string)$rate->getId() === (string)$value) {
+                if ($rate->getIsDefault()) {
+                    throw new ValidationException($this->l->t('The default fee category cannot be the fee of a group'));
+                }
+                return $rate->getId();
+            }
+        }
+        throw new ValidationException($this->l->t('The fee category was not found'));
     }
 
     /**

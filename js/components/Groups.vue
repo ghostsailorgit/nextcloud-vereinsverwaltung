@@ -14,6 +14,16 @@
       <form v-if="showForm" class="group-form" @submit.prevent="saveGroup">
         <NcTextField :model-value="form.name" @update:model-value="form.name = $event" :label="t('verein', 'Name')" maxlength="100" required />
         <NcTextField :model-value="form.description" @update:model-value="form.description = $event" :label="t('verein', 'Description (optional)')" maxlength="255" />
+        <template v-if="canLinkFee">
+          <NcSelect
+            v-model="form.feeRate"
+            :options="feeRateOptions"
+            :input-label="t('verein', 'Fee of the group (optional)')"
+            :placeholder="t('verein', 'Select…')"
+            label="label"
+          />
+          <p class="hint group-fee-hint">{{ t('verein', 'Members of the group pay this fee category in addition to their own. An admission fee of this category is not charged.') }}</p>
+        </template>
         <div class="buttons">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ form.id ? t('verein', 'Save') : t('verein', 'Add') }}</NcButton>
           <NcButton type="button" variant="tertiary" @click="showForm = false">{{ t('verein', 'Cancel') }}</NcButton>
@@ -22,11 +32,12 @@
 
       <div v-if="groups.length" class="table-scroll">
         <table>
-          <thead><tr><th>{{ t('verein', 'Group') }}</th><th>{{ t('verein', 'Description') }}</th><th class="num">{{ t('verein', 'Current members') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Group') }}</th><th>{{ t('verein', 'Description') }}</th><th v-if="canLinkFee">{{ t('verein', 'Fee category') }}</th><th class="num">{{ t('verein', 'Current members') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
           <tbody>
             <tr v-for="g in groups" :key="g.id" :class="{ selected: selected && selected.id === g.id }">
               <td>{{ g.name }}</td>
               <td>{{ g.description || '–' }}</td>
+              <td v-if="canLinkFee">{{ feeRateName(g.feeRateId) }}</td>
               <td class="num">{{ g.currentMembers }}</td>
               <td>
                 <div class="row-actions">
@@ -136,7 +147,7 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import { t, n } from '@nextcloud/l10n'
 import { api } from '../api'
-import { can } from '../store/club'
+import { can, currentClub } from '../store/club'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
 import { formatDate } from '../format'
@@ -151,11 +162,16 @@ export default {
   components: { NcActionButton, NcActions, NcButton, NcSelect, NcTextField },
   setup() {
     const canManage = computed(() => can('verein.member.manage'))
+    // what members are charged is up to those who manage the fee categories
+    const canLinkFee = computed(() => can('verein.club.manage'))
+    const feeRates = computed(() => currentClub.value?.feeRates || [])
+    const feeRateOptions = computed(() => feeRates.value.filter(r => !r.isDefault).map(r => ({ id: r.id, label: r.name })))
+    const feeRateName = (id) => feeRates.value.find(r => r.id === id)?.name || '–'
     const groups = ref([])
     const loaded = ref(false)
     const busy = ref(false)
     const showForm = ref(false)
-    const form = reactive({ id: null, name: '', description: '' })
+    const form = reactive({ id: null, name: '', description: '', feeRate: null })
     const selected = ref(null)
     const periods = ref([])
     const members = ref([])
@@ -206,15 +222,16 @@ export default {
     })
 
     const startAdd = () => {
-      Object.assign(form, { id: null, name: '', description: '' })
+      Object.assign(form, { id: null, name: '', description: '', feeRate: null })
       showForm.value = true
     }
     const startEdit = (group) => {
-      Object.assign(form, { id: group.id, name: group.name, description: group.description || '' })
+      Object.assign(form, { id: group.id, name: group.name, description: group.description || '', feeRate: feeRateOptions.value.find(o => o.id === group.feeRateId) || null })
       showForm.value = true
     }
     const saveGroup = () => call(async () => {
       const payload = { name: form.name, description: form.description }
+      if (canLinkFee.value) payload.feeRateId = form.feeRate?.id ?? ''
       if (form.id) await api.put(`groups/${form.id}`, payload)
       else await api.post('groups', payload)
       showForm.value = false
@@ -271,7 +288,7 @@ export default {
     })
 
     return {
-      t, formatDate, canManage, groups, loaded, busy, showForm, form, selected, adding, editing, current, earlier, editingCurrent, memberOptions,
+      t, formatDate, canManage, canLinkFee, feeRateOptions, feeRateName, groups, loaded, busy, showForm, form, selected, adding, editing, current, earlier, editingCurrent, memberOptions,
       open, startAdd, startEdit, saveGroup, removeGroup, addMembers, startEditPeriod, startEnd, savePeriod, removePeriod,
     }
   },
@@ -288,6 +305,7 @@ export default {
 }
 .section-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hint { color: var(--color-text-maxcontrast); }
+.group-fee-hint { grid-column: 1 / -1; margin: 0; }
 .group-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0; align-items: end; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; }
 .add-member { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 12px; }

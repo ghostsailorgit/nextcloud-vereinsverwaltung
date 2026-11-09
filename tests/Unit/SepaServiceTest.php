@@ -53,6 +53,11 @@ class SepaServiceTest extends TestCase {
     protected function setUp(): void {
         $this->fees = $this->createMock(FeeMapper::class);
         $this->members = $this->createMock(MemberMapper::class);
+        $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
+        $department = new \OCA\Verein\Db\ClubGroup();
+        $department->setId(5);
+        $department->setName('Abt. Fußball');
+        $groups->method('findByClub')->willReturn([$department]);
         $this->feeRates = $this->createMock(FeeRateMapper::class);
         $this->feeRates->method('findByClub')->willReturn([$this->rate(1, 'Erwachsene', true), $this->rate(2, 'Jugend', false)]);
         $clubs = $this->createMock(ClubMapper::class);
@@ -88,7 +93,7 @@ class SepaServiceTest extends TestCase {
         $tz = $this->createMock(IDateTimeZone::class);
         $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
 
-        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates);
+        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates, groups: $groups);
     }
 
     private function fee(int $id, int $memberId, float $amount, ?string $description = null, string $dueDate = '2026-03-01 00:00:00'): void {
@@ -145,6 +150,23 @@ class SepaServiceTest extends TestCase {
         $this->fee(14, 2, 5.0, 'Von Hand');
         $this->fee(15, 3, 99.0, 'Beitrag 2026');
         $this->openFees[4]->setPeriod('2026');
+    }
+
+    public function testGroupFeesAreOneDebitAndShownPerGroupInTheSummary(): void {
+        $this->person(1, 'Anna', 'Neu', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(11, 1, 60.0, 'Mitgliedsbeitrag 2026');
+        $this->openFees[0]->setPeriod('2026');
+        $this->fee(12, 1, 30.0, 'Beitrag Abt. Fußball 2026');
+        $this->openFees[1]->setPeriod('2026');
+        $this->openFees[1]->setGroupId(5);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertCount(1, $preview['transactions'], 'one debit, banks charge per debit');
+        $this->assertSame('Mitgliedsbeitrag 2026, Beitrag Abt. Fußball 2026', $preview['transactions'][0]['reference']);
+        $this->assertSame(['fee', 'group'], array_column($preview['bookings'], 'kind'));
+        $this->assertSame(['Erwachsene', 'Abt. Fußball'], array_column($preview['bookings'], 'category'));
     }
 
     public function testTheBookingSummaryShowsWhatTheCollectionIsMadeOf(): void {

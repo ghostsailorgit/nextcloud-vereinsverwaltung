@@ -7,11 +7,15 @@ declare(strict_types=1);
 
 namespace OCA\Verein\Service;
 
+use OCA\Verein\Db\ClubGroupMapper;
+use OCA\Verein\Db\ClubGroupMember;
+use OCA\Verein\Db\ClubGroupMemberMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\Fee;
 use OCA\Verein\Db\FeeMapper;
 use OCA\Verein\Db\FeeRate;
 use OCA\Verein\Db\FeeRateMapper;
+use OCA\Verein\Db\Member;
 use OCA\Verein\Db\MemberMapper;
 use OCA\Verein\Exception\ValidationException;
 use OCP\IDBConnection;
@@ -40,6 +44,9 @@ use OCA\Verein\L10n\DocumentL10n;
  *
  * A category with age tiers charges the tier of the age on its cut-off day of the
  * fee year. Without a birth date the member is reported, not charged a guessed amount.
+ *
+ * A group with a fee category of its own (a department) adds a separate fee for each of its members, with its own
+ * idempotency: the member's own fee and those of other groups do not count against it.
  */
 class FeeRunService {
     private IL10N $l;
@@ -53,7 +60,9 @@ class FeeRunService {
         private IDBConnection $db,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
-        ?DocumentL10n $documentL10n = null
+        ?DocumentL10n $documentL10n = null,
+        private ?ClubGroupMapper $groups = null,
+        private ?ClubGroupMemberMapper $groupPeriods = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -98,6 +107,7 @@ class FeeRunService {
 
         // the months of this year each member already has a fee for (cancelled ones don't count)
         $billedMonths = [];
+        $groupBilled = [];
         $joinFeeBilled = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
             if ($fee->getPeriod() === FeePeriod::JOIN && $fee->getStatus() !== 'cancelled') {
@@ -106,11 +116,16 @@ class FeeRunService {
             $covered = FeePeriod::covered($fee->getPeriod());
             if ($covered !== null && $covered['year'] === $year && $fee->getStatus() !== 'cancelled') {
                 foreach (range($covered['first'], $covered['last']) as $coveredMonth) {
-                    $billedMonths[$fee->getMemberId()][$coveredMonth] = true;
+                    if ($fee->getGroupId() !== null) {
+                        $groupBilled[$fee->getMemberId()][$fee->getGroupId()][$coveredMonth] = true;
+                    } else {
+                        $billedMonths[$fee->getMemberId()][$coveredMonth] = true;
+                    }
                 }
             }
         }
 
+        [$linkedGroups, $groupStays] = $this->groupFeeSetup($clubId, $ratesById);
 
         $members = $this->members->findByClub($clubId);
         usort($members, fn ($a, $b) => strcasecmp($a->getName() . $a->getFirstName(), $b->getName() . $b->getFirstName()));
@@ -145,6 +160,17 @@ class FeeRunService {
                 $skip($this->l->t('fee-exempt in the year joined'));
                 continue;
             }
+
+            // before the checks of the member's own category: a problem there says nothing about the groups
+            $groupResult = $this->groupFees($member, $groupStays[$member->getId()] ?? [], $linkedGroups, $groupBilled[$member->getId()] ?? [], $year, $month, $prorata, $intervals, $customDescription);
+            foreach ($groupResult['included'] as $entry) {
+                $included[] = $entry;
+                $total += $entry['amount'];
+            }
+            foreach ($groupResult['skipped'] as $reason) {
+                $skip($reason);
+            }
+            array_push($upcoming, ...$groupResult['upcoming']);
 
             $rate = $this->rateFor($member->getMembership()?->getFeeRateId(), $ratesById, $default);
             if ($rate === null) {
@@ -223,6 +249,10 @@ class FeeRunService {
             $total += $amount;
         }
 
+        // each member's own fees first, then those of the groups
+        $position = array_flip(array_map(fn ($m) => $m->getId(), $members));
+        usort($included, fn (array $a, array $b) => [$position[$a['memberId']], isset($a['groupId'])] <=> [$position[$b['memberId']], isset($b['groupId'])]);
+
         return [
             'year' => $year,
             'dueDate' => $dueDate,
@@ -257,6 +287,7 @@ class FeeRunService {
                 $fee->setDueDate($dueDate . ' 00:00:00');
                 $fee->setDescription($entry['description']);
                 $fee->setPeriod($entry['period']);
+                $fee->setGroupId($entry['groupId'] ?? null);
                 $fee->setCreatedAt($now);
                 $fee->setUpdatedAt($now);
                 $this->fees->insert($fee);
@@ -327,6 +358,135 @@ class FeeRunService {
             return str_ireplace(['{period}', '{zeitraum}'], $label, $own);
         }
         return $this->doc->t('Membership fee %s', [$label]);
+    }
+
+    /**
+     * The groups that have a fee of their own and the stays in them.
+     *
+     * @param array<int, FeeRate> $ratesById
+     * @return array{0: array<int, array{name: string, rate: FeeRate}>, 1: array<int, array<int, ClubGroupMember[]>>} group id => group, member id => group id => stays
+     */
+    private function groupFeeSetup(int $clubId, array $ratesById): array {
+        $linked = [];
+        foreach ($this->groups?->findByClub($clubId) ?? [] as $group) {
+            $rate = $ratesById[(int)$group->getFeeRateId()] ?? null;
+            if ($rate !== null) {
+                $linked[$group->getId()] = ['name' => $group->getName(), 'rate' => $rate];
+            }
+        }
+        $stays = [];
+        if ($linked !== []) {
+            foreach ($this->groupPeriods?->findByClub($clubId) ?? [] as $stay) {
+                if (isset($linked[$stay->getGroupId()])) {
+                    $stays[$stay->getMemberId()][$stay->getGroupId()][] = $stay;
+                }
+            }
+        }
+        return [$linked, $stays];
+    }
+
+    /**
+     * The fees of the groups a member belongs to, in addition to the member's own. Whoever is in the group at the end of the
+     * billing period pays; the rules of the category apply (interval, age tiers), but an admission fee is the club's alone.
+     *
+     * @param array<int, ClubGroupMember[]> $staysByGroup
+     * @param array<int, array{name: string, rate: FeeRate}> $linked
+     * @param array<int, array<int, bool>> $billed group id => months with a fee already
+     * @return array{included: array, skipped: string[], upcoming: array}
+     */
+    private function groupFees(Member $member, array $staysByGroup, array $linked, array $billed, int $year, int $month, bool $prorata, ?array $intervals, string $custom): array {
+        $out = ['included' => [], 'skipped' => [], 'upcoming' => []];
+        foreach ($staysByGroup as $groupId => $stays) {
+            $name = $linked[$groupId]['name'];
+            $rate = $linked[$groupId]['rate'];
+            $skip = function (string $reason) use (&$out, $name): void {
+                $out['skipped'][] = $this->l->t('Group %1$s: %2$s', [$name, $reason]);
+            };
+            $interval = $rate->getBillingInterval();
+            $period = FeePeriod::of($interval, $year, $month);
+            $stay = $this->stayAtEndOf($stays, sprintf('%d-%02d', $year, $period['lastMonth']));
+            if ($stay === null) {
+                continue;
+            }
+            if ($intervals !== null && !in_array($interval, $intervals, true)) {
+                $skip($this->l->t('payment interval not part of this run'));
+                continue;
+            }
+            $change = $this->upcomingTierChange($rate, $member->getBirthDate(), $year);
+            if ($change !== null) {
+                $out['upcoming'][] = ['memberId' => $member->getId(), 'name' => $member->getFullName(), 'category' => $rate->getName()] + $change;
+            }
+            if (array_intersect_key($billed[$groupId] ?? [], array_flip(range($period['firstMonth'], $period['lastMonth']))) !== []) {
+                $skip($this->l->t('fee %s already exists', [$period['key']]));
+                continue;
+            }
+            $fullAmount = (float)$rate->getAmount();
+            $tierInfo = [];
+            $tiers = $rate->getAgeTierList();
+            if ($tiers !== []) {
+                $tier = AgeGrading::tierFor($tiers, $member->getBirthDate(), $year, $rate->getAgeCutoff());
+                if ($tier === null) {
+                    $skip($this->l->t('no date of birth (fee category by age)'));
+                    continue;
+                }
+                $fullAmount = $tier['amount'];
+                $tierInfo = $this->tierInfo($tier, $tiers, $member->getBirthDate(), $year, $rate->getAgeCutoff(), $stay->getJoinedOn());
+            }
+            if ($fullAmount <= 0) {
+                continue;
+            }
+            $months = $prorata ? $this->monthsInPeriod($stay->getJoinedOn(), $year, $period) : $period['length'];
+            $amount = $months === $period['length'] ? $fullAmount : round($fullAmount * $months / $period['length'], 2);
+            if ($amount <= 0) {
+                continue;
+            }
+            $entry = [
+                'memberId' => $member->getId(),
+                'name' => $member->getFullName(),
+                'category' => $rate->getName(),
+                'amount' => $amount,
+                'period' => $period['key'],
+                'interval' => $interval,
+                'description' => $this->groupFeeDescription($custom, $rate, $this->periodLabel($interval, $year, $period), $name),
+                'groupId' => $groupId,
+                'groupName' => $name,
+            ] + $tierInfo;
+            if ($months !== $period['length']) {
+                $entry['fullAmount'] = $fullAmount;
+                $entry['months'] = $months;
+                $entry['periodMonths'] = $period['length'];
+            }
+            $out['included'][] = $entry;
+        }
+        return $out;
+    }
+
+    /**
+     * The latest stay that has begun by the given month and does not end before it.
+     *
+     * @param ClubGroupMember[] $stays
+     */
+    private function stayAtEndOf(array $stays, string $lastMonth): ?ClubGroupMember {
+        $found = null;
+        foreach ($stays as $stay) {
+            $left = $stay->getLeftOn();
+            if (substr($stay->getJoinedOn(), 0, 7) <= $lastMonth && ($left === null || substr($left, 0, 7) >= $lastMonth)
+                && ($found === null || $stay->getJoinedOn() > $found->getJoinedOn())) {
+                $found = $stay;
+            }
+        }
+        return $found;
+    }
+
+    /** Names the group, so that the remittance text of a combined debit tells the fees apart. */
+    private function groupFeeDescription(string $custom, FeeRate $rate, string $label, string $group): string {
+        if ($custom !== '') {
+            return mb_substr($custom . ', ' . $group, 0, 500);
+        }
+        if (trim((string)$rate->getFeeText()) !== '') {
+            return $this->feeDescription('', $rate, $label);
+        }
+        return $this->doc->t('Fee %1$s %2$s', [$group, $label]);
     }
 
     /**

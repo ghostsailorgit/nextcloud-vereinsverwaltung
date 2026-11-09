@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 1.11.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 1.12.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -12,7 +12,7 @@ Stand: Version 1.11.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Ab
 | Bestandsmeldung | Jahrgänge nach Geschlecht zum Stichtag, XML-Datei der DOSB-Schnittstelle |
 | Gruppen | Gruppen innerhalb des Vereins (z. B. Trainingsgruppen) mit Ein- und Austritt je Aufenthalt, Anzeige und Filter in der Mitgliederliste |
 | Rechte | Rollen je Verein, automatische Rechte aus der Vereinsfunktion, Selbstauskunft „Meine Daten“ |
-| Beiträge | Kategorien (ein Betrag oder nach Alter gestaffelt mit einstellbarem Stichtag, jährlich bis monatlich zahlbar, einmalige Aufnahmegebühr, eigener Verwendungszweck), Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr, oder Eintrittsjahr ganz beitragsfrei per Häkchen am Mitglied), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben per E-Mail über den Nextcloud-Mailserver oder als PDF), Mitglieder deaktivieren |
+| Beiträge | Kategorien (ein Betrag oder nach Alter gestaffelt mit einstellbarem Stichtag, jährlich bis monatlich zahlbar, einmalige Aufnahmegebühr, eigener Verwendungszweck), Beitragslauf mit Vorschau (wahlweise anteilig bei Eintritt im laufenden Jahr, oder Eintrittsjahr ganz beitragsfrei per Häkchen am Mitglied), Überfällige markieren, Mahnwesen (Zahlungserinnerung, 1. und letzte Mahnung, Schreiben per E-Mail über den Nextcloud-Mailserver oder als PDF), Mitglieder deaktivieren, zusätzlicher Beitrag je Gruppe (Abteilungsbeiträge) |
 | SEPA | Lastschriftdatei (pain.008.001.02) je Verein und Konto, in der CI gegen das offizielle Schema geprüft, SEPA-Zeichensatz, Einzug nie vor Fälligkeit, Einzugsdatum nach Bankarbeitstagen oder frei wählbar, freiwillige Vorabankündigung per E-Mail, Mandatsverwaltung, Meldung nicht einziehbarer Beiträge mit Grund, „bezahlt“-Markierung nach dem Export, Buchungsübersicht je Einzug (CSV) |
 | Kalender | Geburtstage und Jubiläen je Verein als App-Kalender über Nextclouds öffentliche Schnittstelle, sichtbar nur für ausgewählte Gruppen |
 | Sicherheit und Betrieb | Rechte- und CSRF-Prüfung pro Endpunkt (per Test erzwungen), tägliche Sicherung mit `occ`-Wiederherstellung, Änderungsprotokoll mit Aufbewahrungsfristen, einheitliche Fehlerbehandlung |
@@ -25,8 +25,7 @@ Stand: Version 1.11.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Ab
 
 ## Als Nächstes
 
-- **Veröffentlichung im App Store:** Zertifikat und App-ID `verein` sind registriert; das Archiv aus `release.yml`
-  wird ab 1.0.0 signiert hochgeladen.
+- **Abteilungsleitungen ([#25](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/25)):** Leitungen sehen und werten nur die Mitglieder ihrer eigenen Abteilung aus; der Vorstand sieht weiter alle. Bisher gelten Rechte immer für den ganzen Verein.
 
 ## Ideen ohne Termin
 
