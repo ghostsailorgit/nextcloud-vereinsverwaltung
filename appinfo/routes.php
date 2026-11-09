@@ -43,6 +43,7 @@ return [
         ['name' => 'member#show', 'url' => '/members/{id}', 'verb' => 'GET'],
         ['name' => 'member#update', 'url' => '/members/{id}', 'verb' => 'PUT'],
         ['name' => 'member#destroy', 'url' => '/members/{id}', 'verb' => 'DELETE'],
+        ['name' => 'member#sendWelcome', 'url' => '/members/{id}/welcome-mail', 'verb' => 'POST'],
         ['name' => 'member#deactivate', 'url' => '/members/{id}/deactivate', 'verb' => 'POST'],
         ['name' => 'member#activate', 'url' => '/members/{id}/activate', 'verb' => 'POST'],
         ['name' => 'member#anonymize', 'url' => '/members/{id}/anonymize', 'verb' => 'POST'],

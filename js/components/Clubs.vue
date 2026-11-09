@@ -47,6 +47,23 @@
           :label="t('verein', 'Reply-to address')"
           :placeholder="t('verein', 'e.g. board@example.org')"
         />
+        <h4 class="wide">{{ t('verein', 'Membership confirmation by email') }}</h4>
+        <p class="wide hint">{{ t('verein', 'Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only.') }}</p>
+        <NcTextField
+          class="wide"
+          :model-value="form.welcomeSubject"
+          @update:model-value="form.welcomeSubject = $event"
+          :label="t('verein', 'Subject')"
+          maxlength="200"
+        />
+        <label class="wide welcome-body">
+          <span>{{ t('verein', 'Text') }}</span>
+          <textarea v-model="form.welcomeBody" rows="8" maxlength="10000" />
+        </label>
+        <details class="wide">
+          <summary>{{ t('verein', 'Available placeholders') }}</summary>
+          <p class="hint"><code>{vorname} {nachname} {name} {anrede} {strasse} {plz} {ort} {email} {telefon} {geburtsdatum} {eintritt} {mitgliedsnummer} {beitragskategorie} {iban} {mandatsreferenz} {verein} {vereinsstrasse} {vereinsplz} {vereinsort} {vereinsiban} {vereinsbic} {glaeubigerid}</code></p>
+        </details>
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>
         </div>
@@ -242,7 +259,7 @@ export default {
     const busy = ref(false)
     const newClubName = ref('')
     const accountForm = reactive(emptyAccount())
-    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '' })
+    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '', welcomeSubject: '', welcomeBody: '' })
 
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
@@ -283,6 +300,8 @@ export default {
         documentsPath: c?.documentsPath || '',
         mailSenderName: c?.mailSenderName || '',
         mailReplyTo: c?.mailReplyTo || '',
+        welcomeSubject: c?.welcomeSubject || '',
+        welcomeBody: c?.welcomeBody || '',
         calendarGroups: (c?.calendarGroups || []).join(', ')
       })
     }
@@ -444,6 +463,8 @@ export default {
 /* NcSelect's own min-width (260px) is wider than a grid cell */
 .grid :deep(.v-select.select) { min-width: 0; width: 100%; }
 .actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.welcome-body { display: flex; flex-direction: column; gap: 4px; }
+.welcome-body textarea { width: 100%; }
 .age-tiers { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
 .age-tier { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
 .age-tier > * { flex: 1 1 120px; }
