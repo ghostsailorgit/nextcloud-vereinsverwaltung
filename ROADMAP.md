@@ -1,6 +1,6 @@
 # Planung
 
-Stand: Version 1.9.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 1.10.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
@@ -30,6 +30,8 @@ Stand: Version 1.9.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Abs
 
 ## Ideen ohne Termin
 
+- **Finanzbuchhaltung:** Buchungen auf Konten und Sphären, soweit das für Vereine nötig ist; eigenes Recht, getrennt von der Beitragsverwaltung. Der Umfang ist noch offen.
+- Mitgliedsbestätigung zusätzlich als PDF mit Vereinslogo.
 - Feinere Vereinsfunktionen (z. B. 1. Vorsitzender, Schriftführer) statt nur Mitglied, Kassierer, Vorstand.
 - Noch kleineres JavaScript beim Start (derzeit 1,26 MB, 306 KB komprimiert; größter Teil sind Nextcloud-Vue-Komponenten).
 

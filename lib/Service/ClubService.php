@@ -302,6 +302,12 @@ class ClubService {
         $club->setMailSenderName($senderName);
         $club->setMailReplyTo($replyTo);
 
+        $logoUrl = $this->nullIfEmpty($data['mailLogoUrl'] ?? null);
+        if ($logoUrl !== null && (strlen($logoUrl) > 500 || !str_starts_with(strtolower($logoUrl), 'https://') || filter_var($logoUrl, FILTER_VALIDATE_URL) === false)) {
+            throw new ValidationException($this->l->t('The logo address must be a complete https:// address with at most 500 characters'));
+        }
+        $club->setMailLogoUrl($logoUrl);
+
         $welcomeSubject = $this->nullIfEmpty($data['welcomeSubject'] ?? null);
         if ($welcomeSubject !== null && (mb_strlen($welcomeSubject) > 200 || preg_match('/[\r\n]/', $welcomeSubject))) {
             throw new ValidationException($this->l->t('The subject may have at most 200 characters and no line breaks'));
