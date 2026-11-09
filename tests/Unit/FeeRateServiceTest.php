@@ -214,4 +214,42 @@ class FeeRateServiceTest extends TestCase {
     public static function invalidIntervals(): array {
         return ['unknown' => ['weekly'], 'array' => [['monthly']], 'number' => [12]];
     }
+
+    public function testAdmissionFeeAndTextAreStoredAndCanBeRemoved(): void {
+        $rate = $this->service->create(1, ['name' => 'A', 'amount' => '60', 'joinFee' => '12,50', 'feeText' => ' Vereinsbeitrag {period} ']);
+
+        $this->assertSame(12.5, $rate->getJoinFee());
+        $this->assertSame('Vereinsbeitrag {period}', $rate->getFeeText());
+
+        $this->service->update(1, $rate->getId(), ['name' => 'A', 'amount' => '60']);
+        $this->assertSame(12.5, $rate->getJoinFee(), 'not sent = unchanged');
+        $this->assertSame('Vereinsbeitrag {period}', $rate->getFeeText());
+
+        $this->service->update(1, $rate->getId(), ['name' => 'A', 'amount' => '60', 'joinFee' => '', 'feeText' => '']);
+        $this->assertNull($rate->getJoinFee());
+        $this->assertNull($rate->getFeeText());
+    }
+
+    public function testAnAdmissionFeeOfZeroMeansNone(): void {
+        $this->assertNull($this->service->create(1, ['name' => 'A', 'amount' => '60', 'joinFee' => '0'])->getJoinFee());
+    }
+
+    /** @dataProvider invalidExtras */
+    public function testInvalidAdmissionFeeOrTextIsRefused(array $extra, string $expected): void {
+        try {
+            $this->service->create(1, ['name' => 'A', 'amount' => '60'] + $extra);
+            $this->fail('accepted');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString($expected, $e->getMessage());
+        }
+    }
+
+    public static function invalidExtras(): array {
+        return [
+            'negative fee' => [['joinFee' => '-1'], 'Betrag'],
+            'text instead of a fee' => [['joinFee' => 'abc'], 'Betrag'],
+            'too long text' => [['feeText' => str_repeat('x', 141)], '140'],
+            'array as text' => [['feeText' => ['x']], '140'],
+        ];
+    }
 }

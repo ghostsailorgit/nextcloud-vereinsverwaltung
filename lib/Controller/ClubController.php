@@ -178,6 +178,8 @@ class ClubController extends Controller {
             'amount' => $this->request->getParam('amount'),
             'isDefault' => $this->request->getParam('isDefault', false),
             'billingInterval' => $this->request->getParam('billingInterval'),
+            'joinFee' => $this->request->getParam('joinFee'),
+            'feeText' => $this->request->getParam('feeText'),
             'ageTiers' => $this->request->getParam('ageTiers'),
             'ageCutoff' => $this->request->getParam('ageCutoff'),
         ];

@@ -23,6 +23,8 @@ use OCP\IL10N;
  */
 class FeeRateService {
     private const MAX_AGE_TIERS = 20;
+    /** the length of the remittance text of a SEPA debit */
+    private const MAX_FEE_TEXT = 140;
 
     private IL10N $l;
 
@@ -150,6 +152,18 @@ class FeeRateService {
 
         $rate->setName($name);
         $rate->setBillingInterval($interval);
+        // null = not sent, keep; empty = remove
+        if (($data['joinFee'] ?? null) !== null) {
+            $joinFee = $data['joinFee'] === '' ? 0.0 : $this->parseAmount($data['joinFee']);
+            $rate->setJoinFee($joinFee > 0 ? $joinFee : null);
+        }
+        if (($data['feeText'] ?? null) !== null) {
+            $feeText = is_string($data['feeText']) ? trim($data['feeText']) : null;
+            if ($feeText === null || mb_strlen($feeText) > self::MAX_FEE_TEXT) {
+                throw new ValidationException($this->l->t('The payment text is invalid or longer than 140 characters'));
+            }
+            $rate->setFeeText($feeText === '' ? null : $feeText);
+        }
         // with tiers the amount of each tier counts, not this one
         $rate->setAmount($tiers === [] ? $this->parseAmount($data['amount'] ?? '') : 0.0);
         $rate->setAgeTiers($tiers === [] ? null : json_encode($tiers));
