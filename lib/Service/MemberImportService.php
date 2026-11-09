@@ -34,6 +34,7 @@ class MemberImportService {
 
     /** normalised header => field; see normaliseHeader() */
     private const COLUMNS = [
+        'geschlecht' => 'gender', 'gender' => 'gender',
         'anrede' => 'salutation', 'salutation' => 'salutation', 'title' => 'salutation',
         'vorname' => 'firstName', 'firstname' => 'firstName',
         'name' => 'name', 'nachname' => 'name', 'familienname' => 'name', 'lastname' => 'name', 'surname' => 'name',
@@ -295,6 +296,13 @@ class MemberImportService {
         } else {
             $data['salutation'] = null;
             $warnings[] = $this->l->t('Title “%s” unknown, left empty', [$salutation]);
+        }
+
+        $gender = mb_strtolower(trim($record['gender'] ?? ''));
+        $genders = ['m' => 'M', 'männlich' => 'M', 'male' => 'M', 'w' => 'W', 'weiblich' => 'W', 'f' => 'W', 'female' => 'W', 'd' => 'D', 'divers' => 'D', 'diverse' => 'D', 'o' => 'O', 'ohne angabe' => 'O', 'not specified' => 'O'];
+        $data['gender'] = $genders[$gender] ?? null;
+        if ($gender !== '' && !isset($genders[$gender])) {
+            $warnings[] = $this->l->t('Gender “%s” unknown, left empty', [$gender]);
         }
 
         foreach (['birthDate' => $this->l->t('Date of birth'), 'joinDate' => $this->l->t('Date joined'), 'leaveDate' => $this->l->t('Date left'), 'mandateDate' => $this->l->t('Date of signature')] as $field => $label) {

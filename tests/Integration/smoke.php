@@ -111,6 +111,10 @@ if ($mode === 'run') {
     $groups->delete($clubId, $group->getId());
     check($groups->list($clubId) === [], 'group deleted');
 
+    $members->update($clubId, $late->getId(), ['name' => 'CI Spät', 'firstName' => 'Lea', 'joinDate' => '2025-10-15', 'birthDate' => '1990-05-05', 'gender' => 'W', 'role' => 'member']);
+    $xml = svc(\OCA\Verein\Service\AssociationReportService::class)->xml($clubId, '2026-01-01', '123', 'Kai', '59');
+    check(str_contains($xml, '<Jahrgang>1990</Jahrgang>') && str_contains($xml, '<AnzahlW>1</AnzahlW>'), 'gender stored and counted in the association report');
+
     // fee run 2025 with pro-rata: Kai and Lea joined in October 2025 -> 3/12
     $run = svc(FeeRunService::class)->run($clubId, 2025, '2025-03-31', null, true);
     $amounts = array_column($run['included'], 'amount', 'name');

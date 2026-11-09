@@ -286,6 +286,7 @@ class MemberService {
         $member->setCity(null);
         $member->setEmail('');
         $member->setPhone(null);
+        $member->setGender(null);
         $member->setIban(null);
         $member->setBic(null);
         $member->setBirthDate(null);
@@ -359,6 +360,7 @@ class MemberService {
         $member->setCity($this->nullIfEmpty($data['city'] ?? null));
         $member->setEmail((string)($data['email'] ?? ''));
         $member->setPhone($this->nullIfEmpty($data['phone'] ?? null));
+        $member->setGender($this->nullIfEmpty($data['gender'] ?? null));
         $member->setIban($this->nullIfEmpty($data['iban'] ?? null));
         $member->setBic($this->nullIfEmpty($data['bic'] ?? null));
         $member->setBirthDate($this->nullIfEmpty($data['birthDate'] ?? null));

@@ -127,6 +127,8 @@ zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins
   eigenständige Mitglieder mit eigenen Beiträgen. Der SEPA-Export zieht ihre Beiträge je Einzugsdatum als eine Lastschrift vom Konto und mit dem Mandat
   des Zahlers ein (Verwendungszweck nennt die Personen), das Mahnwesen schreibt einen Brief an den Zahler (`FeePayer::of()`). Nur eine Ebene; ein
   ausgetretener oder deaktivierter Zahler zählt nicht mehr. Wer den Zahler aus dem Verein entfernt, löst die Bündelung.
+- **Bestandsmeldung** (`AssociationReportService`, DOSB-Schnittstelle „Bestandsdaten“ SV-LSB, Version 1.3): zählt, wer am Stichtag Mitglied ist, nach Jahrgang und Geschlecht. Ohne gespeichertes Geschlecht entscheidet die
+  Anrede, sonst „ohne Angabe“; ohne Geburtsdatum wird die Person gemeldet statt gezählt. Mit Verbandscode entsteht neben den A-Zahlen eine B-Meldung mit denselben Zahlen (eine Sparte je Verein).
 - **Aufnahmegebühr** (`FeeRate::$joinFee`): eigener Beitrag mit `period` = `join`, einmal je Mitglied, nur für Eintritte im Beitragsjahr; Mitglieder, die im Eintrittsjahr beitragsfrei sind,
   und Ehrenmitglieder zahlen sie nicht. Gleiches Fälligkeitsdatum wie der Mitgliedsbeitrag, damit beides eine Lastschrift wird.
 - **Zahlungsintervalle** (`FeeRate::$billingInterval`, `Service\FeePeriod`): Der Betrag der Kategorie gilt je Zahlung, es wird nichts umgerechnet. Der Beitragslauf rechnet den

@@ -97,7 +97,7 @@ const ACTIONS = {
 const FIELDS = {
   name: t('verein', 'Name'), firstName: t('verein', 'First name'), fullName: t('verein', 'Name'), salutation: t('verein', 'Title'),
   address: t('verein', 'Address'), street: t('verein', 'Street'), postalCode: t('verein', 'Postal code'), city: t('verein', 'City'),
-  email: t('verein', 'Email'), phone: t('verein', 'Phone'), iban: 'IBAN', bic: 'BIC', birthDate: t('verein', 'Date of birth'), age: t('verein', 'Age'),
+  email: t('verein', 'Email'), phone: t('verein', 'Phone'), gender: t('verein', 'Gender'), iban: 'IBAN', bic: 'BIC', birthDate: t('verein', 'Date of birth'), age: t('verein', 'Age'),
   role: t('verein', 'Position'), joinDate: t('verein', 'Joined'), leaveDate: t('verein', 'Left'), foundingMember: t('verein', 'Founding member'),
   feeExemptJoinYear: t('verein', 'Fee-exempt in the year joined'),
   honoraryMember: t('verein', 'Honorary member'),

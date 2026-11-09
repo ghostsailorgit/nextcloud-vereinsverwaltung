@@ -4,6 +4,18 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.8.0] - 2026-11-09
+
+### ✨ Neu
+- **Bestandsmeldung:** Im Dashboard zeigt eine neue Auswertung die Mitglieder nach Jahrgang und Geschlecht zum Stichtag und erzeugt die XML-Datei der DOSB-Schnittstelle zum Hochladen beim Landessportbund.
+- **Geschlecht:** neues optionales Feld am Mitglied, auch im CSV-Export und Import. Ist nichts eingetragen, nimmt die Auswertung die Anrede.
+- **Gruppen beim Anlegen:** Ein neues Mitglied lässt sich direkt Gruppen zuordnen.
+
+### 🔧 Geändert
+- Abfragen sind nur noch beim Löschen farbig hervorgehoben; alle anderen Bestätigungen bleiben neutral.
+
+---
+
 ## [1.7.0] - 2026-11-09
 
 ### ✨ Neu

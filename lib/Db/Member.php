@@ -28,6 +28,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCity(?string $city)
  * @method string getEmail()
  * @method void setEmail(string $email)
+ * @method ?string getGender()
+ * @method void setGender(?string $gender)
  * @method ?string getPhone()
  * @method void setPhone(?string $phone)
  * @method ?string getIban()
@@ -57,6 +59,8 @@ class Member extends Entity implements JsonSerializable {
     protected ?string $city = null;
     protected string $email = '';
     protected ?string $phone = null;
+    // M, W, D or O (not specified), as in the association report; null = not recorded
+    protected ?string $gender = null;
     protected ?string $iban = null;
     protected ?string $bic = null;
     protected ?string $birthDate = null;
@@ -194,6 +198,7 @@ class Member extends Entity implements JsonSerializable {
             'city' => $this->city,
             'email' => $this->email,
             'phone' => $this->phone,
+            'gender' => $this->gender,
             'iban' => $this->iban,
             'bic' => $this->bic,
             'birthDate' => $this->birthDate,

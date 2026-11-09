@@ -58,6 +58,9 @@ class ValidationService {
         }
 
         // free text ("0171 123456 (mobil)"), only the column length is a hard limit
+        if (!empty($data['gender']) && !in_array($data['gender'], AssociationReportService::GENDERS, true)) {
+            $errors[] = $this->l->t('Gender is invalid');
+        }
         if (mb_strlen(trim((string)($data['phone'] ?? ''))) > 50) {
             $errors[] = $this->l->t('Phone number must not be longer than 50 characters');
         }

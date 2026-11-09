@@ -64,4 +64,12 @@ class ValidationServiceTest extends TestCase {
         $this->assertTrue($this->service->validateIBAN('DE89 3704 0044 0532 0130 00'));
         $this->assertFalse($this->service->validateIBAN('DE89370400440532013001'));
     }
+
+    public function testGenderMustBeOneOfTheKnownValues(): void {
+        $service = new ValidationService(l10n: SourceL10n::fromAppLanguage('de'));
+        foreach (['M', 'W', 'D', 'O', '', null] as $ok) {
+            $this->assertTrue($service->validateMember(['name' => 'Muster', 'gender' => $ok])['valid']);
+        }
+        $this->assertFalse($service->validateMember(['name' => 'Muster', 'gender' => 'x'])['valid']);
+    }
 }

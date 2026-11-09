@@ -161,6 +161,7 @@ class SelfServiceService {
                 'city' => $person->getCity(),
                 'email' => $person->getEmail(),
                 'phone' => $person->getPhone(),
+                'gender' => $person->getGender(),
                 'iban' => $person->getIban(),
                 'bic' => $person->getBic(),
                 'deceased' => $person->getDeceased(),
