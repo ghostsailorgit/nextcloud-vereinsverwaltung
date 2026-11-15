@@ -1014,7 +1014,28 @@ export default {
   :deep(.v-select.select) {
     min-width: 0;
     width: 100%;
+    /* its bottom margin put selects 4px higher than the text fields next to them (issue #47) */
+    margin-bottom: 0;
   }
+
+  /* One height for every field (issue #47): Nextcloud draws text fields 30px inside a 34px frame, selects at 34px and the
+     multiple and account selects at 42px. */
+  > :deep(.input-field) .input-field__main-wrapper { padding-block: 0; }
+  > :deep(.input-field) .input-field__input { height: var(--default-clickable-area); }
+  /* as specific as Nextcloud's own rule (.nc-select.v-select.select.vs--multiple ...), or it loses */
+  :deep(.nc-select.v-select.select.vs--multiple .vs__dropdown-toggle) {
+    min-height: var(--default-clickable-area);
+    padding-block: 0;
+    border-width: 0;
+  }
+  :deep(.vs--multiple .vs__selected-options) {
+    min-height: var(--default-clickable-area);
+    align-items: center;
+  }
+  /* the account select raises the clickable area to 42px for avatars */
+  .account-link :deep(.vs__search .input-field__main-wrapper) { --default-clickable-area: 34px; }
+
+  .date-field .form-input { width: 100%; }
 }
 
 .form-subheader {

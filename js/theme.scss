@@ -323,3 +323,28 @@ a.skip-navigation:focus {
     text-decoration: underline;
   }
 }
+
+// Plain inputs and selects (dates, numbers, the month of the fee run) drawn like Nextcloud's own fields: same height,
+// rounding and outline as NcTextField, so they no longer stand out next to them (issue #47). The id beats the scoped
+// .form-input rules of the components.
+#content-vue {
+  input.form-input,
+  select.form-input {
+    height: var(--default-clickable-area);
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 8px;
+    border: none;
+    border-radius: var(--border-radius-element, var(--border-radius-large));
+    box-shadow: 0 -1px 0 0 var(--color-border-maxcontrast), 0 0 0 1px color-mix(in srgb, var(--color-border-maxcontrast), transparent 65%);
+    background: var(--color-main-background);
+    color: var(--color-main-text);
+    font-size: var(--default-font-size);
+
+    &:focus,
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--color-main-text);
+    }
+  }
+}
