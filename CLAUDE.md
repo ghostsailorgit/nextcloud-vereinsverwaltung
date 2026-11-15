@@ -46,6 +46,11 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - Everything user-facing is scoped to a club via a `clubId` request parameter. The frontend sends it
   automatically (`js/api.js` interceptor + `js/store/club.js`); direct `axios` calls must add it.
 
+- **Own fields (`verein_custom_fields`, `verein_custom_values`, `CustomFieldService`)**: each club defines extra member fields itself (defined with
+  `verein.club.manage`, filled with `verein.member.manage`, read with `verein.member.view`), so a new kind of information needs no app change.
+  Values travel as JSON in the form field `customFields` (form-encoded API), are checked before the member is written, deleted when the
+  person leaves the club or is anonymized, part of "My data"/export/backup; the audit log names only the changed field ids.
+
 - **Groups (`verein_groups`, `verein_group_members`, `ClubGroupService`)** inside a club, e.g. training groups: one row per stay, so joining again keeps the
   history. Reading needs `verein.member.view`, changes `verein.member.manage`. Not Nextcloud groups: most members have no account.
   `fee_rate_id` (only with `verein.club.manage`, never the default category): members at the end of the billing period pay it on top of their own fee; such fees have `verein_fees.group_id` and are idempotent per member, group and months on their own.

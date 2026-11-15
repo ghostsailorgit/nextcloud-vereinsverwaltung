@@ -20,7 +20,8 @@ export function matchesMemberSearch(member, query) {
   const phone = String(member.phone ?? '')
   const text = normalize([
     member.id, member.memberNumber, member.firstName, member.name, member.email, phone, phone.replace(/\D/g, ''),
-    member.street, member.postalCode, member.city
+    member.street, member.postalCode, member.city,
+    ...Object.values(member.custom || {})
   ].join(' '))
   return words.every(word => text.includes(word))
 }

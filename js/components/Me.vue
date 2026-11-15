@@ -46,6 +46,9 @@
               </div>
             </dd>
           </template>
+          <template v-for="(c, i) in (m.customFields || [])" :key="'cf' + i">
+            <dt>{{ c.label }}</dt><dd>{{ formatFieldValue(c.type, c.value) }}</dd>
+          </template>
           <dt>{{ t('verein', 'SEPA mandate') }}</dt>
           <dd>
             <span v-if="m.mandate.date">{{ t('verein', 'Reference {reference}, signed on {date}', { reference: m.mandate.reference, date: formatDate(m.mandate.date) }) }}<span v-if="m.mandate.signedCopyOnFile"> ({{ t('verein', 'copy on file') }})</span></span>
@@ -93,6 +96,7 @@ import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate, salutationLabel } from '../format'
 import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
+import { formatFieldValue } from '../customFields'
 
 export default {
   name: 'Me',
@@ -133,7 +137,7 @@ export default {
     }
     const print = () => window.print()
 
-    return { t, n, data, loading, error, personName, address, formatDate, formatMoney, roleLabel, statusLabel, download, print }
+    return { t, n, data, loading, error, personName, address, formatDate, formatMoney, formatFieldValue, roleLabel, statusLabel, download, print }
   }
 }
 </script>

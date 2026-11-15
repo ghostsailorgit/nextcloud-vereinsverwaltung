@@ -18,6 +18,7 @@ use OCA\Verein\Service\WelcomeMailService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
+use OCA\Verein\Service\CustomFieldService;
 use OCP\IRequest;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -49,7 +50,8 @@ class MemberController extends Controller {
         private SelfServiceService $selfService,
         ?IL10N $l10n = null,
         private ?ClubGroupService $clubGroups = null,
-        private ?WelcomeMailService $welcomeMail = null
+        private ?WelcomeMailService $welcomeMail = null,
+        private ?CustomFieldService $customFields = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
@@ -86,9 +88,11 @@ class MemberController extends Controller {
                 $members = $this->memberService->findAll($this->clubId());
             }
             $groups = $this->clubGroups?->currentGroupNames($this->clubId()) ?? [];
+            // one query for the whole club, not one per member
+            $custom = $this->customFields?->valuesForClub($this->clubId()) ?? [];
             return new JSONResponse([
                 'status' => 'ok',
-                'members' => array_map(fn ($m) => $this->present($m) + ['groups' => $groups[$m->getId()] ?? []], $members)
+                'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? []) + ['groups' => $groups[$m->getId()] ?? []], $members)
             ]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
@@ -242,7 +246,10 @@ class MemberController extends Controller {
                 ], 400);
             }
 
+            // the own fields are checked before anything is written
+            $custom = $this->readCustomFields(true);
             $member = $this->memberService->create($this->clubId(), $data);
+            $this->customFields?->saveValues($this->clubId(), $member->getId(), $custom);
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $this->present($member)
@@ -250,6 +257,20 @@ class MemberController extends Controller {
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
+    }
+
+    /**
+     * The submitted values of the club's own fields, checked; nothing sent = nothing changes.
+     *
+     * @return array<int, ?string>
+     * @throws \OCA\Verein\Exception\ValidationException
+     */
+    private function readCustomFields(bool $creating): array {
+        $raw = $this->request->getParam('customFields');
+        if ($this->customFields === null || ($raw === null && !$creating)) {
+            return [];
+        }
+        return $this->customFields->validateValues($this->clubId(), $raw, $creating);
     }
 
     /**
@@ -322,7 +343,9 @@ class MemberController extends Controller {
                 ], 400);
             }
 
+            $custom = $this->readCustomFields(false);
             $member = $this->memberService->update($this->clubId(), (int)$id, $data);
+            $this->customFields?->saveValues($this->clubId(), $member->getId(), $custom);
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $this->present($member)
@@ -342,6 +365,8 @@ class MemberController extends Controller {
     public function destroy($id) {
         try {
             $this->memberService->remove($this->clubId(), (int)$id);
+            // the club's own fields belong to the membership
+            $this->customFields?->deleteForMember($this->clubId(), (int)$id);
             return new JSONResponse([
                 'status' => 'ok',
                 'message' => $this->l->t('Member deleted')
@@ -416,6 +441,7 @@ class MemberController extends Controller {
         try {
             $this->memberService->find($this->clubId(), (int)$id);
             $member = $this->memberService->anonymize((int)$id);
+            $this->customFields?->deleteForPerson((int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
@@ -458,8 +484,10 @@ class MemberController extends Controller {
      * The member as JSON plus the display name of the linked Nextcloud
      * account (falls back to the uid if that account no longer exists).
      */
-    private function present($member): array {
+    private function present($member, ?array $custom = null): array {
         $data = $member->jsonSerialize();
+        // the club's own fields, field id => value (an object in JSON, also when empty)
+        $data['custom'] = (object)($custom ?? $this->customFields?->valuesFor($this->clubId(), $member->getId()) ?? []);
         $uid = $member->getUserId();
         if ($uid !== null && $uid !== '') {
             $user = $this->userManager->get($uid);

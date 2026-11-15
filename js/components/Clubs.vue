@@ -202,6 +202,8 @@
     </div>
 
     <!-- Automatic rights -->
+    <CustomFields v-if="club && canManage" :key="club.id" />
+
     <div v-if="club && canManageRoles" class="card">
       <h3>{{ t('verein', 'Automatic permissions') }}</h3>
       <p class="hint">
@@ -252,6 +254,7 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import Backups from './Backups.vue'
+import CustomFields from './CustomFields.vue'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { extractErrorMessage } from '../errorMessage'
@@ -264,7 +267,7 @@ const emptyAccount = () => ({ id: null, label: '', iban: '', bic: '', creditorId
 
 export default {
   name: 'Clubs',
-  components: { NcActionButton, NcActions, NcButton, NcTextField, NcSelect, Backups },
+  components: { NcActionButton, NcActions, NcButton, NcTextField, NcSelect, Backups, CustomFields },
   setup() {
     const busy = ref(false)
     const newClubName = ref('')
