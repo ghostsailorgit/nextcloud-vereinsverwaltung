@@ -5,7 +5,9 @@
  */
 namespace OCA\Verein\Controller;
 
+use OCA\Verein\Attributes\RequirePermission;
 use OCA\Verein\Exception\ValidationException;
+use OCA\Verein\Service\BackupAccess;
 use OCA\Verein\Service\BackupService;
 use OCP\IUserSession;
 use OCP\AppFramework\Controller;
@@ -18,20 +20,30 @@ use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 
 /**
- * Backups cover all clubs, so every action is reserved for Nextcloud
- * administrators (no @NoAdminRequired - Nextcloud itself rejects everybody else).
+ * Backups cover all clubs: Nextcloud administrators may always use them, holders of 'verein.backup.restore' only while the
+ * installation has exactly one club (BackupAccess, checked in every action - the attribute alone accepts the permission
+ * from any club).
  */
 class BackupController extends Controller {
     use RespondsWithErrors;
 
     private IL10N $l;
 
-    public function __construct(string $appName, IRequest $request, private BackupService $backups, private IUserSession $userSession, ?IL10N $l10n = null) {
+    public function __construct(string $appName, IRequest $request, private BackupService $backups, private IUserSession $userSession, private BackupAccess $access, ?IL10N $l10n = null) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($appName, $request);
     }
 
+    /**
+     * @NoAdminRequired
+     */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function index(): JSONResponse {
+        try {
+            $this->allowed();
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
         return new JSONResponse([
             'status' => 'ok',
             'backups' => $this->backups->listBackups(),
@@ -39,8 +51,13 @@ class BackupController extends Controller {
         ]);
     }
 
+    /**
+     * @NoAdminRequired
+     */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function create(): JSONResponse {
         try {
+            $this->allowed();
             $backup = $this->backups->createBackup();
             $this->backups->prune();
             return new JSONResponse(['status' => 'ok', 'backup' => $backup], Http::STATUS_CREATED);
@@ -51,38 +68,56 @@ class BackupController extends Controller {
 
     /**
      * What restoring this stored backup would change. Nothing is written.
+     *
+     * @NoAdminRequired
      */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function previewRestore(string $name): JSONResponse {
         return $this->respond(fn () => $this->backups->summary($this->stored($name)));
     }
 
     /**
      * Replaces all club data (of every club) with this stored backup; the current state is backed up first.
+     *
+     * @NoAdminRequired
      */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function restore(string $name): JSONResponse {
         return $this->respond(fn () => $this->restoreBackup($this->stored($name)));
     }
 
     /**
      * What restoring an uploaded backup file (e.g. one downloaded earlier) would change. Nothing is written.
+     *
+     * @NoAdminRequired
      */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function previewUpload(): JSONResponse {
         return $this->respond(fn () => $this->backups->summary($this->uploaded()));
     }
 
     /**
      * Replaces all club data with an uploaded backup file; the current state is backed up first.
+     *
+     * @NoAdminRequired
      */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function restoreUpload(): JSONResponse {
         return $this->respond(fn () => $this->restoreBackup($this->uploaded()));
     }
 
     private function respond(callable $action): JSONResponse {
         try {
+            $this->allowed();
             return new JSONResponse(['status' => 'ok'] + $action());
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
+    }
+
+    /** @throws \OCA\Verein\Exception\PermissionDeniedException */
+    private function allowed(): void {
+        $this->access->check($this->userSession->getUser()?->getUID() ?? '');
     }
 
     /** @throws ValidationException */
@@ -126,12 +161,18 @@ class BackupController extends Controller {
      * Plain file download from a link, read-only.
      *
      * @NoCSRFRequired
+     *
+     * @NoAdminRequired
      */
+    #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function download(string $name) {
         try {
+            $this->allowed();
             return new DataDownloadResponse($this->backups->getContent($name), $name, 'application/gzip');
         } catch (NotFoundException $e) {
             return new JSONResponse(['status' => 'error', 'message' => $this->l->t('Backup not found')], Http::STATUS_NOT_FOUND);
+        } catch (\OCA\Verein\Exception\PermissionDeniedException $e) {
+            return $this->errorResponse($e);
         }
     }
 }

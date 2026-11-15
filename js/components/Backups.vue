@@ -4,7 +4,7 @@
 -->
 <template>
   <div class="card backups">
-    <h3>{{ t('verein', 'Backups (administrator)') }}</h3>
+    <h3>{{ isAdmin ? t('verein', 'Backups (administrator)') : t('verein', 'Backups') }}</h3>
     <p class="hint">
       {{ t('verein', 'All club data (all clubs, members, fees, roles) is backed up automatically every day. Backups older than {days} days are deleted automatically. They are stored in Nextcloud\'s app data folder, not in Files.', { days: retentionDays }) }}
     </p>
@@ -36,7 +36,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { t } from '@nextcloud/l10n'
 import { formatDateTime, formatNumber } from '../format'
@@ -45,6 +45,7 @@ import { api } from '../api'
 import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
 import { confirmAction } from '../confirm'
+import { clubState } from '../store/club'
 
 export default {
   name: 'Backups',
@@ -131,7 +132,7 @@ export default {
     const downloadUrl = (name) => absoluteUrl('/apps/verein/backups/' + encodeURIComponent(name))
 
     onMounted(load)
-    return { t, backups, retentionDays, loaded, busy, create, restoreStored, restoreFile, formatTime, formatSize, downloadUrl }
+    return { t, isAdmin: computed(() => clubState.isAdmin), backups, retentionDays, loaded, busy, create, restoreStored, restoreFile, formatTime, formatSize, downloadUrl }
   }
 }
 </script>

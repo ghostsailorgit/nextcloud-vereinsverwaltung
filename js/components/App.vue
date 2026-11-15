@@ -110,7 +110,7 @@ export default {
       { id: 'finance', label: t('verein', 'Finances'), emoji: '💰', show: can('verein.finance.read') },
       { id: 'roles', label: t('verein', 'Roles'), emoji: '🛡️', show: can('verein.role.manage') },
       { id: 'sepa', label: t('verein', 'SEPA export'), emoji: '🏦', show: can('verein.sepa.export') },
-      { id: 'clubs', label: t('verein', 'Club'), emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin },
+      { id: 'clubs', label: t('verein', 'Club'), emoji: '🏛️', show: can('verein.club.manage') || clubState.isAdmin || clubState.backupAccess },
       { id: 'audit', label: t('verein', 'Audit log'), emoji: '📜', show: can('verein.audit.view') },
       { id: 'me', label: t('verein', 'My data'), emoji: '👤', show: !!clubState.me?.linked },
       {

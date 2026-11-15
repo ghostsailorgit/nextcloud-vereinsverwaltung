@@ -117,7 +117,8 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     APIs, no shell tools (`mysqldump`, cron on the host), no hard-coded hosts/paths/groups, work on every database Nextcloud
     supports, ship background jobs via `appinfo/info.xml`. New tables go into `BackupService::TABLES` (a test checks it).
     Backups: `BackupService` (gzip JSON in the app data folder), `DailyBackupJob`, retention 30 days but the newest 7 always kept.
-    Restore: `occ verein:backup:restore` or the UI (`BackupController`, Nextcloud admins only like every backup route; a stored backup or an
+    Restore: `occ verein:backup:restore` or the UI (`BackupController`: Nextcloud admins, or `verein.backup.restore` only while there is exactly
+    one club - `BackupAccess::check()` in every backup action, the attribute alone accepts the permission from any club; a stored backup or an
     upload, preview first, a backup of a newer app version is refused, the current state is backed up first, the restore is logged).
 
 15. **Anonymize, don't delete:** `MemberService::anonymize()` replaces a person's PII with placeholders but keeps the row -

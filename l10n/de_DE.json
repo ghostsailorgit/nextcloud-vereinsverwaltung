@@ -1005,7 +1005,10 @@
         "optional": "optional",
         "The member number may have at most %s characters": "Die Mitgliedsnummer darf höchstens %s Zeichen haben",
         "The member number %s is already used in this club": "Die Mitgliedsnummer %s ist in diesem Verein schon vergeben",
-        "The member number %1$s is already in line %2$s of this file": "Die Mitgliedsnummer %1$s steht schon in Zeile %2$s dieser Datei"
+        "The member number %1$s is already in line %2$s of this file": "Die Mitgliedsnummer %1$s steht schon in Zeile %2$s dieser Datei",
+        "Backups cover all clubs. With more than one club only Nextcloud administrators may use them.": "Sicherungen umfassen alle Vereine. Gibt es mehr als einen Verein, dürfen nur Nextcloud-Administratoren sie verwenden.",
+        "Back up and restore (only with one club)": "Sichern und wiederherstellen (nur bei einem Verein)",
+        "Backups": "Sicherungen"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

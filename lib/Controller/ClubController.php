@@ -7,6 +7,7 @@ namespace OCA\Verein\Controller;
 
 use Exception;
 use OCA\Verein\Attributes\RequirePermission;
+use OCA\Verein\Service\BackupAccess;
 use OCA\Verein\Service\ClubService;
 use OCA\Verein\Service\FeeRateService;
 use OCA\Verein\Service\RBAC\RoleService;
@@ -35,6 +36,7 @@ class ClubController extends Controller {
         private FeeRateService $feeRates,
         private RoleService $roleService,
         private IUserSession $userSession,
+        private BackupAccess $backupAccess,
         ?IL10N $l10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
@@ -52,6 +54,7 @@ class ClubController extends Controller {
         return new JSONResponse([
             'status' => 'ok',
             'isAdmin' => $this->roleService->isNextcloudAdmin($uid),
+            'backupAccess' => $this->backupAccess->allows($uid),
             'clubs' => $this->clubService->listForUser($uid),
         ]);
     }

@@ -45,7 +45,7 @@ darf**. Vereine anlegen/löschen und Rollendefinitionen ändern dürfen nur Next
 
 Jeder Endpunkt ist mit `#[RequirePermission('verein.…')]` geschützt; ein Test stellt sicher, dass keiner
 vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/delete/export`,
-`verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`.
+`verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`, `verein.backup.restore` (Sicherungen; wirkt nur bei genau einem Verein, sonst nur Nextcloud-Administratoren, siehe `BackupAccess`).
 
 ## Mitglieder deaktivieren
 Ein Mitglied lässt sich in einem Verein deaktivieren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“).
