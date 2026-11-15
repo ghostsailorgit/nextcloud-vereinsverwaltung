@@ -1,13 +1,13 @@
 # Planung
 
-Stand: Version 1.16.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
+Stand: Version 1.17.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Absicht. Wünsche und Ideen gern als [Issue](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues).
 
 ## Fertig
 
 | Thema | Inhalt |
 |---|---|
 | Mehrere Vereine | Vereine, Mitgliedschaften (eine Person in mehreren Vereinen), Bankkonten, Rechte je Verein |
-| Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung, eigene Mitgliedsnummer je Verein |
+| Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung, eigene Mitgliedsnummer je Verein, eigene Felder je Verein (Text, Zahl, Datum, Auswahl, Ja/Nein) |
 | Mitgliedsbestätigung | E-Mail mit eigenem Text und Platzhaltern, nur auf Wunsch, Mitglieds-IBAN gekürzt |
 | Bestandsmeldung | Jahrgänge nach Geschlecht zum Stichtag, XML-Datei der DOSB-Schnittstelle |
 | Gruppen | Gruppen innerhalb des Vereins (z. B. Trainingsgruppen) mit Ein- und Austritt je Aufenthalt, Anzeige und Filter in der Mitgliederliste |

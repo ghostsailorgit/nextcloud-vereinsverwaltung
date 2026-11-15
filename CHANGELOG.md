@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.17.0] - 2026-11-15
+
+### ✨ Neu
+- **Eigene Felder** ([#49](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/49)): Jeder Verein legt im Reiter „Verein“ selbst fest, welche Angaben er zusätzlich braucht, etwa Lizenz, Passnummer, Instrument oder Graduierung. Arten: Text, Zahl, Datum, Auswahlliste und Ja/Nein, wahlweise als Pflichtfeld und als Spalte in der Mitgliederliste. Die Felder erscheinen im Mitgliederformular, sind durchsuchbar, stehen in CSV-Export und -Import (Spaltenüberschrift = Name des Feldes) und unter „Meine Daten“. Sie sind Teil der Sicherung, werden beim Austritt aus dem Verein und beim Anonymisieren gelöscht, und das Änderungsprotokoll nennt nur, welches Feld sich geändert hat.
+
+---
+
 ## [1.16.0] - 2026-11-15
 
 ### ✨ Neu

@@ -40,7 +40,8 @@ class ExportController extends Controller {
         FeeService $feeService,
         CsvExporter $csvExporter,
         PdfExporter $pdfExporter,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        private ?\OCA\Verein\Service\CustomFieldService $customFields = null
     ) {
         parent::__construct($appName, $request);
         $this->memberService = $memberService;
@@ -65,6 +66,19 @@ class ExportController extends Controller {
 
             // Format and export (works with empty array too)
             $formatted = $this->csvExporter->formatMembers($members);
+            // the club's own fields as further columns, headed by their names (the import reads them back the same way)
+            if ($this->customFields !== null) {
+                $fields = $this->customFields->fields($clubId);
+                $values = $this->customFields->valuesForClub($clubId);
+                foreach ($fields as $field) {
+                    $formatted['headers'][] = $field->getLabel();
+                }
+                foreach ($members as $i => $member) {
+                    foreach ($fields as $field) {
+                        $formatted['data'][$i][] = $this->customFields->display($field, $values[$member->getId()][$field->getId()] ?? null);
+                    }
+                }
+            }
             $result = $this->csvExporter->export($formatted['data'], $formatted['headers'], 'members');
 
             $response = new DataDownloadResponse(

@@ -81,6 +81,15 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | PUT | `/finance/{id}` | `verein.finance.write` |
 | DELETE | `/finance/{id}` | `verein.finance.delete` |
 
+## CustomField
+
+| Methode | Pfad | Erforderliches Recht |
+|---|---|---|
+| GET | `/custom-fields` | `verein.member.view` |
+| POST | `/custom-fields` | `verein.club.manage` |
+| PUT | `/custom-fields/{id}` | `verein.club.manage` |
+| DELETE | `/custom-fields/{id}` | `verein.club.manage` |
+
 ## ClubGroup
 
 | Methode | Pfad | Erforderliches Recht |

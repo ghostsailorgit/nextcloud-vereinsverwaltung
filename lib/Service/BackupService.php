@@ -42,10 +42,12 @@ class BackupService {
         'verein_audit_log',
         'verein_groups',
         'verein_group_members',
+        'verein_custom_fields',
+        'verein_custom_values',
     ];
 
     /** Tables that older backups do not contain; restoring such a backup leaves them untouched. */
-    public const OPTIONAL_TABLES = ['verein_audit_log', 'verein_groups', 'verein_group_members'];
+    public const OPTIONAL_TABLES = ['verein_audit_log', 'verein_groups', 'verein_group_members', 'verein_custom_fields', 'verein_custom_values'];
 
     /** Backups older than this are removed. */
     public const RETENTION_DAYS = 30;

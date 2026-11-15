@@ -35,7 +35,8 @@ class SelfServiceService {
         private FeeMapper $fees,
         ?IL10N $l10n = null,
         private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null,
-        private ?\OCA\Verein\Db\ClubGroupMapper $groups = null
+        private ?\OCA\Verein\Db\ClubGroupMapper $groups = null,
+        private ?CustomFieldService $customFields = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -123,6 +124,8 @@ class SelfServiceService {
                 'honoraryPaysFee' => $membership->getHonoraryPaysFee(),
                 'isFormer' => $view->isFormer(),
                 'groups' => $this->groupsOf($person->getId(), $club->getId()),
+                // what the club stores in its own fields is part of the person's data (Art. 15 GDPR)
+                'customFields' => $this->customFields?->labelledValuesFor($club->getId(), $person->getId()) ?? [],
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [
                     'reference' => $membership->getEffectiveMandateReference(),

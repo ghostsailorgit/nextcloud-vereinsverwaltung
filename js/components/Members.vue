@@ -211,6 +211,35 @@
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
 
+        <template v-if="customFields.length">
+          <h3 class="form-subheader">{{ t('verein', 'More details') }}</h3>
+          <template v-for="f in customFields" :key="f.id">
+            <label v-if="f.type === 'date'" class="date-field">
+              <span>{{ f.required ? f.label + ' *' : f.label }}</span>
+              <input v-model="formData.custom[f.id]" type="date" class="form-input" />
+            </label>
+            <NcSelect
+              v-else-if="f.type === 'select'"
+              v-model="formData.custom[f.id]"
+              :options="f.options"
+              :input-label="f.required ? f.label + ' *' : f.label"
+              :placeholder="t('verein', 'Select…')"
+            />
+            <label v-else-if="f.type === 'checkbox'" class="checkbox-field">
+              <input type="checkbox" :checked="formData.custom[f.id] === '1'" @change="formData.custom[f.id] = $event.target.checked ? '1' : ''" />
+              <span>{{ f.label }}</span>
+            </label>
+            <NcTextField
+              v-else
+              :model-value="formData.custom[f.id] ?? ''"
+              @update:model-value="formData.custom[f.id] = $event"
+              :type="f.type === 'number' ? 'number' : 'text'"
+              :label="f.required ? f.label + ' *' : f.label"
+              :maxlength="f.type === 'text' ? 500 : undefined"
+            />
+          </template>
+        </template>
+
         <h3 class="form-subheader">{{ t('verein', 'Bank details') }}</h3>
         <NcTextField
           :model-value="formData.iban"
@@ -325,6 +354,7 @@
               <th>{{ t('verein', 'Age') }}</th>
               <th>{{ t('verein', 'Member since') }}</th>
               <th v-if="groupOptions.length">{{ t('verein', 'Groups') }}</th>
+              <th v-for="f in customListFields" :key="'cf' + f.id">{{ f.label }}</th>
               <th>{{ t('verein', 'Position') }}</th>
               <th>{{ t('verein', 'Actions') }}</th>
             </tr>
@@ -343,6 +373,7 @@
               <td>{{ member.age !== null && member.age !== undefined ? n('verein', '%n year', '%n years', member.age) : '-' }}</td>
               <td>{{ member.membershipYears !== null && member.membershipYears !== undefined ? n('verein', '%n year', '%n years', member.membershipYears) : '-' }}</td>
               <td v-if="groupOptions.length">{{ (member.groups || []).join(', ') || '–' }}</td>
+              <td v-for="f in customListFields" :key="'cf' + f.id">{{ formatFieldValue(f.type, (member.custom || {})[f.id]) }}</td>
               <td>
                 <!-- position plus the status where it is not simply "active" (one column less, so the list fits) -->
                 <div class="status-cell">
@@ -438,6 +469,7 @@ import { extractErrorMessage } from '../errorMessage'
 import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate, salutationLabel } from '../format'
 import { hasAgeTiers, intervalLabel } from '../feeRates'
+import { formatFieldValue, customValues } from '../customFields'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -476,6 +508,7 @@ const emptyFormData = () => ({
   bic: '',
   mandateReference: '',
   memberNumber: '',
+  custom: {},
   mandateDate: '',
   mandateFile: '',
   userId: '',
@@ -647,8 +680,20 @@ export default {
       return absoluteUrl('/apps/files/files?dir=' + encodeURIComponent(dir) + '&openfile=true&scrollto=' + encodeURIComponent(file))
     }
 
+    // the club's own fields (form, list columns)
+    const customFields = ref([])
+    const customListFields = computed(() => customFields.value.filter(f => f.showInList))
+    const loadCustomFields = async () => {
+      try {
+        customFields.value = (await api.get('custom-fields')).data.data || []
+      } catch (e) {
+        customFields.value = []
+      }
+    }
+
     onMounted(async () => {
       loadGroups()
+      loadCustomFields()
       await fetchMembers()
     })
 
@@ -740,9 +785,12 @@ export default {
       alertError.value = ''
       alertErrors.value = []
       try {
+        // the own fields go as JSON: the API sends form fields, an object would arrive as "[object Object]"
+        const { custom, ...fields } = formData
+        const payload = { ...fields, customFields: JSON.stringify(custom || {}) }
         const response = editingId.value
-          ? await api.put(`members/${editingId.value}`, formData)
-          : await api.post('members', formData)
+          ? await api.put(`members/${editingId.value}`, payload)
+          : await api.post('members', payload)
 
         if (response.data.status === 'error') {
           alertError.value = response.data.message
@@ -782,6 +830,7 @@ export default {
       for (const key of Object.keys(defaults)) {
         if (formData[key] === null || formData[key] === undefined) formData[key] = defaults[key]
       }
+      formData.custom = customValues(member)
     }
 
     const startAdd = () => {
@@ -924,6 +973,9 @@ export default {
       payerOptions,
       payerName,
       filteredMembers,
+      customFields,
+      customListFields,
+      formatFieldValue,
       displayName,
       roleLabel,
       saveMember,

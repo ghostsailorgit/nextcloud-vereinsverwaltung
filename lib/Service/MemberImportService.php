@@ -76,7 +76,8 @@ class MemberImportService {
         private FeeRateMapper $rates,
         private ClubMapper $clubs,
         private ValidationService $validation,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?CustomFieldService $customFields = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -89,7 +90,12 @@ class MemberImportService {
      */
     public function plan(int $clubId, string $csv, bool $mayAssignRoles): array {
         $this->clubs->find($clubId);
-        [$columns, $ignored, $records] = $this->parse($csv);
+        // a column named like one of the club's own fields fills that field
+        $customByKey = [];
+        foreach ($this->customFields?->fields($clubId) ?? [] as $field) {
+            $customByKey[$this->normaliseHeader($field->getLabel())] = $field->getId();
+        }
+        [$columns, $ignored, $records] = $this->parse($csv, $customByKey);
 
         $ratesByName = [];
         foreach ($this->rates->findByClub($clubId) as $rate) {
@@ -113,7 +119,21 @@ class MemberImportService {
         $rows = [];
         $counts = ['ok' => 0, 'error' => 0, 'duplicate' => 0];
         foreach ($records as $line => $record) {
+            $custom = [];
+            foreach ($record as $key => $value) {
+                if (str_starts_with((string)$key, 'custom:')) {
+                    $custom[(int)substr((string)$key, 7)] = $value;
+                    unset($record[$key]);
+                }
+            }
             [$data, $errors, $warnings] = $this->toMemberData($record, $ratesByName, $mayAssignRoles);
+            if ($errors === [] && $this->customFields !== null) {
+                try {
+                    $data['custom'] = $this->customFields->validateValues($clubId, $custom, true);
+                } catch (ValidationException $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
             $label = trim(($data['firstName'] ?? '') . ' ' . ($data['name'] ?? ''));
 
             $status = 'ok';
@@ -191,6 +211,7 @@ class MemberImportService {
             }
             try {
                 $member = $this->members->create($clubId, $row['data']);
+                $this->customFields?->saveValues($clubId, $member->getId(), $row['data']['custom'] ?? []);
                 $created[] = ['line' => $row['line'], 'name' => $row['name'], 'memberId' => $member->getId()];
             } catch (ValidationException $e) {
                 $failed[] = ['line' => $row['line'], 'name' => $row['name'], 'reason' => $e->getMessage()];
@@ -207,7 +228,7 @@ class MemberImportService {
      *   [header => field of the recognised columns, ignored headers, line number => field => value]
      * @throws ValidationException
      */
-    private function parse(string $csv): array {
+    private function parse(string $csv, array $customByKey = []): array {
         if (strlen($csv) > self::MAX_BYTES) {
             throw new ValidationException($this->l->t('The file is too large (at most 2 MB)'));
         }
@@ -244,7 +265,7 @@ class MemberImportService {
         foreach ($header as $i => $title) {
             $title = trim((string)$title);
             $key = $this->normaliseHeader($title);
-            $field = self::COLUMNS[$key] ?? null;
+            $field = self::COLUMNS[$key] ?? (isset($customByKey[$key]) ? 'custom:' . $customByKey[$key] : null);
             if ($field !== null && !in_array($field, $fieldByIndex, true)) {
                 $fieldByIndex[$i] = $field;
                 $columns[$title] = $field;
