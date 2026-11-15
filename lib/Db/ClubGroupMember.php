@@ -20,6 +20,8 @@ use OCP\AppFramework\Db\Entity;
  * @method string getJoinedOn()
  * @method void setJoinedOn(string $joinedOn)
  * @method ?string getLeftOn()
+ * @method ?int getFeeRateId()
+ * @method void setFeeRateId(?int $feeRateId)
  * @method void setLeftOn(?string $leftOn)
  */
 class ClubGroupMember extends Entity implements JsonSerializable {
@@ -29,11 +31,14 @@ class ClubGroupMember extends Entity implements JsonSerializable {
     // YYYY-MM-DD as text: the same on every database, and it sorts by date
     protected string $joinedOn = '';
     protected ?string $leftOn = null;
+    // the member's own fee category in this group instead of the group's; null = the group's
+    protected ?int $feeRateId = null;
 
     public function __construct() {
         $this->addType('clubId', 'integer');
         $this->addType('groupId', 'integer');
         $this->addType('memberId', 'integer');
+        $this->addType('feeRateId', 'integer');
     }
 
     public function jsonSerialize(): array {
@@ -43,6 +48,7 @@ class ClubGroupMember extends Entity implements JsonSerializable {
             'memberId' => $this->memberId,
             'joinedOn' => $this->joinedOn,
             'leftOn' => $this->leftOn,
+            'feeRateId' => $this->feeRateId,
         ];
     }
 }

@@ -28,7 +28,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |
 | `verein_user_roles` | wer hat welche Rolle in welchem Verein |
 | `verein_groups` | Gruppen eines Vereins, z. B. Trainingsgruppen (keine Nextcloud-Gruppen, die meisten Mitglieder haben kein Konto); `fee_rate_id`: Beitragskategorie, die Mitglieder der Gruppe zusätzlich zahlen |
-| `verein_group_members` | je Aufenthalt eines Mitglieds in einer Gruppe eine Zeile mit Ein- und Austritt; Zeiträume derselben Person in derselben Gruppe dürfen sich nicht überschneiden |
+| `verein_group_members` | je Aufenthalt eines Mitglieds in einer Gruppe eine Zeile mit Ein- und Austritt; Zeiträume derselben Person in derselben Gruppe dürfen sich nicht überschneiden; `fee_rate_id`: eigene Beitragskategorie des Mitglieds in dieser Gruppe statt der der Gruppe (leer = die der Gruppe) |
 | `verein_audit_log` | Änderungsprotokoll: wer hat wann was geändert (siehe „Änderungsprotokoll“) |
 
 ## Rechte

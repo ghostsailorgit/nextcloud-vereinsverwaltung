@@ -26,6 +26,8 @@ class FeeRateServiceTest extends TestCase {
     private int $nextId = 1;
     /** @var \OCA\Verein\Db\ClubGroup[] */
     private array $groupList = [];
+    /** @var \OCA\Verein\Db\ClubGroupMember[] */
+    private array $stayList = [];
 
     protected function setUp(): void {
         $this->rates = $this->createMock(FeeRateMapper::class);
@@ -33,6 +35,8 @@ class FeeRateServiceTest extends TestCase {
         $clubs = $this->createMock(ClubMapper::class);
         $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
         $groups->method('findByClub')->willReturnCallback(fn () => $this->groupList);
+        $periods = $this->createMock(\OCA\Verein\Db\ClubGroupMemberMapper::class);
+        $periods->method('findByClub')->willReturnCallback(fn () => $this->stayList);
 
         $this->rates->method('findByClub')->willReturnCallback(
             fn (int $club) => array_values(array_filter($this->store, fn (FeeRate $r) => $r->getClubId() === $club))
@@ -51,7 +55,7 @@ class FeeRateServiceTest extends TestCase {
             return $r;
         });
 
-        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs, l10n: SourceL10n::fromAppLanguage('de'), groups: $groups);
+        $this->service = new FeeRateService($this->rates, $this->memberships, $clubs, l10n: SourceL10n::fromAppLanguage('de'), groups: $groups, groupPeriods: $periods);
     }
 
     public function testTheFirstCategoryBecomesTheDefault(): void {
@@ -132,6 +136,18 @@ class FeeRateServiceTest extends TestCase {
 
         $this->expectExceptionMessage('kann nicht Standard sein');
         $this->service->update(1, $rate->getId(), ['name' => 'Fußball', 'amount' => '8', 'isDefault' => true]);
+    }
+
+    public function testACategoryOfAMemberInAGroupCannotBeDeleted(): void {
+        $this->service->create(1, ['name' => 'Erwachsene', 'amount' => '24']);
+        $rate = $this->service->create(1, ['name' => 'Passiv', 'amount' => '8']);
+        $this->memberships->method('countByFeeRate')->willReturn(0);
+        $stay = new \OCA\Verein\Db\ClubGroupMember();
+        $stay->setFeeRateId($rate->getId());
+        $this->stayList[] = $stay;
+
+        $this->expectExceptionMessage('noch von einer Gruppe verwendet');
+        $this->service->delete(1, $rate->getId());
     }
 
     public function testACategoryInUseCannotBeDeleted(): void {

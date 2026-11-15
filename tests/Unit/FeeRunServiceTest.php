@@ -127,6 +127,39 @@ class FeeRunServiceTest extends TestCase {
         $this->member(10, 'Anna', 'Adult');
     }
 
+    public function testAMemberCanHaveTheirOwnCategoryInAGroup(): void {
+        $this->departmentFixture();
+        $this->rate(3, 'Fußball passiv', 10.0);
+        $this->rate(4, 'Ehepartner frei', 0.0);
+        $this->member(11, 'Paul', 'Passiv');
+        $this->member(12, 'Erna', 'Ehe');
+        $this->stay(5, 10, '2020-01-01');
+        $this->stay(5, 11, '2020-01-01');
+        $this->stayList[1]->setFeeRateId(3);
+        $this->stay(5, 12, '2020-01-01');
+        $this->stayList[2]->setFeeRateId(4);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $groupFees = array_values(array_filter($plan['included'], fn ($e) => isset($e['groupId'])));
+        $this->assertSame([['Anna Adult', 30.0], ['Paul Passiv', 10.0]], array_map(fn ($e) => [$e['name'], $e['amount']], $groupFees), 'spouse free = no group fee');
+        $this->assertSame('Fußball passiv', $groupFees[1]['category']);
+    }
+
+    public function testAnOwnCategoryCountsInAGroupWithoutOne(): void {
+        $this->departmentFixture();
+        $this->rate(6, 'Aerobic', 4.0);
+        $this->rateList[2]->setBillingInterval('monthly');
+        $this->group(7, 'Aerobic', null);
+        $this->stay(7, 10, '2026-01-01');
+        $this->stayList[0]->setFeeRateId(6);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31', null, false, 3);
+
+        $this->assertSame([24.0, 4.0], array_column($plan['included'], 'amount'));
+        $this->assertSame('2026-03', $plan['included'][1]['period']);
+    }
+
     public function testAMemberOfADepartmentPaysItsFeeOnTop(): void {
         $this->departmentFixture();
         $this->stay(5, 10, '2020-01-01');

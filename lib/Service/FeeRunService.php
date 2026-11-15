@@ -162,7 +162,7 @@ class FeeRunService {
             }
 
             // before the checks of the member's own category: a problem there says nothing about the groups
-            $groupResult = $this->groupFees($member, $groupStays[$member->getId()] ?? [], $linkedGroups, $groupBilled[$member->getId()] ?? [], $year, $month, $prorata, $intervals, $customDescription);
+            $groupResult = $this->groupFees($member, $groupStays[$member->getId()] ?? [], $linkedGroups, $groupBilled[$member->getId()] ?? [], $year, $month, $prorata, $intervals, $customDescription, $ratesById);
             foreach ($groupResult['included'] as $entry) {
                 $included[] = $entry;
                 $total += $entry['amount'];
@@ -367,19 +367,32 @@ class FeeRunService {
      * @return array{0: array<int, array{name: string, rate: FeeRate}>, 1: array<int, array<int, ClubGroupMember[]>>} group id => group, member id => group id => stays
      */
     private function groupFeeSetup(int $clubId, array $ratesById): array {
-        $linked = [];
+        $groups = [];
         foreach ($this->groups?->findByClub($clubId) ?? [] as $group) {
+            $groups[$group->getId()] = $group;
+        }
+        if ($groups === []) {
+            return [[], []];
+        }
+        // a group without a category of its own still counts for members who have one there
+        $periods = $this->groupPeriods?->findByClub($clubId) ?? [];
+        $withOwn = [];
+        foreach ($periods as $stay) {
+            if ($stay->getFeeRateId() !== null) {
+                $withOwn[$stay->getGroupId()] = true;
+            }
+        }
+        $linked = [];
+        foreach ($groups as $id => $group) {
             $rate = $ratesById[(int)$group->getFeeRateId()] ?? null;
-            if ($rate !== null) {
-                $linked[$group->getId()] = ['name' => $group->getName(), 'rate' => $rate];
+            if ($rate !== null || isset($withOwn[$id])) {
+                $linked[$id] = ['name' => $group->getName(), 'rate' => $rate];
             }
         }
         $stays = [];
-        if ($linked !== []) {
-            foreach ($this->groupPeriods?->findByClub($clubId) ?? [] as $stay) {
-                if (isset($linked[$stay->getGroupId()])) {
-                    $stays[$stay->getMemberId()][$stay->getGroupId()][] = $stay;
-                }
+        foreach ($periods as $stay) {
+            if (isset($linked[$stay->getGroupId()])) {
+                $stays[$stay->getMemberId()][$stay->getGroupId()][] = $stay;
             }
         }
         return [$linked, $stays];
@@ -394,20 +407,20 @@ class FeeRunService {
      * @param array<int, array<int, bool>> $billed group id => months with a fee already
      * @return array{included: array, skipped: string[], upcoming: array}
      */
-    private function groupFees(Member $member, array $staysByGroup, array $linked, array $billed, int $year, int $month, bool $prorata, ?array $intervals, string $custom): array {
+    private function groupFees(Member $member, array $staysByGroup, array $linked, array $billed, int $year, int $month, bool $prorata, ?array $intervals, string $custom, array $ratesById = []): array {
         $out = ['included' => [], 'skipped' => [], 'upcoming' => []];
         foreach ($staysByGroup as $groupId => $stays) {
             $name = $linked[$groupId]['name'];
-            $rate = $linked[$groupId]['rate'];
             $skip = function (string $reason) use (&$out, $name): void {
                 $out['skipped'][] = $this->l->t('Group %1$s: %2$s', [$name, $reason]);
             };
-            $interval = $rate->getBillingInterval();
-            $period = FeePeriod::of($interval, $year, $month);
-            $stay = $this->stayAtEndOf($stays, sprintf('%d-%02d', $year, $period['lastMonth']));
+            // the stay that counts and its category: the member's own one in this group, else the group's
+            [$stay, $rate] = $this->stayAndRate($stays, $linked[$groupId]['rate'], $ratesById, $year, $month);
             if ($stay === null) {
                 continue;
             }
+            $interval = $rate->getBillingInterval();
+            $period = FeePeriod::of($interval, $year, $month);
             if ($intervals !== null && !in_array($interval, $intervals, true)) {
                 $skip($this->l->t('payment interval not part of this run'));
                 continue;
@@ -462,20 +475,27 @@ class FeeRunService {
     }
 
     /**
-     * The latest stay that has begun by the given month and does not end before it.
+     * The latest stay that has begun by the end of its billing period and does not end before it, with its category:
+     * the member's own one in the group, else the group's. No category at all = no fee.
      *
      * @param ClubGroupMember[] $stays
+     * @param array<int, FeeRate> $ratesById
+     * @return array{0: ?ClubGroupMember, 1: ?FeeRate}
      */
-    private function stayAtEndOf(array $stays, string $lastMonth): ?ClubGroupMember {
-        $found = null;
+    private function stayAndRate(array $stays, ?FeeRate $groupRate, array $ratesById, int $year, int $month): array {
+        usort($stays, fn (ClubGroupMember $a, ClubGroupMember $b) => strcmp($b->getJoinedOn(), $a->getJoinedOn()));
         foreach ($stays as $stay) {
+            $rate = $stay->getFeeRateId() !== null ? ($ratesById[$stay->getFeeRateId()] ?? null) : $groupRate;
+            if ($rate === null) {
+                continue;
+            }
+            $lastMonth = sprintf('%d-%02d', $year, FeePeriod::of($rate->getBillingInterval(), $year, $month)['lastMonth']);
             $left = $stay->getLeftOn();
-            if (substr($stay->getJoinedOn(), 0, 7) <= $lastMonth && ($left === null || substr($left, 0, 7) >= $lastMonth)
-                && ($found === null || $stay->getJoinedOn() > $found->getJoinedOn())) {
-                $found = $stay;
+            if (substr($stay->getJoinedOn(), 0, 7) <= $lastMonth && ($left === null || substr($left, 0, 7) >= $lastMonth)) {
+                return [$stay, $rate];
             }
         }
-        return $found;
+        return [null, null];
     }
 
     /** Names the group, so that the remittance text of a combined debit tells the fees apart. */
