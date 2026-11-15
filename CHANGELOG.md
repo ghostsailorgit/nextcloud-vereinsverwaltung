@@ -4,6 +4,16 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.13.0] - 2026-11-15
+
+### ✨ Neu
+- **Wiederherstellen über die Oberfläche** ([#50](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/50)): Im Reiter „Verein“ können Nextcloud-Administratoren eine Sicherung zurückspielen, aus der Liste oder aus einer heruntergeladenen Datei. Vorher zeigt die App, was sich ändert, und sichert den aktuellen Stand; die Wiederherstellung wird im Nextcloud-Protokoll vermerkt. Damit geht es auch ohne `occ`, etwa bei einer verwalteten Nextcloud. Sicherungen aus einer neueren App-Version werden abgelehnt.
+
+### 🐛 Behoben
+- Datei-Uploads über die interne API verloren ihre Datei, sobald die Vereins-ID ergänzt wurde (betraf bisher keine Funktion).
+
+---
+
 ## [1.12.1] - 2026-11-15
 
 ### 🐛 Behoben

@@ -37,6 +37,10 @@ class RoutePermissionsTest extends TestCase {
         'backup#index',
         'backup#create',
         'backup#download',
+        'backup#previewRestore',
+        'backup#restore',
+        'backup#previewUpload',
+        'backup#restoreUpload',
     ];
 
     /** @return array<string, array{string, string}> */

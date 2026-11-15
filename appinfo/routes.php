@@ -15,6 +15,10 @@ return [
         // Backups of the club tables (Nextcloud administrators only)
         ['name' => 'backup#index', 'url' => '/backups', 'verb' => 'GET'],
         ['name' => 'backup#create', 'url' => '/backups', 'verb' => 'POST'],
+        ['name' => 'backup#previewRestore', 'url' => '/backups/{name}/preview', 'verb' => 'POST', 'requirements' => ['name' => 'verein-backup-[0-9]{8}-[0-9]{6}\.json\.gz']],
+        ['name' => 'backup#restore', 'url' => '/backups/{name}/restore', 'verb' => 'POST', 'requirements' => ['name' => 'verein-backup-[0-9]{8}-[0-9]{6}\.json\.gz']],
+        ['name' => 'backup#previewUpload', 'url' => '/backup-upload/preview', 'verb' => 'POST'],
+        ['name' => 'backup#restoreUpload', 'url' => '/backup-upload/restore', 'verb' => 'POST'],
         ['name' => 'backup#download', 'url' => '/backups/{name}', 'verb' => 'GET', 'requirements' => ['name' => 'verein-backup-[0-9]{8}-[0-9]{6}\.json\.gz']],
         ['name' => 'club#create', 'url' => '/clubs', 'verb' => 'POST'],
         ['name' => 'club#update', 'url' => '/clubs/{clubId}', 'verb' => 'PUT'],

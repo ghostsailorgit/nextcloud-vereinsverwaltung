@@ -986,7 +986,21 @@
         "The fee category was not found": "Die Kategorie wurde nicht gefunden",
         "The default fee category cannot be the fee of a group": "Die Standardkategorie kann nicht der Beitrag einer Gruppe sein",
         "The fee category is still used by a group": "Die Kategorie wird noch von einer Gruppe verwendet",
-        "A fee category used by a group cannot be the default": "Eine Kategorie, die eine Gruppe verwendet, kann nicht Standard sein"
+        "A fee category used by a group cannot be the default": "Eine Kategorie, die eine Gruppe verwendet, kann nicht Standard sein",
+        "Restore from a file…": "Aus Datei wiederherstellen…",
+        "Restoring replaces the data of all clubs with the backup. The current state is backed up automatically first, so a restore can be undone.": "Eine Wiederherstellung ersetzt die Daten aller Vereine durch die Sicherung. Vorher wird der aktuelle Stand automatisch gesichert, sie lässt sich also rückgängig machen.",
+        "Restore…": "Wiederherstellen…",
+        "{what}: {now} now, {backup} in the backup": "{what}: jetzt {now}, in der Sicherung {backup}",
+        "Replace the data of all clubs with the backup of {date} (app version {version})? Everything entered since then is lost; the current state is backed up first.": "Die Daten aller Vereine durch die Sicherung vom {date} (App-Version {version}) ersetzen? Alles, was seitdem eingegeben wurde, geht verloren; der aktuelle Stand wird vorher gesichert.",
+        "Restore backup": "Sicherung wiederherstellen",
+        "Restore": "Wiederherstellen",
+        "Backup restored. The previous state was saved as {name}.": "Sicherung wiederhergestellt. Der vorherige Stand wurde als {name} gesichert.",
+        "The backup could not be restored": "Die Sicherung konnte nicht wiederhergestellt werden",
+        "The backup was made with a newer version of the app (%1$s, installed: %2$s). Update the app first.": "Die Sicherung stammt aus einer neueren Version der App (%1$s, installiert: %2$s). Bitte zuerst die App aktualisieren.",
+        "The file is not a valid backup of this app": "Die Datei ist keine gültige Sicherung dieser App",
+        "No backup file was uploaded": "Es wurde keine Sicherungsdatei hochgeladen",
+        "The file is too large for a backup of this app": "Die Datei ist zu groß für eine Sicherung dieser App",
+        "The restore failed, nothing was changed. The details are in the Nextcloud log.": "Die Wiederherstellung ist fehlgeschlagen, es wurde nichts geändert. Details stehen im Nextcloud-Protokoll."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

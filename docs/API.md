@@ -32,6 +32,10 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 |---|---|---|
 | GET | `/backups` | Nextcloud-Administrator |
 | POST | `/backups` | Nextcloud-Administrator |
+| POST | `/backups/{name}/preview` | Nextcloud-Administrator |
+| POST | `/backups/{name}/restore` | Nextcloud-Administrator |
+| POST | `/backup-upload/preview` | Nextcloud-Administrator |
+| POST | `/backup-upload/restore` | Nextcloud-Administrator |
 | GET | `/backups/{name}` | Nextcloud-Administrator |
 
 ## Meine Daten (Selbstauskunft)

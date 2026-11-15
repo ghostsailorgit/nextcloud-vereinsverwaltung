@@ -5,7 +5,9 @@
  */
 namespace OCA\Verein\Controller;
 
+use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\Service\BackupService;
+use OCP\IUserSession;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataDownloadResponse;
@@ -24,7 +26,7 @@ class BackupController extends Controller {
 
     private IL10N $l;
 
-    public function __construct(string $appName, IRequest $request, private BackupService $backups, ?IL10N $l10n = null) {
+    public function __construct(string $appName, IRequest $request, private BackupService $backups, private IUserSession $userSession, ?IL10N $l10n = null) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($appName, $request);
     }
@@ -44,6 +46,79 @@ class BackupController extends Controller {
             return new JSONResponse(['status' => 'ok', 'backup' => $backup], Http::STATUS_CREATED);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * What restoring this stored backup would change. Nothing is written.
+     */
+    public function previewRestore(string $name): JSONResponse {
+        return $this->respond(fn () => $this->backups->summary($this->stored($name)));
+    }
+
+    /**
+     * Replaces all club data (of every club) with this stored backup; the current state is backed up first.
+     */
+    public function restore(string $name): JSONResponse {
+        return $this->respond(fn () => $this->restoreBackup($this->stored($name)));
+    }
+
+    /**
+     * What restoring an uploaded backup file (e.g. one downloaded earlier) would change. Nothing is written.
+     */
+    public function previewUpload(): JSONResponse {
+        return $this->respond(fn () => $this->backups->summary($this->uploaded()));
+    }
+
+    /**
+     * Replaces all club data with an uploaded backup file; the current state is backed up first.
+     */
+    public function restoreUpload(): JSONResponse {
+        return $this->respond(fn () => $this->restoreBackup($this->uploaded()));
+    }
+
+    private function respond(callable $action): JSONResponse {
+        try {
+            return new JSONResponse(['status' => 'ok'] + $action());
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /** @throws ValidationException */
+    private function stored(string $name): array {
+        try {
+            return BackupService::parse($this->backups->getContent($name));
+        } catch (\InvalidArgumentException $e) {
+            throw new ValidationException($this->l->t('The file is not a valid backup of this app'));
+        }
+    }
+
+    /** @throws ValidationException */
+    private function uploaded(): array {
+        $file = $this->request->getUploadedFile('backup');
+        if (!is_array($file) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_string($file['tmp_name'] ?? null)) {
+            throw new ValidationException($this->l->t('No backup file was uploaded'));
+        }
+        if ((int)($file['size'] ?? 0) > BackupService::MAX_UPLOAD_BYTES || filesize($file['tmp_name']) > BackupService::MAX_UPLOAD_BYTES) {
+            throw new ValidationException($this->l->t('The file is too large for a backup of this app'));
+        }
+        $content = file_get_contents($file['tmp_name']);
+        try {
+            return BackupService::parse($content === false ? '' : $content);
+        } catch (\InvalidArgumentException $e) {
+            throw new ValidationException($this->l->t('The file is not a valid backup of this app'));
+        }
+    }
+
+    /** @throws ValidationException */
+    private function restoreBackup(array $backup): array {
+        $this->backups->summary($backup); // refuses a backup of a newer app version
+        try {
+            return $this->backups->restore($backup, $this->userSession->getUser()?->getUID());
+        } catch (\Throwable $e) {
+            // the service rolled back and logged the details; they may contain SQL, so only this goes out
+            throw new ValidationException($this->l->t('The restore failed, nothing was changed. The details are in the Nextcloud log.'));
         }
     }
 
