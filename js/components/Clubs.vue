@@ -224,7 +224,7 @@
       </form>
     </div>
 
-    <Backups v-if="isAdmin" />
+    <Backups v-if="backupAccess" />
 
     <!-- Nextcloud administrators: add / remove clubs -->
     <div v-if="isAdmin" class="card">
@@ -273,6 +273,7 @@ export default {
 
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
+    const backupAccess = computed(() => clubState.backupAccess)
     const canManage = computed(() => can('verein.club.manage'))
     const canManageRoles = computed(() => can('verein.role.manage'))
 
@@ -449,7 +450,7 @@ export default {
       t,
       formatMoney, hasAgeTiers, ageTierSummary, ageCutoffLabel, intervalLabel, intervalChoices: intervalOptions(),
       rateForm, saveRate, editRate, removeRate, resetRateForm,
-      busy, club, isAdmin, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
+      busy, club, isAdmin, backupAccess, canManage, canManageRoles, roleOptions, mapping, mappingRows, saveMapping, form, accountForm, newClubName,
       saveClub, createClub, deleteClub, saveAccount, editAccount, removeAccount, resetAccountForm
     }
   }

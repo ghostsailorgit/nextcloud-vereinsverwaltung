@@ -34,13 +34,6 @@ class RoutePermissionsTest extends TestCase {
         'role#store',
         'role#update',
         'role#destroy',
-        'backup#index',
-        'backup#create',
-        'backup#download',
-        'backup#previewRestore',
-        'backup#restore',
-        'backup#previewUpload',
-        'backup#restoreUpload',
     ];
 
     /** @return array<string, array{string, string}> */

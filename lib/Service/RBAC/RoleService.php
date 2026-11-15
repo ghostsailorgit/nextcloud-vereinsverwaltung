@@ -59,6 +59,8 @@ class RoleService {
         'verein.sepa.export',
         'verein.club.manage',
         'verein.audit.view',
+        // only with exactly one club, see BackupAccess
+        'verein.backup.restore',
     ];
 
 

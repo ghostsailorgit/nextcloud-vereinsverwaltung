@@ -177,6 +177,7 @@ const PERMISSION_LABELS = {
   'verein.sepa.export': t('verein', 'SEPA export'),
   'verein.club.manage': t('verein', 'Manage the club'),
   'verein.audit.view': t('verein', 'View the audit log'),
+  'verein.backup.restore': t('verein', 'Back up and restore (only with one club)'),
 }
 import { clubState, currentClub } from '../store/club'
 

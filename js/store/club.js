@@ -17,6 +17,8 @@ export const clubState = reactive({
   clubs: [],
   currentId: null,
   isAdmin: false,
+  // backups: Nextcloud admins, or the backup permission while there is only one club (BackupAccess)
+  backupAccess: false,
   loaded: false,
   // self-service record of the person linked to the logged-in account ({ linked: false } if none)
   me: null
@@ -51,6 +53,7 @@ export async function loadClubs() {
   const response = await axios.get(absoluteUrl('/apps/verein/clubs'))
   clubState.clubs = response.data.clubs || []
   clubState.isAdmin = !!response.data.isAdmin
+  clubState.backupAccess = !!response.data.backupAccess
 
   let remembered = null
   try {

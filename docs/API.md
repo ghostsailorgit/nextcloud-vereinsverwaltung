@@ -30,13 +30,13 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 
 | Methode | Pfad | Erforderliches Recht |
 |---|---|---|
-| GET | `/backups` | Nextcloud-Administrator |
-| POST | `/backups` | Nextcloud-Administrator |
-| POST | `/backups/{name}/preview` | Nextcloud-Administrator |
-| POST | `/backups/{name}/restore` | Nextcloud-Administrator |
-| POST | `/backup-upload/preview` | Nextcloud-Administrator |
-| POST | `/backup-upload/restore` | Nextcloud-Administrator |
-| GET | `/backups/{name}` | Nextcloud-Administrator |
+| GET | `/backups` | `verein.backup.restore` (übergreifend) |
+| POST | `/backups` | `verein.backup.restore` (übergreifend) |
+| POST | `/backups/{name}/preview` | `verein.backup.restore` (übergreifend) |
+| POST | `/backups/{name}/restore` | `verein.backup.restore` (übergreifend) |
+| POST | `/backup-upload/preview` | `verein.backup.restore` (übergreifend) |
+| POST | `/backup-upload/restore` | `verein.backup.restore` (übergreifend) |
+| GET | `/backups/{name}` | `verein.backup.restore` (übergreifend) |
 
 ## Meine Daten (Selbstauskunft)
 
