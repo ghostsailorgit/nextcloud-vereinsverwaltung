@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace OCA\Verein\Service;
 
 use OCA\Verein\Db\ClubGroupMapper;
+use OCA\Verein\Db\ClubGroupMemberMapper;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\FeeRate;
 use OCA\Verein\Db\FeeRateMapper;
@@ -35,7 +36,8 @@ class FeeRateService {
         private ClubMapper $clubs,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
-        private ?ClubGroupMapper $groups = null
+        private ?ClubGroupMapper $groups = null,
+        private ?ClubGroupMemberMapper $groupPeriods = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -129,6 +131,11 @@ class FeeRateService {
     private function usedByGroup(int $clubId, int $id): bool {
         foreach ($this->groups?->findByClub($clubId) ?? [] as $group) {
             if ($group->getFeeRateId() === $id) {
+                return true;
+            }
+        }
+        foreach ($this->groupPeriods?->findByClub($clubId) ?? [] as $period) {
+            if ($period->getFeeRateId() === $id) {
                 return true;
             }
         }

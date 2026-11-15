@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.16.0] - 2026-11-15
+
+### ✨ Neu
+- **Eigener Beitrag in einer Gruppe** ([#25](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/25)): Bei jedem Mitglied einer Gruppe lässt sich statt der Kategorie der Gruppe eine eigene wählen, etwa für passive Mitglieder oder beitragsfrei für Ehepartner. Das geht auch in Gruppen ohne eigenen Beitrag. Zuordnen darf, wer Beitragskategorien ändern darf; eine so genutzte Kategorie lässt sich nicht löschen und nicht zur Standardkategorie machen.
+
+---
+
 ## [1.15.0] - 2026-11-15
 
 ### ✨ Neu

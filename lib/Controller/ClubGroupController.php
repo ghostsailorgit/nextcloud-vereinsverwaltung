@@ -34,14 +34,17 @@ class ClubGroupController extends Controller {
     }
 
     private function groupParams(): array {
-        $params = ['name' => $this->request->getParam('name'), 'description' => $this->request->getParam('description')];
-        // what members are charged: only for those who may change fee categories, whoever else sends it changes nothing
+        return ['name' => $this->request->getParam('name'), 'description' => $this->request->getParam('description')] + $this->feeParam();
+    }
+
+    /** What members are charged: only for those who may change fee categories, whoever else sends it changes nothing. */
+    private function feeParam(): array {
         $feeRateId = $this->request->getParam('feeRateId', false);
         $uid = $this->userSession->getUser()?->getUID() ?? '';
         if ($feeRateId !== false && $this->roles->userHasPermission($uid, 'verein.club.manage', $this->clubId())) {
-            $params['feeRateId'] = $feeRateId;
+            return ['feeRateId' => $feeRateId];
         }
-        return $params;
+        return [];
     }
 
     private function respond(callable $action, int $status = 200): JSONResponse {
@@ -120,7 +123,8 @@ class ClubGroupController extends Controller {
             $this->clubId(),
             $periodId,
             $this->request->getParam('joinedOn'),
-            $this->request->getParam('leftOn')
+            $this->request->getParam('leftOn'),
+            $this->feeParam()
         ));
     }
 

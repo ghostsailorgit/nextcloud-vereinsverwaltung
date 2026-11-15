@@ -1009,7 +1009,8 @@ OC.L10N.register(
         "The member number %1$s is already in line %2$s of this file": "Die Mitgliedsnummer %1$s steht schon in Zeile %2$s dieser Datei",
         "Backups cover all clubs. With more than one club only Nextcloud administrators may use them.": "Sicherungen umfassen alle Vereine. Gibt es mehr als einen Verein, dürfen nur Nextcloud-Administratoren sie verwenden.",
         "Back up and restore (only with one club)": "Sichern und wiederherstellen (nur bei einem Verein)",
-        "Backups": "Sicherungen"
+        "Backups": "Sicherungen",
+        "as the group": "wie die Gruppe"
     },
     "nplurals=2; plural=(n != 1);"
 );

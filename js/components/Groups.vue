@@ -78,18 +78,22 @@
       <h4>{{ t('verein', 'Current members ({count})', { count: current.length }) }}</h4>
       <div v-if="current.length" class="table-scroll">
         <table>
-          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Date joined') }}</th><th v-if="editing.id && editingCurrent">{{ t('verein', 'Date left') }}</th><th v-if="canManage">{{ t('verein', 'Actions') }}</th></tr></thead>
+          <thead><tr><th>{{ t('verein', 'Member') }}</th><th>{{ t('verein', 'Date joined') }}</th><th v-if="editing.id && editingCurrent">{{ t('verein', 'Date left') }}</th><th v-if="canLinkFee">{{ t('verein', 'Fee category') }}</th><th v-if="canManage">{{ t('verein', 'Actions') }}</th></tr></thead>
           <tbody>
             <tr v-for="p in current" :key="p.id">
               <td>{{ p.memberName }}</td>
               <template v-if="editing.id === p.id">
                 <td><input v-model="editing.joinedOn" type="date" class="form-input" required /></td>
                 <td><input v-model="editing.leftOn" type="date" class="form-input" /></td>
+                <td v-if="canLinkFee" class="fee-cell">
+                  <NcSelect v-model="editing.feeRate" :options="feeRateOptions" label="label" :aria-label-combobox="t('verein', 'Fee category')" :placeholder="t('verein', 'as the group')" />
+                </td>
                 <td><div class="row-actions"><NcButton variant="primary" :disabled="busy" @click="savePeriod">{{ t('verein', 'Save') }}</NcButton><NcButton variant="tertiary" @click="editing.id = null">{{ t('verein', 'Cancel') }}</NcButton></div></td>
               </template>
               <template v-else>
                 <td>{{ formatDate(p.joinedOn) }}</td>
                 <td v-if="editing.id && editingCurrent"></td>
+                <td v-if="canLinkFee">{{ p.feeRateId ? feeRateName(p.feeRateId) : t('verein', 'as the group') }}</td>
                 <td v-if="canManage">
                   <div class="row-actions">
                     <NcButton variant="secondary" @click="startEnd(p)">{{ t('verein', 'End') }}</NcButton>
@@ -176,7 +180,7 @@ export default {
     const periods = ref([])
     const members = ref([])
     const adding = reactive({ members: [], joinedOn: today() })
-    const editing = reactive({ id: null, joinedOn: '', leftOn: '' })
+    const editing = reactive({ id: null, joinedOn: '', leftOn: '', feeRate: null })
 
     // an open period of somebody who left the club belongs to the past, even without a date left
     const isCurrent = (p) => !p.leftOn && !p.memberFormer
@@ -263,10 +267,13 @@ export default {
       if (done) showSuccess(n('verein', '%n member added', '%n members added', list.length))
     }
 
-    const startEditPeriod = (p) => Object.assign(editing, { id: p.id, joinedOn: p.joinedOn, leftOn: p.leftOn || '' })
-    const startEnd = (p) => Object.assign(editing, { id: p.id, joinedOn: p.joinedOn, leftOn: today() })
+    const ownRate = (p) => feeRateOptions.value.find(o => o.id === p.feeRateId) || null
+    const startEditPeriod = (p) => Object.assign(editing, { id: p.id, joinedOn: p.joinedOn, leftOn: p.leftOn || '', feeRate: ownRate(p) })
+    const startEnd = (p) => Object.assign(editing, { id: p.id, joinedOn: p.joinedOn, leftOn: today(), feeRate: ownRate(p) })
     const savePeriod = () => call(async () => {
-      await api.put(`group-members/${editing.id}`, { joinedOn: editing.joinedOn, leftOn: editing.leftOn })
+      const payload = { joinedOn: editing.joinedOn, leftOn: editing.leftOn }
+      if (canLinkFee.value) payload.feeRateId = editing.feeRate?.id ?? ''
+      await api.put(`group-members/${editing.id}`, payload)
       editing.id = null
       await refresh()
     })
@@ -306,6 +313,7 @@ export default {
 .section-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hint { color: var(--color-text-maxcontrast); }
 .group-fee-hint { grid-column: 1 / -1; margin: 0; }
+.fee-cell { min-width: 200px; }
 .group-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0; align-items: end; }
 .buttons { grid-column: 1 / -1; display: flex; gap: 8px; }
 .add-member { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 12px; }

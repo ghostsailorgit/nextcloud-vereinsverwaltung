@@ -166,13 +166,17 @@ class ClubGroupService {
      * @throws ValidationException
      * @throws NotFoundException
      */
-    public function updatePeriod(int $clubId, int $id, mixed $joinedOn, mixed $leftOn): ClubGroupMember {
+    public function updatePeriod(int $clubId, int $id, mixed $joinedOn, mixed $leftOn, array $extra = []): ClubGroupMember {
         $period = $this->ownPeriod($clubId, $id);
         $before = $period->jsonSerialize();
         [$from, $to] = $this->period($joinedOn, $leftOn);
         $this->refuseOverlap($period->getGroupId(), $period->getMemberId(), $from, $to, $id);
         $period->setJoinedOn($from);
         $period->setLeftOn($to);
+        // the controller passes this only for those who may change fee categories; absent = unchanged
+        if (array_key_exists('feeRateId', $extra)) {
+            $period->setFeeRateId($this->feeRateId($clubId, $extra['feeRateId']));
+        }
         $period = $this->periods->update($period);
         if ($this->auditLog !== null) {
             $changes = $this->auditLog->diff($before, $period->jsonSerialize());

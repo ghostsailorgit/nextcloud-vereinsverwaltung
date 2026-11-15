@@ -143,6 +143,22 @@ class ClubGroupServiceTest extends TestCase {
         ];
     }
 
+    public function testAStayCanGetItsOwnCategory(): void {
+        $this->feeRate(self::CLUB, 7);
+        $this->feeRate(self::CLUB, 8, true);
+        $this->member(self::CLUB, 50, 'Erna', 'Ehe');
+        $group = $this->group('Fußball');
+        $stay = $this->service->addMember(self::CLUB, $group->getId(), 50, '2026-01-01');
+
+        $stay = $this->service->updatePeriod(self::CLUB, $stay->getId(), '2026-01-01', null, ['feeRateId' => '7']);
+        $this->assertSame(7, $stay->getFeeRateId());
+        $stay = $this->service->updatePeriod(self::CLUB, $stay->getId(), '2026-01-01', '2026-06-30');
+        $this->assertSame(7, $stay->getFeeRateId(), 'not sent = unchanged');
+
+        $this->expectExceptionMessage('Standardkategorie');
+        $this->service->updatePeriod(self::CLUB, $stay->getId(), '2026-01-01', null, ['feeRateId' => '8']);
+    }
+
     public function testAGroupNeedsAUniqueNameWithinTheClub(): void {
         $this->group('Judo');
         try {
