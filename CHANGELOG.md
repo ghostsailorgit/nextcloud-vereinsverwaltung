@@ -4,6 +4,15 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.12.1] - 2026-11-15
+
+### 🐛 Behoben
+- **Einheitliche Felder** ([#47](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/47)): Im Mitgliederformular sind alle Felder gleich hoch und stehen auf einer Linie, auch die Auswahl des Nextcloud-Kontos und der Gruppen. Datums-, Zahlen- und Monatsfelder sehen in der ganzen App aus wie die übrigen Nextcloud-Felder.
+- **Abhängigkeiten:** `fast-xml-parser` und `serialize-javascript` aktualisiert (Hinweise von Dependabot mit niedriger Stufe).
+- **Beschreibung im App Store** um die Funktionen seit 1.4.0 ergänzt.
+
+---
+
 ## [1.12.0] - 2026-11-09
 
 ### ✨ Neu
