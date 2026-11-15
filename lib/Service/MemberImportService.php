@@ -45,6 +45,7 @@ class MemberImportService {
         'telefon' => 'phone', 'telefonnummer' => 'phone', 'tel' => 'phone', 'festnetz' => 'phone', 'phone' => 'phone', 'phonenumber' => 'phone',
         'mobil' => 'phone', 'mobilnummer' => 'phone', 'mobiltelefon' => 'phone', 'handy' => 'phone', 'mobile' => 'phone',
         'iban' => 'iban', 'bic' => 'bic',
+        'mitgliedsnummer' => 'memberNumber', 'mitgliedsnr' => 'memberNumber', 'mitgliednr' => 'memberNumber', 'membernumber' => 'memberNumber', 'memberno' => 'memberNumber',
         'geburtsdatum' => 'birthDate', 'geburtstag' => 'birthDate', 'birthdate' => 'birthDate', 'dateofbirth' => 'birthDate',
         'eintritt' => 'joinDate', 'eintrittsdatum' => 'joinDate', 'mitgliedseit' => 'joinDate', 'joindate' => 'joinDate', 'datejoined' => 'joinDate', 'joined' => 'joinDate',
         'austritt' => 'leaveDate', 'austrittsdatum' => 'leaveDate', 'leavedate' => 'leaveDate', 'dateleft' => 'leaveDate', 'left' => 'leaveDate',
@@ -97,11 +98,18 @@ class MemberImportService {
 
         // name key => birth dates (null = unknown) of the club's members
         $existing = [];
+        // member numbers in use (compared without case, like MemberService does), so the preview already names a clash
+        $usedNumbers = [];
         foreach ($this->memberMapper->findByClub($clubId) as $member) {
             $existing[$this->nameKey($member->getFirstName(), $member->getName())][] = $member->getBirthDate();
+            $number = (string)$member->getMembership()?->getMemberNumber();
+            if ($number !== '') {
+                $usedNumbers[mb_strtolower($number)] = true;
+            }
         }
 
         $seen = [];
+        $seenNumbers = [];
         $rows = [];
         $counts = ['ok' => 0, 'error' => 0, 'duplicate' => 0];
         foreach ($records as $line => $record) {
@@ -131,6 +139,22 @@ class MemberImportService {
                     }
                 }
                 $seen[$key][] = [$line, $birth];
+            }
+            $number = trim((string)($data['memberNumber'] ?? ''));
+            if ($status === 'ok' && $number !== '') {
+                $numberKey = mb_strtolower($number);
+                if (mb_strlen($number) > 20) {
+                    $status = 'error';
+                    $errors[] = $this->l->t('The member number may have at most %s characters', [20]);
+                } elseif (isset($usedNumbers[$numberKey])) {
+                    $status = 'error';
+                    $errors[] = $this->l->t('The member number %s is already used in this club', [$number]);
+                } elseif (isset($seenNumbers[$numberKey])) {
+                    $status = 'error';
+                    $errors[] = $this->l->t('The member number %1$s is already in line %2$s of this file', [$number, $seenNumbers[$numberKey]]);
+                } else {
+                    $seenNumbers[$numberKey] = $line;
+                }
             }
             $counts[$status]++;
             $rows[] = ['line' => $line, 'name' => $label !== '' ? $label : '(ohne Namen)', 'status' => $status,
@@ -279,6 +303,7 @@ class MemberImportService {
             'bic' => $this->nullIfEmpty(isset($record['bic']) ? strtoupper(str_replace(' ', '', $record['bic'])) : null),
             'iban' => $this->nullIfEmpty(isset($record['iban']) ? strtoupper(str_replace(' ', '', $record['iban'])) : null),
             'mandateReference' => $this->nullIfEmpty($record['mandateReference'] ?? null),
+            'memberNumber' => $this->nullIfEmpty($record['memberNumber'] ?? null),
             'userId' => null,
             'role' => 'member',
         ];

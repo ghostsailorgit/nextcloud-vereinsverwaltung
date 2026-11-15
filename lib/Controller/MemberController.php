@@ -282,6 +282,7 @@ class MemberController extends Controller {
             'payerMemberId' => $this->request->getParam('payerMemberId'),
             'deceased' => $this->request->getParam('deceased', false),
             'mandateReference' => $this->request->getParam('mandateReference'),
+            'memberNumber' => $this->request->getParam('memberNumber'),
             'mandateDate' => $this->request->getParam('mandateDate'),
             'mandateFile' => $this->request->getParam('mandateFile'),
             'userId' => $this->request->getParam('userId'),

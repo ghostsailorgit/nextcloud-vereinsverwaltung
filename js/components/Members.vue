@@ -138,6 +138,14 @@
         </div>
 
         <h3 class="form-subheader">{{ t('verein', 'Membership') }}</h3>
+        <NcTextField
+          :model-value="formData.memberNumber"
+          @update:model-value="formData.memberNumber = $event"
+          type="text"
+          :label="t('verein', 'Member number')"
+          :placeholder="t('verein', 'optional')"
+          maxlength="20"
+        />
         <NcSelect
           v-if="!editingId && allGroups.length"
           v-model="newMemberGroups"
@@ -323,7 +331,7 @@
           </thead>
           <tbody>
             <tr v-for="member in filteredMembers" :key="member.id" :class="{ editing: editingId === member.id }">
-              <td>{{ member.id }}</td>
+              <td>{{ member.memberNumber || member.id }}</td>
               <td>{{ displayName(member) }}</td>
               <td>{{ member.email }}</td>
               <td>{{ member.phone || '-' }}</td>
@@ -467,6 +475,7 @@ const emptyFormData = () => ({
   iban: '',
   bic: '',
   mandateReference: '',
+  memberNumber: '',
   mandateDate: '',
   mandateFile: '',
   userId: '',

@@ -116,6 +116,8 @@ class MemberService {
      */
     public function create(int $clubId, array $data): Member {
         $this->clubMapper->find($clubId);
+        // before anything is written: a refused number must not leave a person without membership behind
+        $this->checkMemberNumber($clubId, $data, null);
         $member = new Member();
         $this->applyPersonData($member, $data);
         $member->setCreatedAt(date('Y-m-d H:i:s'));
@@ -143,6 +145,7 @@ class MemberService {
     public function attachExisting(int $clubId, int $memberId, array $data): Member {
         $this->clubMapper->find($clubId);
         $member = $this->mapper->find($memberId);
+        $this->checkMemberNumber($clubId, $data, $memberId);
 
         try {
             $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
@@ -164,6 +167,7 @@ class MemberService {
 
     public function update(int $clubId, int $id, array $data): Member {
         $member = $this->find($clubId, $id);
+        $this->checkMemberNumber($clubId, $data, $id);
         $before = $member->jsonSerialize();
 
         $this->applyPersonData($member, $data);
@@ -367,6 +371,36 @@ class MemberService {
         $member->setDeceased($this->toBool($data['deceased'] ?? false));
     }
 
+    private const MAX_MEMBER_NUMBER = 20;
+
+    private static function memberNumber(mixed $value): ?string {
+        $number = is_scalar($value) ? trim((string)$value) : '';
+        return $number === '' ? null : $number;
+    }
+
+    /**
+     * A member number is optional, at most 20 characters and unique within the club (compared without case).
+     *
+     * @throws ValidationException
+     */
+    private function checkMemberNumber(int $clubId, array $data, ?int $memberId): void {
+        if (!array_key_exists('memberNumber', $data)) {
+            return;
+        }
+        $number = self::memberNumber($data['memberNumber']);
+        if ($number === null) {
+            return;
+        }
+        if (mb_strlen($number) > self::MAX_MEMBER_NUMBER || preg_match('/[\x00-\x1F\x7F]/', $number) === 1) {
+            throw new ValidationException($this->l->t('The member number may have at most %s characters', [self::MAX_MEMBER_NUMBER]));
+        }
+        foreach ($this->membershipMapper->findByClub($clubId) as $other) {
+            if ($other->getMemberId() !== $memberId && mb_strtolower((string)$other->getMemberNumber()) === mb_strtolower($number)) {
+                throw new ValidationException($this->l->t('The member number %s is already used in this club', [$number]));
+            }
+        }
+    }
+
     private function applyMembershipData(Membership $membership, array $data): void {
         $membership->setRole((string)($data['role'] ?? 'member'));
         $membership->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
@@ -380,6 +414,10 @@ class MemberService {
         $membership->setMandateDate($this->nullIfEmpty($data['mandateDate'] ?? null));
         $membership->setMandateFile($this->nullIfEmpty($data['mandateFile'] ?? null));
         $membership->setMandateOnPaper($this->toBool($data['mandateOnPaper'] ?? false));
+        // only when sent: callers that do not know the field (e.g. adding a person from another club) keep it
+        if (array_key_exists('memberNumber', $data)) {
+            $membership->setMemberNumber(self::memberNumber($data['memberNumber']));
+        }
         $this->applyFeeRate($membership, $data);
         $this->applyPayer($membership, $data);
     }

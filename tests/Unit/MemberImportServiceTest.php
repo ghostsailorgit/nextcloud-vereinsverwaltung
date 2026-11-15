@@ -99,6 +99,17 @@ class MemberImportServiceTest extends TestCase {
         ];
     }
 
+    public function testThePreviewNamesMemberNumbersThatClash(): void {
+        $csv = "Nachname;Vorname;Mitgliedsnummer\nEins;Ida;A-1\nZwei;Ole;a-1\nDrei;Per;B-2\nVier;Uwe;\n";
+
+        $rows = $this->service->plan(self::CLUB, $csv, false)['rows'];
+
+        $this->assertSame(['ok', 'error', 'ok', 'ok'], array_column($rows, 'status'));
+        $this->assertStringContainsString('schon in Zeile 2', $rows[1]['messages'][0]);
+        $this->assertSame('B-2', $rows[2]['data']['memberNumber']);
+        $this->assertNull($rows[3]['data']['memberNumber']);
+    }
+
     public function testTheEnglishExportCanBeImportedAgainToo(): void {
         // headers exactly as CsvExporter writes them for an English-speaking user (no translation table = English)
         $export = (new CsvExporter())->formatMembers([[
@@ -109,7 +120,7 @@ class MemberImportServiceTest extends TestCase {
             'createdAt' => '2026-01-01 10:00:00',
         ]]);
         $this->assertContains('Founding member', $export['headers']);
-        $this->assertSame(['Ms', 'Board'], [$export['data'][0][1], $export['data'][0][10]], 'labels, not the internal ids');
+        $this->assertSame(['Ms', 'Board'], [$export['data'][0][2], $export['data'][0][11]], 'labels, not the internal ids');
         $csv = implode(';', $export['headers']) . "\n" . implode(';', array_map('strval', $export['data'][0])) . "\n";
 
         $plan = $this->service->plan(self::CLUB, $csv, true);

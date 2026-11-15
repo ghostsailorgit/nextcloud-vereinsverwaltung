@@ -91,6 +91,7 @@ class CsvExporter {
     public function formatMembers(array $members): array {
         $headers = [
             'ID',
+            $this->l->t('Member number'),
             $this->l->t('Title'),
             $this->l->t('First name'),
             $this->l->t('Name'),
@@ -128,6 +129,7 @@ class CsvExporter {
 
             $data[] = [
                 $m['id'] ?? '',
+                $m['memberNumber'] ?? '',
                 $salutations[$m['salutation'] ?? ''] ?? ($m['salutation'] ?? ''),
                 $m['firstName'] ?? '',
                 $m['name'] ?? '',

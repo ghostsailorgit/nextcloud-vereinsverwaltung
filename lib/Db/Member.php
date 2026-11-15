@@ -219,6 +219,7 @@ class Member extends Entity implements JsonSerializable {
             'mandateOnPaper' => $this->getMandateOnPaper(),
             'payerMemberId' => $this->getPayerMemberId(),
             'mandateReference' => $this->membership?->getMandateReference(),
+            'memberNumber' => $this->membership?->getMemberNumber(),
             'mandateDate' => $this->membership?->getMandateDate(),
             'mandateFile' => $this->membership?->getMandateFile(),
             'feeRateId' => $this->membership?->getFeeRateId(),

@@ -123,7 +123,7 @@ class WelcomeMailService {
             'phone' => (string)$member->getPhone(),
             'birthDate' => $date($member->getBirthDate()),
             'joinDate' => $date($member->getJoinDate()),
-            'memberNumber' => (string)$member->getId(),
+            'memberNumber' => (string)($membership?->getMemberNumber() ?? $member->getId()),
             'feeCategory' => $this->feeCategory($club->getId(), $membership?->getFeeRateId()),
             'iban' => self::shortenIban((string)$member->getIban()),
             'mandateReference' => (string)$membership?->getEffectiveMandateReference(),
