@@ -123,6 +123,35 @@ class BackupServiceTest extends TestCase {
         $this->assertSame(BackupService::TABLES, array_keys($parsed['tables']));
     }
 
+    public function testAFileThatUnpacksToTooMuchIsRefused(): void {
+        $this->expectException(\InvalidArgumentException::class);
+        BackupService::parse($this->backupFile(), 100);
+    }
+
+    private function serviceWithVersion(string $installed): BackupService {
+        $apps = $this->createMock(IAppManager::class);
+        $apps->method('getAppVersion')->willReturn($installed);
+        return new BackupService($this->createMock(IDBConnection::class), $this->createMock(IAppDataFactory::class), $apps,
+            $this->createMock(ITimeFactory::class), $this->createMock(LoggerInterface::class), l10n: SourceL10n::fromAppLanguage('de'));
+    }
+
+    public function testABackupOfANewerAppVersionIsRefused(): void {
+        $backup = BackupService::parse($this->backupFile(['appVersion' => '2.0.0']));
+
+        $this->expectException(\OCA\Verein\Exception\ValidationException::class);
+        $this->expectExceptionMessage('neueren Version der App (2.0.0, installiert: 1.13.0)');
+        $this->serviceWithVersion('1.13.0')->summary($backup);
+    }
+
+    public function testARestoreIsLoggedWithWhoDidIt(): void {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('warning')
+            ->with($this->stringContains('restored'), $this->callback(fn (array $c) => $c['user'] === 'zz-admin' && str_starts_with($c['safetyBackup'], 'verein-backup-')));
+        $service = $this->serviceWithFailingWrite(null, $db, $logger);
+
+        $service->restore(BackupService::parse($this->backupFile()), 'zz-admin');
+    }
+
     public function testAnOlderBackupWithoutTheAuditLogStillParsesAndLeavesThatTableAlone(): void {
         $tables = array_fill_keys(BackupService::TABLES, []);
         unset($tables['verein_audit_log']);
@@ -161,7 +190,7 @@ class BackupServiceTest extends TestCase {
     }
 
     /** A service whose query builder accepts everything and throws on the Nth write statement. */
-    private function serviceWithFailingWrite(?int $failOnStatement, ?\OCP\IDBConnection &$db = null): BackupService {
+    private function serviceWithFailingWrite(?int $failOnStatement, ?\OCP\IDBConnection &$db = null, ?LoggerInterface $logger = null): BackupService {
         $result = $this->createMock(\OCP\DB\IResult::class);
         $result->method('fetchAll')->willReturn([]);
         $calls = 0;
@@ -189,7 +218,7 @@ class BackupServiceTest extends TestCase {
         $factory->method('get')->willReturn($appData);
         $time = $this->createMock(ITimeFactory::class);
         $time->method('getTime')->willReturn(1790000000);
-        return new BackupService($db, $factory, $this->createMock(IAppManager::class), $time, $this->createMock(LoggerInterface::class), l10n: SourceL10n::fromAppLanguage('de'));
+        return new BackupService($db, $factory, $this->createMock(IAppManager::class), $time, $logger ?? $this->createMock(LoggerInterface::class), l10n: SourceL10n::fromAppLanguage('de'));
     }
 
     public function testRestoreCommitsInOneTransactionAndWritesASafetyBackupFirst(): void {

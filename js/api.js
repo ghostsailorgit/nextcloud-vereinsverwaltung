@@ -24,6 +24,9 @@ instance.interceptors.request.use(config => {
     const method = (config.method || 'get').toLowerCase()
     if (method === 'get' || method === 'delete') {
       config.params = { ...config.params, clubId }
+    } else if (config.data instanceof FormData) {
+      // spreading a FormData gives {}: the file would be lost
+      config.data.set('clubId', clubId)
     } else {
       config.data = { ...(config.data && typeof config.data === 'object' ? config.data : {}), clubId }
     }

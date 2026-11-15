@@ -5,6 +5,7 @@
  */
 namespace OCA\Verein\Service;
 
+use OCA\Verein\Exception\ValidationException;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\IAppData;
@@ -54,6 +55,9 @@ class BackupService {
     public const KEEP_AT_MOST = 100;
 
     private const FOLDER = 'backups';
+    /** Largest backup file accepted as an upload, and largest content once unpacked (a small file can unpack to a lot). */
+    public const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+    public const MAX_UNPACKED_BYTES = 200 * 1024 * 1024;
     private const NAME_PATTERN = '/^verein-backup-(\d{8})-(\d{6})\.json\.gz$/';
 
     private IAppData $appData;
@@ -233,8 +237,8 @@ class BackupService {
      * @return array{created: string, appVersion: string, tables: array<string, array<int, array<string, mixed>>>}
      * @throws \InvalidArgumentException if the file is not a usable backup of this app
      */
-    public static function parse(string $gzipped): array {
-        $json = @gzdecode($gzipped);
+    public static function parse(string $gzipped, int $maxUnpackedBytes = self::MAX_UNPACKED_BYTES): array {
+        $json = @gzdecode($gzipped, $maxUnpackedBytes);
         if ($json === false) {
             throw new \InvalidArgumentException('The file is not a valid (gzip-compressed) backup');
         }
@@ -268,6 +272,27 @@ class BackupService {
     }
 
     /**
+     * What a restore would change, for asking before it: per table the rows now and in the backup (null = the backup
+     * leaves that table alone).
+     *
+     * @param array{created: string, appVersion: string, tables: array<string, array>} $backup result of parse()
+     * @return array{created: string, appVersion: string, tables: array<int, array{table: string, now: int, backup: ?int}>}
+     * @throws ValidationException if the backup comes from a newer version of the app (its columns may not exist here)
+     */
+    public function summary(array $backup): array {
+        $installed = (string)$this->appManager->getAppVersion('verein');
+        if ($backup['appVersion'] !== '' && $installed !== '' && version_compare($backup['appVersion'], $installed, '>')) {
+            throw new ValidationException($this->l->t('The backup was made with a newer version of the app (%1$s, installed: %2$s). Update the app first.', [$backup['appVersion'], $installed]));
+        }
+        $now = $this->currentCounts();
+        $tables = [];
+        foreach (self::TABLES as $table) {
+            $tables[] = ['table' => $table, 'now' => $now[$table], 'backup' => isset($backup['tables'][$table]) ? count($backup['tables'][$table]) : null];
+        }
+        return ['created' => $backup['created'], 'appVersion' => $backup['appVersion'], 'tables' => $tables];
+    }
+
+    /**
      * Number of rows currently in each club table.
      *
      * @return array<string, int>
@@ -290,7 +315,7 @@ class BackupService {
      * @param array{tables: array<string, array<int, array<string, mixed>>>} $backup result of parse()
      * @return array{safetyBackup: string, tables: array<string, int>}
      */
-    public function restore(array $backup): array {
+    public function restore(array $backup, ?string $byUser = null): array {
         $safety = $this->createBackup();
 
         // only what the backup contains is replaced
@@ -315,6 +340,10 @@ class BackupService {
         }
 
         $this->realignSequences($present);
+        // replacing everything is worth a trace outside the app's own tables (the audit log may just have been replaced too)
+        $this->logger->warning('Verein: club data restored from the backup of {created}' . ($byUser !== null ? ' by {user}' : ''), [
+            'created' => $backup['created'] ?? '', 'user' => $byUser, 'safetyBackup' => $safety['name'],
+        ]);
 
         $counts = [];
         foreach ($present as $table) {
