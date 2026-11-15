@@ -1000,7 +1000,12 @@
         "The file is not a valid backup of this app": "Die Datei ist keine gültige Sicherung dieser App",
         "No backup file was uploaded": "Es wurde keine Sicherungsdatei hochgeladen",
         "The file is too large for a backup of this app": "Die Datei ist zu groß für eine Sicherung dieser App",
-        "The restore failed, nothing was changed. The details are in the Nextcloud log.": "Die Wiederherstellung ist fehlgeschlagen, es wurde nichts geändert. Details stehen im Nextcloud-Protokoll."
+        "The restore failed, nothing was changed. The details are in the Nextcloud log.": "Die Wiederherstellung ist fehlgeschlagen, es wurde nichts geändert. Details stehen im Nextcloud-Protokoll.",
+        "Member number": "Mitgliedsnummer",
+        "optional": "optional",
+        "The member number may have at most %s characters": "Die Mitgliedsnummer darf höchstens %s Zeichen haben",
+        "The member number %s is already used in this club": "Die Mitgliedsnummer %s ist in diesem Verein schon vergeben",
+        "The member number %1$s is already in line %2$s of this file": "Die Mitgliedsnummer %1$s steht schon in Zeile %2$s dieser Datei"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

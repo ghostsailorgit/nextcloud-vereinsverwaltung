@@ -47,6 +47,49 @@ class MemberServiceTest extends TestCase {
         $this->service = new MemberService($this->members, $this->memberships, $this->fees, $this->clubs, $this->userManager, $this->feeRates, l10n: SourceL10n::fromAppLanguage('de'));
     }
 
+    private function numbered(int $memberId, int $clubId, ?string $number): Membership {
+        $ms = new Membership();
+        $ms->setMemberId($memberId);
+        $ms->setClubId($clubId);
+        $ms->setMemberNumber($number);
+        return $ms;
+    }
+
+    public function testAMemberNumberIsUniqueWithinTheClub(): void {
+        $this->memberships->method('findByClub')->willReturn([$this->numbered(7, 1, 'A-12')]);
+        $this->members->expects($this->never())->method('insert');
+
+        $this->expectException(\OCA\Verein\Exception\ValidationException::class);
+        $this->expectExceptionMessage('a-12 ist in diesem Verein schon vergeben');
+        $this->service->create(1, ['name' => 'Neu', 'memberNumber' => ' a-12 ']);
+    }
+
+    public function testAMemberMayKeepTheirOwnNumberAndTooLongIsRefused(): void {
+        $this->memberships->method('findByClub')->willReturn([$this->numbered(7, 1, '12')]);
+        $check = new \ReflectionMethod(\OCA\Verein\Service\MemberService::class, 'checkMemberNumber');
+
+        $check->invoke($this->service, 1, ['memberNumber' => '12'], 7);
+        $check->invoke($this->service, 1, ['memberNumber' => ''], 8);
+        $check->invoke($this->service, 1, [], 8);
+
+        $this->expectExceptionMessage('höchstens 20 Zeichen');
+        $check->invoke($this->service, 1, ['memberNumber' => str_repeat('9', 21)], 8);
+    }
+
+    public function testTheNumberIsOnlyChangedWhenSent(): void {
+        $ms = $this->numbered(7, 1, '12');
+        $apply = new \ReflectionMethod(\OCA\Verein\Service\MemberService::class, 'applyMembershipData');
+
+        $apply->invoke($this->service, $ms, ['role' => 'member']);
+        $this->assertSame('12', $ms->getMemberNumber(), 'not sent = kept');
+
+        $apply->invoke($this->service, $ms, ['role' => 'member', 'memberNumber' => ' 13 ']);
+        $this->assertSame('13', $ms->getMemberNumber());
+
+        $apply->invoke($this->service, $ms, ['role' => 'member', 'memberNumber' => '']);
+        $this->assertNull($ms->getMemberNumber());
+    }
+
     private function person(int $id, string $name = 'Mustermann'): Member {
         $m = new Member();
         $m->setId($id);

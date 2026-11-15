@@ -37,6 +37,8 @@ use OCP\AppFramework\Db\Entity;
  * @method bool getFeeExemptJoinYear()
  * @method void setFeeExemptJoinYear(bool $feeExemptJoinYear)
  * @method ?string getMandateReference()
+ * @method ?string getMemberNumber()
+ * @method void setMemberNumber(?string $memberNumber)
  * @method void setMandateReference(?string $mandateReference)
  * @method ?string getMandateDate()
  * @method void setMandateDate(?string $mandateDate)
@@ -67,6 +69,8 @@ class Membership extends Entity implements JsonSerializable {
     // someone else in the club pays this member's fees, see FeePayer
     protected ?int $payerMemberId = null;
     protected ?string $mandateReference = null;
+    // the club's own member number; null = none (the list then shows the internal id)
+    protected ?string $memberNumber = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
     protected ?int $feeRateId = null;
@@ -112,6 +116,7 @@ class Membership extends Entity implements JsonSerializable {
             'mandateOnPaper' => $this->mandateOnPaper,
             'payerMemberId' => $this->payerMemberId,
             'mandateReference' => $this->mandateReference,
+            'memberNumber' => $this->memberNumber,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,
             'feeRateId' => $this->feeRateId,

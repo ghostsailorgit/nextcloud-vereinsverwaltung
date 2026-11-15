@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.14.0] - 2026-11-15
+
+### ✨ Neu
+- **Eigene Mitgliedsnummer** ([#49](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/49)): Je Mitgliedschaft lässt sich eine Mitgliedsnummer vergeben (bis 20 Zeichen, je Verein eindeutig). Sie erscheint in der Mitgliederliste statt der internen Nummer, ist durchsuchbar, steht in CSV-Export und -Import, unter „Meine Daten“ und im Platzhalter `{mitgliedsnummer}` der Mitgliedsbestätigung. Ohne eigene Nummer bleibt es bei der internen.
+
+---
+
 ## [1.13.0] - 2026-11-15
 
 ### ✨ Neu

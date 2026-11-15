@@ -114,6 +114,7 @@ class SelfServiceService {
             $memberships[] = [
                 'club' => ['id' => $club->getId(), 'name' => $club->getName()],
                 'role' => $membership->getRole(),
+                'memberNumber' => $membership->getMemberNumber(),
                 'joinDate' => $membership->getJoinDate(),
                 'leaveDate' => $membership->getLeaveDate(),
                 'foundingMember' => $membership->getFoundingMember(),

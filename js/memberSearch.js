@@ -19,7 +19,7 @@ export function matchesMemberSearch(member, query) {
   if (words.length === 0) return true
   const phone = String(member.phone ?? '')
   const text = normalize([
-    member.id, member.firstName, member.name, member.email, phone, phone.replace(/\D/g, ''),
+    member.id, member.memberNumber, member.firstName, member.name, member.email, phone, phone.replace(/\D/g, ''),
     member.street, member.postalCode, member.city
   ].join(' '))
   return words.every(word => text.includes(word))
