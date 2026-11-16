@@ -70,6 +70,23 @@ class MemberController extends Controller {
         return $this->roleService->userHasPermission($uid, 'verein.role.manage', $this->clubId());
     }
 
+    /** @var array{visible: int[]|null, editable: int[]|null}|null */
+    private ?array $customAccess = null;
+
+    /**
+     * Which own fields the user sees and may change (sections with their own roles, CustomFieldService::access()).
+     *
+     * @return array{visible: int[]|null, editable: int[]|null}
+     */
+    private function customAccess(): array {
+        if ($this->customAccess === null) {
+            $uid = $this->userSession->getUser()?->getUID() ?? '';
+            $this->customAccess = $this->customFields?->access($this->clubId(), $this->roleService->sectionRoleIds($uid, $this->clubId()))
+                ?? ['visible' => [], 'editable' => []];
+        }
+        return $this->customAccess;
+    }
+
     private function clubId(): int {
         return (int)$this->request->getParam('clubId', 0);
     }
@@ -89,7 +106,7 @@ class MemberController extends Controller {
             }
             $groups = $this->clubGroups?->currentGroupNames($this->clubId()) ?? [];
             // one query for the whole club, not one per member
-            $custom = $this->customFields?->valuesForClub($this->clubId()) ?? [];
+            $custom = $this->customFields?->valuesForClub($this->clubId(), $this->customAccess()['visible']) ?? [];
             return new JSONResponse([
                 'status' => 'ok',
                 'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? []) + ['groups' => $groups[$m->getId()] ?? []], $members)
@@ -270,7 +287,7 @@ class MemberController extends Controller {
         if ($this->customFields === null || ($raw === null && !$creating)) {
             return [];
         }
-        return $this->customFields->validateValues($this->clubId(), $raw, $creating);
+        return $this->customFields->validateValues($this->clubId(), $raw, $creating, $this->customAccess()['editable']);
     }
 
     /**
@@ -468,7 +485,8 @@ class MemberController extends Controller {
             // viewing members does not include seeing what they paid
             $uid = $this->userSession->getUser()?->getUID() ?? '';
             $mayReadFinances = $this->roleService->userHasPermission($uid, 'verein.finance.read', $this->clubId());
-            $data = $this->selfService->forMemberId((int)$id, $this->clubId(), $mayReadFinances);
+            // own fields only as far as the exporting user sees them
+            $data = $this->selfService->forMemberId((int)$id, $this->clubId(), $mayReadFinances, $this->customAccess()['visible']);
             $data['status'] = 'ok';
             $data['exportedAt'] = date('c');
             return new DataDownloadResponse(
@@ -488,7 +506,7 @@ class MemberController extends Controller {
     private function present($member, ?array $custom = null): array {
         $data = $member->jsonSerialize();
         // the club's own fields, field id => value (an object in JSON, also when empty)
-        $data['custom'] = (object)($custom ?? $this->customFields?->valuesFor($this->clubId(), $member->getId()) ?? []);
+        $data['custom'] = (object)($custom ?? $this->customFields?->valuesFor($this->clubId(), $member->getId(), $this->customAccess()['visible']) ?? []);
         $uid = $member->getUserId();
         if ($uid !== null && $uid !== '') {
             $user = $this->userManager->get($uid);

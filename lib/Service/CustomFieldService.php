@@ -10,8 +10,11 @@ namespace OCA\Verein\Service;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\CustomField;
 use OCA\Verein\Db\CustomFieldMapper;
+use OCA\Verein\Db\CustomSection;
+use OCA\Verein\Db\CustomSectionMapper;
 use OCA\Verein\Db\CustomValue;
 use OCA\Verein\Db\CustomValueMapper;
+use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Exception\NotFoundException;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\L10n\SourceL10n;
@@ -25,6 +28,11 @@ use OCP\IL10N;
  *
  * Values are personal data: they belong to the member's record ("My data", data export), are removed when the person
  * leaves the club or is anonymized, and the audit log only notes which fields changed, never the values.
+ *
+ * Fields can be put into sections (CustomSection) that only some roles may see or change. Everything that hands out
+ * values or accepts them takes the result of access() and leaves out what the user may not see or change - the
+ * values never leave the server for someone without the right. A field without a section is seen by everyone who
+ * sees members and changed by everyone who may manage them.
  */
 class CustomFieldService {
     private const MAX_LABEL = 100;
@@ -32,6 +40,7 @@ class CustomFieldService {
     private const MAX_OPTION = 100;
     private const MAX_TEXT = 500;
     public const MAX_FIELDS = 50;
+    public const MAX_SECTIONS = 20;
 
     private IL10N $l;
 
@@ -40,14 +49,121 @@ class CustomFieldService {
         private CustomValueMapper $values,
         private ClubMapper $clubs,
         private ?AuditLogService $auditLog = null,
+        private ?CustomSectionMapper $sections = null,
+        private ?RoleMapper $roleDefinitions = null,
         ?IL10N $l10n = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
 
-    /** @return CustomField[] */
-    public function fields(int $clubId): array {
-        return $this->fields->findByClub($clubId);
+    /**
+     * @param int[]|null $only field ids to keep (see access()), null = all
+     * @return CustomField[]
+     */
+    public function fields(int $clubId, ?array $only = null): array {
+        $fields = $this->fields->findByClub($clubId);
+        return $only === null ? $fields : array_values(array_filter($fields, fn (CustomField $f) => in_array($f->getId(), $only, true)));
+    }
+
+    /**
+     * Which fields someone sees and may change, from the roles they hold in the club (RoleService::sectionRoleIds()).
+     * A field in a section is seen with one of its view or edit roles and changed only with an edit role; changing
+     * needs the permission to manage members on top, which the routes check. Null role ids = every field.
+     *
+     * @param int[]|null $roleIds
+     * @return array{visible: int[]|null, editable: int[]|null} field ids, null = all
+     */
+    public function access(int $clubId, ?array $roleIds): array {
+        if ($roleIds === null) {
+            return ['visible' => null, 'editable' => null];
+        }
+        $sections = [];
+        foreach ($this->sections($clubId) as $section) {
+            $sections[$section->getId()] = $section;
+        }
+        $visible = [];
+        $editable = [];
+        foreach ($this->fields->findByClub($clubId) as $field) {
+            $sectionId = $field->getSectionId();
+            if ($sectionId === null) {
+                $visible[] = $field->getId();
+                $editable[] = $field->getId();
+                continue;
+            }
+            // a field pointing to a section that is gone stays hidden rather than open
+            $section = $sections[$sectionId] ?? null;
+            if ($section === null) {
+                continue;
+            }
+            $mayEdit = array_intersect($roleIds, $section->getEditRoleIds()) !== [];
+            if ($mayEdit || array_intersect($roleIds, $section->getViewRoleIds()) !== []) {
+                $visible[] = $field->getId();
+            }
+            if ($mayEdit) {
+                $editable[] = $field->getId();
+            }
+        }
+        return ['visible' => $visible, 'editable' => $editable];
+    }
+
+    /** @return CustomSection[] */
+    public function sections(int $clubId): array {
+        return $this->sections?->findByClub($clubId) ?? [];
+    }
+
+    /** @throws ValidationException */
+    public function createSection(int $clubId, array $data): CustomSection {
+        if ($this->sections === null) {
+            throw new ValidationException($this->l->t('Sections are not available'));
+        }
+        $this->clubs->find($clubId);
+        $existing = $this->sections->findByClub($clubId);
+        if (count($existing) >= self::MAX_SECTIONS) {
+            throw new ValidationException($this->l->t('A club can have at most %s sections', [self::MAX_SECTIONS]));
+        }
+        $section = new CustomSection();
+        $section->setClubId($clubId);
+        $this->applySection($section, $data, $existing);
+        $section->setSortOrder(count($existing) === 0 ? 0 : max(array_map(fn (CustomSection $s) => (int)$s->getSortOrder(), $existing)) + 1);
+        $section->setCreatedAt(date('Y-m-d H:i:s'));
+        $section = $this->sections->insert($section);
+        $this->auditLog?->record($clubId, 'custom_section', $section->getId(), 'create', $section->jsonSerialize());
+        return $section;
+    }
+
+    /**
+     * @throws ValidationException
+     * @throws NotFoundException
+     */
+    public function updateSection(int $clubId, int $id, array $data): CustomSection {
+        $section = $this->ownSection($clubId, $id);
+        $before = $section->jsonSerialize();
+        $this->applySection($section, $data, $this->sections->findByClub($clubId));
+        $section = $this->sections->update($section);
+        if ($this->auditLog !== null) {
+            $changes = $this->auditLog->diff($before, $section->jsonSerialize());
+            if ($changes !== []) {
+                $this->auditLog->record($clubId, 'custom_section', $id, 'update', $changes);
+            }
+        }
+        return $section;
+    }
+
+    /**
+     * Only an empty section can go: removing it would otherwise open its fields to everyone.
+     *
+     * @throws ValidationException
+     * @throws NotFoundException
+     */
+    public function deleteSection(int $clubId, int $id): void {
+        $section = $this->ownSection($clubId, $id);
+        foreach ($this->fields->findByClub($clubId) as $field) {
+            if ($field->getSectionId() === $id) {
+                throw new ValidationException($this->l->t('The section still has fields. Move them to another section or delete them first.'));
+            }
+        }
+        $this->sections->delete($section);
+        $this->auditLog?->record($clubId, 'custom_section', $id, 'delete', ['name' => $section->getName()]);
     }
 
     /** @throws ValidationException */
@@ -102,10 +218,16 @@ class CustomFieldService {
         $this->auditLog?->record($clubId, 'custom_field', $id, 'delete', ['label' => $field->getLabel()]);
     }
 
-    /** @return array<int, array<int, string>> member id => field id => value */
-    public function valuesForClub(int $clubId): array {
+    /**
+     * @param int[]|null $only field ids to keep (see access()), null = all
+     * @return array<int, array<int, string>> member id => field id => value
+     */
+    public function valuesForClub(int $clubId, ?array $only = null): array {
         $byMember = [];
         foreach ($this->values->findByClub($clubId) as $value) {
+            if ($only !== null && !in_array($value->getFieldId(), $only, true)) {
+                continue;
+            }
             if ($value->getValue() !== null && $value->getValue() !== '') {
                 $byMember[$value->getMemberId()][$value->getFieldId()] = (string)$value->getValue();
             }
@@ -113,10 +235,16 @@ class CustomFieldService {
         return $byMember;
     }
 
-    /** @return array<int, string> field id => value */
-    public function valuesFor(int $clubId, int $memberId): array {
+    /**
+     * @param int[]|null $only field ids to keep (see access()), null = all
+     * @return array<int, string> field id => value
+     */
+    public function valuesFor(int $clubId, int $memberId, ?array $only = null): array {
         $out = [];
         foreach ($this->values->findByMember($clubId, $memberId) as $value) {
+            if ($only !== null && !in_array($value->getFieldId(), $only, true)) {
+                continue;
+            }
             if ($value->getValue() !== null && $value->getValue() !== '') {
                 $out[$value->getFieldId()] = (string)$value->getValue();
             }
@@ -125,16 +253,27 @@ class CustomFieldService {
     }
 
     /**
-     * The member's values with their labels, in the club's order, as a person reads them (for "My data").
+     * The member's values with their labels, in the club's order, as a person reads them: for "My data" all of the
+     * person's own values, for the data export of a member only what the exporting user sees.
      *
-     * @return array<int, array{label: string, type: string, value: string}>
+     * @param int[]|null $only field ids to keep (see access()), null = all
+     * @return array<int, array{label: string, type: string, value: string, section: ?string}>
      */
-    public function labelledValuesFor(int $clubId, int $memberId): array {
-        $values = $this->valuesFor($clubId, $memberId);
+    public function labelledValuesFor(int $clubId, int $memberId, ?array $only = null): array {
+        $values = $this->valuesFor($clubId, $memberId, $only);
+        $sectionNames = [];
+        foreach ($this->sections($clubId) as $section) {
+            $sectionNames[$section->getId()] = $section->getName();
+        }
         $out = [];
         foreach ($this->fields->findByClub($clubId) as $field) {
             if (isset($values[$field->getId()])) {
-                $out[] = ['label' => $field->getLabel(), 'type' => (string)($field->getType() ?? 'text'), 'value' => $values[$field->getId()]];
+                $out[] = [
+                    'label' => $field->getLabel(),
+                    'type' => (string)($field->getType() ?? 'text'),
+                    'value' => $values[$field->getId()],
+                    'section' => $field->getSectionId() !== null ? ($sectionNames[$field->getSectionId()] ?? null) : null,
+                ];
             }
         }
         return $out;
@@ -143,11 +282,14 @@ class CustomFieldService {
     /**
      * Checks and normalises submitted values (field id => value, or that as JSON). Fields of other clubs and unknown ids
      * are ignored; a field not sent stays as it is - except that creating a member needs every required field.
+     * Fields outside $editable (see access()) are ignored the same way and never required: whoever may not change a
+     * section can neither overwrite nor empty it, and can still create members.
      *
+     * @param int[]|null $editable field ids the user may change, null = all
      * @return array<int, ?string> field id => normalised value (null = empty)
      * @throws ValidationException naming every field that is wrong
      */
-    public function validateValues(int $clubId, mixed $raw, bool $creating): array {
+    public function validateValues(int $clubId, mixed $raw, bool $creating, ?array $editable = null): array {
         if (is_string($raw)) {
             $raw = $raw === '' ? [] : json_decode($raw, true);
         }
@@ -161,7 +303,10 @@ class CustomFieldService {
         $errors = [];
         foreach ($this->fields->findByClub($clubId) as $field) {
             $id = $field->getId();
-            $sent = array_key_exists($id, $raw) || array_key_exists((string)$id, $raw);
+            if ($editable !== null && !in_array($id, $editable, true)) {
+                continue;
+            }
+            $sent =array_key_exists($id, $raw) || array_key_exists((string)$id, $raw);
             if (!$sent) {
                 if ($creating && $field->getRequired() && $field->getType() !== 'checkbox') {
                     $errors[] = $this->l->t('%s is required', [$field->getLabel()]);
@@ -347,6 +492,78 @@ class CustomFieldService {
         if (array_key_exists('sortOrder', $data) && is_numeric($data['sortOrder'])) {
             $field->setSortOrder((int)$data['sortOrder']);
         }
+        if (array_key_exists('sectionId', $data)) {
+            $sectionId = is_numeric($data['sectionId']) && (int)$data['sectionId'] > 0 ? (int)$data['sectionId'] : null;
+            if ($sectionId !== null) {
+                // only a section of the same club
+                try {
+                    $this->ownSection($field->getClubId(), $sectionId);
+                } catch (NotFoundException $e) {
+                    throw new ValidationException($this->l->t('The section does not exist'));
+                }
+            }
+            $field->setSectionId($sectionId);
+        }
+    }
+
+    /**
+     * @param CustomSection[] $existing the club's sections
+     * @throws ValidationException
+     */
+    private function applySection(CustomSection $section, array $data, array $existing): void {
+        $name = trim(is_scalar($data['name'] ?? null) ? (string)$data['name'] : $section->getName());
+        if ($name === '') {
+            throw new ValidationException($this->l->t('The name of the section is required'));
+        }
+        if (mb_strlen($name) > self::MAX_LABEL) {
+            throw new ValidationException($this->l->t('The name of the section is too long'));
+        }
+        foreach ($existing as $other) {
+            if ($other->getId() !== $section->getId() && mb_strtolower($other->getName()) === mb_strtolower($name)) {
+                throw new ValidationException($this->l->t('A section with this name already exists'));
+            }
+        }
+        $section->setName($name);
+        if (array_key_exists('viewRoles', $data)) {
+            $section->setViewRoles(json_encode($this->roleIds($data['viewRoles'])));
+        }
+        if (array_key_exists('editRoles', $data)) {
+            $section->setEditRoles(json_encode($this->roleIds($data['editRoles'])));
+        }
+        if (array_key_exists('sortOrder', $data) && is_numeric($data['sortOrder'])) {
+            $section->setSortOrder((int)$data['sortOrder']);
+        }
+    }
+
+    /**
+     * Role ids from a list, JSON of a list or comma-separated text; unknown roles are refused.
+     *
+     * @return int[]
+     * @throws ValidationException
+     */
+    private function roleIds(mixed $raw): array {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : ($raw === '' ? [] : explode(',', $raw));
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($raw as $id) {
+            if (!is_numeric($id) || (int)$id <= 0) {
+                throw new ValidationException($this->l->t('Unknown role'));
+            }
+            $ids[(int)$id] = (int)$id;
+        }
+        foreach ($ids as $id) {
+            try {
+                $this->roleDefinitions?->find($id);
+            } catch (DoesNotExistException $e) {
+                throw new ValidationException($this->l->t('Unknown role'));
+            }
+        }
+        return array_values($ids);
     }
 
     /**
@@ -384,6 +601,22 @@ class CustomFieldService {
 
     private function bool(mixed $value): bool {
         return $value === true || $value === 1 || in_array(mb_strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /** @throws NotFoundException */
+    private function ownSection(int $clubId, int $id): CustomSection {
+        if ($this->sections === null) {
+            throw new NotFoundException($this->l->t('Section not found'));
+        }
+        try {
+            $section = $this->sections->find($id);
+        } catch (DoesNotExistException $e) {
+            throw new NotFoundException($this->l->t('Section not found'));
+        }
+        if ($section->getClubId() !== $clubId) {
+            throw new NotFoundException($this->l->t('Section not found'));
+        }
+        return $section;
     }
 
     /** @throws NotFoundException */

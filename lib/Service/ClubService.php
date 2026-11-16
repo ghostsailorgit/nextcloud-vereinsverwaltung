@@ -44,7 +44,8 @@ class ClubService {
         private ?\OCA\Verein\Db\ClubGroupMapper $groups = null,
         private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null,
         private ?\OCA\Verein\Db\CustomValueMapper $customValues = null,
-        private ?\OCA\Verein\Db\CustomFieldMapper $customFields = null
+        private ?\OCA\Verein\Db\CustomFieldMapper $customFields = null,
+        private ?\OCA\Verein\Db\CustomSectionMapper $customSections = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -134,6 +135,7 @@ class ClubService {
         $this->groupPeriods?->deleteByClub($id);
         $this->customValues?->deleteByClub($id);
         $this->customFields?->deleteByClub($id);
+        $this->customSections?->deleteByClub($id);
         $this->groups?->deleteByClub($id);
         $this->accountMapper->deleteByClub($id);
         $this->feeRates->deleteByClub($id);

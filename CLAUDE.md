@@ -50,6 +50,9 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
   `verein.club.manage`, filled with `verein.member.manage`, read with `verein.member.view`), so a new kind of information needs no app change.
   Values travel as JSON in the form field `customFields` (form-encoded API), are checked before the member is written, deleted when the
   person leaves the club or is anonymized, part of "My data"/export/backup; the audit log names only the changed field ids.
+  **Sections (`verein_custom_sections`)** restrict fields to roles: every place that hands out values (member list/show, CSV export,
+  member data export) filters by `CustomFieldService::access($clubId, RoleService::sectionRoleIds())['visible']`, every place that
+  accepts them (member create/update, import) by `['editable']`. A new place that reads or writes values must do the same.
 
 - **Groups (`verein_groups`, `verein_group_members`, `ClubGroupService`)** inside a club, e.g. training groups: one row per stay, so joining again keeps the
   history. Reading needs `verein.member.view`, changes `verein.member.manage`. Not Nextcloud groups: most members have no account.

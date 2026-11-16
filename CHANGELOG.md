@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.19.0] - 2026-11-16
+
+### ✨ Neu
+- **Bereiche für eigene Felder mit eigenen Rechten** ([#49](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/49)): Unter „Verein“ → „Eigene Felder“ lassen sich Bereiche anlegen, z. B. „Bankdaten“, „Verein intern“ oder „Führungszeugnis“. Je Bereich wählt man die Rollen, die ihn sehen, und die, die ihn ändern dürfen. Felder eines Bereichs bekommen nur diese Rollen zu sehen, auch in der Mitgliederliste, im CSV-Export und im Datenexport eines Mitglieds; der Import füllt sie nur für Berechtigte. Wer den Verein verwalten darf, sieht immer alles. Felder ohne Bereich verhalten sich wie bisher. Im Mitgliederformular erscheinen die Felder nach Bereichen gruppiert, nicht änderbare Felder schreibgeschützt. Ein Bereich lässt sich nur löschen, wenn keine Felder mehr darin sind. Unter „Meine Daten“ sieht jedes Mitglied weiterhin alle eigenen Werte.
+
+---
+
 ## [1.18.1] - 2026-11-16
 
 ### 🐛 Behoben

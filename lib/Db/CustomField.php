@@ -25,6 +25,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setShowInList(?bool $showInList)
  * @method int getSortOrder()
  * @method void setSortOrder(int $sortOrder)
+ * @method ?int getSectionId()
+ * @method void setSectionId(?int $sectionId)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
  */
@@ -39,6 +41,8 @@ class CustomField extends Entity implements JsonSerializable {
     protected ?bool $required = null;
     protected ?bool $showInList = null;
     protected ?int $sortOrder = null;
+    // null = no section: seen by everyone who sees members
+    protected ?int $sectionId = null;
     protected ?string $createdAt = null;
 
     public function __construct() {
@@ -46,6 +50,7 @@ class CustomField extends Entity implements JsonSerializable {
         $this->addType('required', 'bool');
         $this->addType('showInList', 'bool');
         $this->addType('sortOrder', 'integer');
+        $this->addType('sectionId', 'integer');
     }
 
     /** @return string[] */
@@ -64,6 +69,7 @@ class CustomField extends Entity implements JsonSerializable {
             'required' => (bool)$this->required,
             'showInList' => (bool)$this->showInList,
             'sortOrder' => (int)$this->sortOrder,
+            'sectionId' => $this->sectionId,
         ];
     }
 }

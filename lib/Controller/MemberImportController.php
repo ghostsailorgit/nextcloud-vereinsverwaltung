@@ -36,7 +36,7 @@ class MemberImportController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function preview(): JSONResponse {
         try {
-            $plan = $this->import->plan($this->clubId(), $this->csv(), $this->mayAssignRoles());
+            $plan = $this->import->plan($this->clubId(), $this->csv(), $this->mayAssignRoles(), $this->sectionRoleIds());
             // the parsed values stay on the server: the browser has the file anyway and needs only the verdict
             $plan['rows'] = array_map(function (array $row) {
                 unset($row['data']);
@@ -55,7 +55,7 @@ class MemberImportController extends Controller {
     public function run(): JSONResponse {
         try {
             $lines = array_filter(array_map('intval', explode(',', (string)$this->request->getParam('lines', ''))));
-            return new JSONResponse(['status' => 'ok'] + $this->import->import($this->clubId(), $this->csv(), $this->mayAssignRoles(), $lines));
+            return new JSONResponse(['status' => 'ok'] + $this->import->import($this->clubId(), $this->csv(), $this->mayAssignRoles(), $lines, $this->sectionRoleIds()));
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
@@ -65,6 +65,11 @@ class MemberImportController extends Controller {
     private function mayAssignRoles(): bool {
         $uid = $this->userSession->getUser()?->getUID() ?? '';
         return $this->roleService->userHasPermission($uid, 'verein.role.manage', $this->clubId());
+    }
+
+    /** Own fields in sections the user may not change are not imported. */
+    private function sectionRoleIds(): ?array {
+        return $this->roleService->sectionRoleIds($this->userSession->getUser()?->getUID() ?? '', $this->clubId());
     }
 
     private function csv(): string {

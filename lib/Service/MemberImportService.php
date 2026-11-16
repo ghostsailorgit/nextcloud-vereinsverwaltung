@@ -85,14 +85,17 @@ class MemberImportService {
     /**
      * Checks every row; writes nothing.
      *
+     * @param int[]|null $sectionRoleIds the importing user's roles for the sections of own fields
+     *   (RoleService::sectionRoleIds()), null = every field; a column of a field they may not change is ignored
      * @return array{columns: array, ignoredColumns: string[], rows: array, counts: array}
      * @throws ValidationException
      */
-    public function plan(int $clubId, string $csv, bool $mayAssignRoles): array {
+    public function plan(int $clubId, string $csv, bool $mayAssignRoles, ?array $sectionRoleIds = null): array {
         $this->clubs->find($clubId);
+        $editable = $this->customFields?->access($clubId, $sectionRoleIds)['editable'];
         // a column named like one of the club's own fields fills that field
         $customByKey = [];
-        foreach ($this->customFields?->fields($clubId) ?? [] as $field) {
+        foreach ($this->customFields?->fields($clubId, $editable) ?? [] as $field) {
             $customByKey[$this->normaliseHeader($field->getLabel())] = $field->getId();
         }
         [$columns, $ignored, $records] = $this->parse($csv, $customByKey);
@@ -129,7 +132,7 @@ class MemberImportService {
             [$data, $errors, $warnings] = $this->toMemberData($record, $ratesByName, $mayAssignRoles);
             if ($errors === [] && $this->customFields !== null) {
                 try {
-                    $data['custom'] = $this->customFields->validateValues($clubId, $custom, true);
+                    $data['custom'] = $this->customFields->validateValues($clubId, $custom, true, $editable);
                 } catch (ValidationException $e) {
                     $errors[] = $e->getMessage();
                 }
@@ -192,11 +195,11 @@ class MemberImportService {
      * @return array{created: array, failed: array, skipped: array}
      * @throws ValidationException
      */
-    public function import(int $clubId, string $csv, bool $mayAssignRoles, array $lines): array {
+    public function import(int $clubId, string $csv, bool $mayAssignRoles, array $lines, ?array $sectionRoleIds = null): array {
         if ($lines === [] || count($lines) > 100) {
             throw new ValidationException($this->l->t('Please import 1 to 100 lines at a time'));
         }
-        $plan = $this->plan($clubId, $csv, $mayAssignRoles);
+        $plan = $this->plan($clubId, $csv, $mayAssignRoles, $sectionRoleIds);
         $wanted = array_flip(array_map('intval', $lines));
         $created = [];
         $failed = [];

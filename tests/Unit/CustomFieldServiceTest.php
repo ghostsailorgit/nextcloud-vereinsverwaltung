@@ -8,8 +8,12 @@ namespace OCA\Verein\Tests\Unit;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Db\CustomField;
 use OCA\Verein\Db\CustomFieldMapper;
+use OCA\Verein\Db\CustomSection;
+use OCA\Verein\Db\CustomSectionMapper;
 use OCA\Verein\Db\CustomValue;
 use OCA\Verein\Db\CustomValueMapper;
+use OCA\Verein\Db\Role;
+use OCA\Verein\Db\RoleMapper;
 use OCA\Verein\Exception\NotFoundException;
 use OCA\Verein\Exception\ValidationException;
 use OCA\Verein\L10n\SourceL10n;
@@ -23,6 +27,8 @@ class CustomFieldServiceTest extends TestCase {
 
     /** @var array<int, CustomField> */
     private array $fieldStore = [];
+    /** @var array<int, CustomSection> */
+    private array $sectionStore = [];
     /** @var CustomValue[] */
     private array $valueStore = [];
     private int $nextId = 1;
@@ -58,7 +64,27 @@ class CustomFieldServiceTest extends TestCase {
         });
         $audit->method('diff')->willReturn(['x' => 1]);
 
-        $this->service = new CustomFieldService($fields, $values, $this->createMock(ClubMapper::class), $audit, SourceL10n::fromAppLanguage('de'));
+        $values->method('findByClub')->willReturnCallback(fn (int $c) => array_values(array_filter($this->valueStore, fn ($v) => $v->getClubId() === $c)));
+
+        $sections = $this->createMock(CustomSectionMapper::class);
+        $sections->method('findByClub')->willReturnCallback(fn (int $c) => array_values(array_filter($this->sectionStore, fn ($s) => $s->getClubId() === $c)));
+        $sections->method('find')->willReturnCallback(fn (int $id) => $this->sectionStore[$id] ?? throw new DoesNotExistException('none'));
+        $sections->method('insert')->willReturnCallback(function (CustomSection $s) {
+            $s->setId($this->nextId++);
+            $this->sectionStore[$s->getId()] = $s;
+            return $s;
+        });
+        $sections->method('update')->willReturnArgument(0);
+        $sections->method('delete')->willReturnCallback(function (CustomSection $s) {
+            unset($this->sectionStore[$s->getId()]);
+            return $s;
+        });
+
+        // roles 10, 11 and 12 exist
+        $roles = $this->createMock(RoleMapper::class);
+        $roles->method('find')->willReturnCallback(fn (int $id) => in_array($id, [10, 11, 12], true) ? new Role() : throw new DoesNotExistException('none'));
+
+        $this->service = new CustomFieldService($fields, $values, $this->createMock(ClubMapper::class), $audit, $sections, $roles, SourceL10n::fromAppLanguage('de'));
     }
 
     private function field(string $label, string $type, array $extra = []): CustomField {
@@ -148,5 +174,96 @@ class CustomFieldServiceTest extends TestCase {
 
         $this->expectException(NotFoundException::class);
         $this->service->delete(2, $field->getId());
+    }
+
+    public function testSectionsDecideWhoSeesAndChangesAField(): void {
+        $open = $this->field('Instrument', 'text');
+        $bank = $this->service->createSection(self::CLUB, ['name' => 'Bankdaten', 'viewRoles' => '[10]', 'editRoles' => '[11]']);
+        $police = $this->service->createSection(self::CLUB, ['name' => 'Führungszeugnis', 'viewRoles' => [], 'editRoles' => []]);
+        $account = $this->field('Zweitkonto', 'text', ['sectionId' => (string)$bank->getId()]);
+        $certificate = $this->field('Vorgelegt am', 'date', ['sectionId' => $police->getId(), 'required' => '1']);
+
+        $this->assertSame(['visible' => null, 'editable' => null], $this->service->access(self::CLUB, null), 'club managers see everything');
+        $this->assertSame(['visible' => [$open->getId()], 'editable' => [$open->getId()]], $this->service->access(self::CLUB, []),
+            'no role: only fields without a section');
+        $this->assertSame(['visible' => [$open->getId(), $account->getId()], 'editable' => [$open->getId()]], $this->service->access(self::CLUB, [10]),
+            'a view role shows the section but does not open it for changes');
+        $this->assertSame(['visible' => [$open->getId(), $account->getId()], 'editable' => [$open->getId(), $account->getId()]], $this->service->access(self::CLUB, [11, 12]),
+            'an edit role includes seeing');
+
+        $this->service->saveValues(self::CLUB, 7, [$open->getId() => 'Flöte', $account->getId() => 'DE00', $certificate->getId() => '2026-01-01']);
+        $visible = $this->service->access(self::CLUB, [10])['visible'];
+        $this->assertSame([$open->getId() => 'Flöte', $account->getId() => 'DE00'], $this->service->valuesFor(self::CLUB, 7, $visible));
+        $this->assertSame([7 => [$open->getId() => 'Flöte', $account->getId() => 'DE00']], $this->service->valuesForClub(self::CLUB, $visible));
+        $this->assertSame(['Instrument', 'Zweitkonto'], array_column($this->service->labelledValuesFor(self::CLUB, 7, $visible), 'label'));
+        $this->assertSame('Bankdaten', $this->service->labelledValuesFor(self::CLUB, 7)[1]['section']);
+        $this->assertCount(3, $this->service->labelledValuesFor(self::CLUB, 7), 'the person themselves sees all of their values');
+        $this->assertSame([$open->getId(), $account->getId()], array_map(fn ($f) => $f->getId(), $this->service->fields(self::CLUB, $visible)));
+    }
+
+    public function testValuesOfFieldsSomeoneMayNotChangeAreIgnored(): void {
+        $open = $this->field('Instrument', 'text');
+        $police = $this->service->createSection(self::CLUB, ['name' => 'Führungszeugnis']);
+        $certificate = $this->field('Vorgelegt am', 'date', ['sectionId' => $police->getId(), 'required' => '1']);
+        $editable = $this->service->access(self::CLUB, [10])['editable'];
+
+        // neither overwritten nor emptied, and its being required does not stop creating a member
+        $this->assertSame([$open->getId() => 'Flöte'], $this->service->validateValues(self::CLUB, [$open->getId() => 'Flöte', $certificate->getId() => ''], true, $editable));
+        $this->assertSame([], $this->service->validateValues(self::CLUB, [$certificate->getId() => '2026-01-01'], false, $editable));
+        // with every right the field is required as before
+        $this->expectExceptionMessage('Vorgelegt am ist ein Pflichtfeld');
+        $this->service->validateValues(self::CLUB, [$open->getId() => 'Flöte'], true);
+    }
+
+    public function testSectionsAreChecked(): void {
+        $this->service->createSection(self::CLUB, ['name' => 'Bankdaten']);
+        foreach ([
+            [['name' => ' '], 'Name des Bereichs fehlt'],
+            [['name' => 'bankdaten'], 'Bereich mit diesem Namen gibt es schon'],
+            [['name' => 'Intern', 'viewRoles' => '[99]'], 'Unbekannte Rolle'],
+            [['name' => 'Intern', 'editRoles' => 'x'], 'Unbekannte Rolle'],
+        ] as [$data, $message]) {
+            try {
+                $this->service->createSection(self::CLUB, $data);
+                $this->fail('accepted: ' . json_encode($data));
+            } catch (ValidationException $e) {
+                $this->assertStringContainsString($message, $e->getMessage());
+            }
+        }
+        $other = new CustomSection();
+        $other->setClubId(2);
+        $other->setName('Fremd');
+        $other->setId(500);
+        $this->sectionStore[500] = $other;
+        try {
+            $this->field('Konto', 'text', ['sectionId' => 500]);
+            $this->fail('a section of another club was accepted');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('Bereich gibt es nicht', $e->getMessage());
+        }
+        $this->expectException(NotFoundException::class);
+        $this->service->updateSection(self::CLUB, 500, ['name' => 'Meins']);
+    }
+
+    public function testOnlyAnEmptySectionCanBeDeleted(): void {
+        $section = $this->service->createSection(self::CLUB, ['name' => 'Intern', 'editRoles' => '10,11']);
+        $this->assertSame([10, 11], $section->getEditRoleIds());
+        $field = $this->field('Notiz', 'text', ['sectionId' => $section->getId()]);
+        try {
+            $this->service->deleteSection(self::CLUB, $section->getId());
+            $this->fail('deleted a section with fields');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('noch Felder', $e->getMessage());
+        }
+        $this->service->update(self::CLUB, $field->getId(), ['label' => 'Notiz', 'sectionId' => '']);
+        $this->assertNull($field->getSectionId());
+        $this->service->deleteSection(self::CLUB, $section->getId());
+        $this->assertSame([], $this->service->sections(self::CLUB));
+    }
+
+    public function testAFieldWhoseSectionIsGoneStaysHidden(): void {
+        $field = $this->field('Notiz', 'text');
+        $field->setSectionId(999);
+        $this->assertSame(['visible' => [], 'editable' => []], $this->service->access(self::CLUB, [10]));
     }
 }
