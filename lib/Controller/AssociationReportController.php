@@ -23,7 +23,8 @@ class AssociationReportController extends Controller {
     public function __construct(
         $AppName,
         IRequest $request,
-        private AssociationReportService $reports
+        private AssociationReportService $reports,
+        private ?\OCA\Verein\Service\MemberScope $scope = null
     ) {
         parent::__construct($AppName, $request);
     }
@@ -39,7 +40,7 @@ class AssociationReportController extends Controller {
     #[RequirePermission('verein.member.view')]
     public function show(): JSONResponse {
         try {
-            return new JSONResponse(['status' => 'ok', 'data' => $this->reports->report($this->clubId(), (string)$this->request->getParam('date', ''))]);
+            return new JSONResponse(['status' => 'ok', 'data' => $this->reports->report($this->clubId(), (string)$this->request->getParam('date', ''), $this->scope?->memberIds($this->clubId()))]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
@@ -57,7 +58,9 @@ class AssociationReportController extends Controller {
                 $date,
                 (string)$this->request->getParam('number', ''),
                 (string)$this->request->getParam('contact', ''),
-                (string)$this->request->getParam('sportCode', '')
+                (string)$this->request->getParam('sportCode', ''),
+                // a department head reports their department (MemberScope)
+                $this->scope?->memberIds($this->clubId())
             );
             return new DataDownloadResponse($xml, 'bestandserhebung-' . substr($date, 0, 4) . '.xml', 'application/xml');
         } catch (\Throwable $e) {

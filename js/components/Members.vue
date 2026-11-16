@@ -18,7 +18,7 @@
       <h2>{{ editingId ? t('verein', 'Edit member') : t('verein', 'Add member') }}</h2>
 
       <!-- Add a person who is already a member of another club (no duplicate) -->
-      <div v-if="!editingId" class="lookup-box">
+      <div v-if="!editingId && !scoped" class="lookup-box">
         <h3 class="form-subheader">{{ t('verein', 'Add a person from another club') }}</h3>
         <NcTextField
           :model-value="lookupQuery"
@@ -152,7 +152,7 @@
           :options="allGroups"
           label="name"
           multiple
-          :input-label="t('verein', 'Groups')"
+          :input-label="scoped ? t('verein', 'Groups') + ' *' : t('verein', 'Groups')"
           :placeholder="t('verein', 'Select…')"
         />
         <label class="date-field">
@@ -308,7 +308,7 @@
           <NcButton v-if="canManage" variant="primary" @click="startAdd">
             {{ t('verein', 'Add member') }}
           </NcButton>
-          <NcButton v-if="canManage" variant="secondary" @click="showImport = !showImport">
+          <NcButton v-if="canManage && !scoped" variant="secondary" @click="showImport = !showImport">
             {{ showImport ? t('verein', 'Close import') : t('verein', 'Import CSV') }}
           </NcButton>
           <ExportButtons resource="members" inline />
@@ -401,7 +401,7 @@
               <td>
                 <!-- Edit stays visible, everything else goes into the "…" menu so a row stays one line high -->
                 <div class="actions">
-                  <NcButton v-if="canManage" @click="startEdit(member)" variant="secondary">
+                  <NcButton v-if="canManage && member.editable !== false" @click="startEdit(member)" variant="secondary">
                     {{ t('verein', 'Edit') }}
                   </NcButton>
                   <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: displayName(member) })" :disabled="loading">
@@ -420,7 +420,7 @@
                       {{ t('verein', 'Deactivate') }}
                     </NcActionButton>
                     <NcActionButton
-                      v-if="canManage && canSendWelcome && member.email"
+                      v-if="canManage && member.editable !== false && canSendWelcome && member.email"
                       close-after-click
                       @click="sendWelcome(member)"
                     >
@@ -434,7 +434,7 @@
                       {{ t('verein', 'Personal data export') }}
                     </NcActionButton>
                     <NcActionButton
-                      v-if="canManage"
+                      v-if="canManage && member.editable !== false"
                       close-after-click
                       @click="deleteMember(member.id)"
                     >
@@ -748,6 +748,8 @@ export default {
     ]
     const allGroups = ref([])
     const newMemberGroups = ref([])
+    // a department head (role limited to groups): new members go into one of their groups, no import, no other clubs
+    const scoped = computed(() => Array.isArray(currentClub.value?.memberScope?.manage))
     const loadGroups = async () => {
       if (!canManage.value) return
       try {
@@ -757,10 +759,10 @@ export default {
       }
     }
     // the member exists by now, so a group that fails is reported without losing the rest
-    const addToGroups = async (memberId, joinDate) => {
+    const addToGroups = async (memberId, joinDate, groups) => {
       const d = new Date()
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      for (const group of newMemberGroups.value) {
+      for (const group of groups) {
         try {
           await api.post(`groups/${group.id}/members`, { memberId, joinedOn: String(joinDate || today).substring(0, 10) })
         } catch (error) {
@@ -810,6 +812,13 @@ export default {
         // only the fields the user may change (the server ignores the others anyway)
         const editable = Object.fromEntries(Object.entries(custom || {}).filter(([id]) => customFields.value.some(f => String(f.id) === id && f.editable)))
         const payload = { ...fields, customFields: JSON.stringify(editable) }
+        if (!editingId.value && scoped.value) {
+          if (!newMemberGroups.value.length) {
+            alertError.value = t('verein', 'Please choose one of your groups for the new member')
+            return
+          }
+          payload.groupId = newMemberGroups.value[0].id
+        }
         const response = editingId.value
           ? await api.put(`members/${editingId.value}`, payload)
           : await api.post('members', payload)
@@ -820,7 +829,10 @@ export default {
           if (alertRef.value) alertRef.value.open()
         } else {
           showSuccess(editingId.value ? t('verein', 'Member updated') : t('verein', 'Member added'))
-          if (!editingId.value && newMemberGroups.value.length) await addToGroups(response.data.data.id, formData.joinDate)
+          // a department head's first group was already set when the member was created
+          const more = scoped.value ? newMemberGroups.value.slice(1) : newMemberGroups.value
+          if (!editingId.value && more.length) await addToGroups(response.data.data.id, formData.joinDate, more)
+          if (!editingId.value) newMemberGroups.value = []
           if (!editingId.value && sendWelcomeOnCreate.value && formData.email) await postWelcome(response.data.data.id)
           sendWelcomeOnCreate.value = false
           cancelEdit()
@@ -990,6 +1002,7 @@ export default {
       genderOptions,
       allGroups,
       newMemberGroups,
+      scoped,
       groupFilter,
       groupOptions,
       payerOptions,

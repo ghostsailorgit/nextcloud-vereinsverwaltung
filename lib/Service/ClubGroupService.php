@@ -194,6 +194,15 @@ class ClubGroupService {
         $this->auditLog?->record($clubId, 'club_group_member', $id, 'delete');
     }
 
+    /**
+     * The group a stay belongs to.
+     *
+     * @throws NotFoundException
+     */
+    public function groupOfPeriod(int $clubId, int $periodId): int {
+        return $this->ownPeriod($clubId, $periodId)->getGroupId();
+    }
+
     /** @return ClubGroupMember[] open periods of people who are still members */
     private function currentPeriods(int $clubId): array {
         $members = $this->membersById($clubId);

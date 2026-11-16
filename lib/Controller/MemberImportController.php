@@ -25,7 +25,8 @@ class MemberImportController extends Controller {
         IRequest $request,
         private MemberImportService $import,
         private RoleService $roleService,
-        private IUserSession $userSession
+        private IUserSession $userSession,
+        private ?\OCA\Verein\Service\MemberScope $scope = null
     ) {
         parent::__construct($AppName, $request);
     }
@@ -36,6 +37,8 @@ class MemberImportController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function preview(): JSONResponse {
         try {
+            // imported members belong to no group yet: only with the permission for the whole club
+            $this->scope?->requireWholeClub($this->clubId());
             $plan = $this->import->plan($this->clubId(), $this->csv(), $this->mayAssignRoles(), $this->sectionRoleIds());
             // the parsed values stay on the server: the browser has the file anyway and needs only the verdict
             $plan['rows'] = array_map(function (array $row) {
@@ -54,6 +57,7 @@ class MemberImportController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function run(): JSONResponse {
         try {
+            $this->scope?->requireWholeClub($this->clubId());
             $lines = array_filter(array_map('intval', explode(',', (string)$this->request->getParam('lines', ''))));
             return new JSONResponse(['status' => 'ok'] + $this->import->import($this->clubId(), $this->csv(), $this->mayAssignRoles(), $lines, $this->sectionRoleIds()));
         } catch (\Throwable $e) {

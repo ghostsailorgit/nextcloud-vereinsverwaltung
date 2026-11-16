@@ -7,7 +7,7 @@
     <div class="card">
       <div class="section-header">
         <h2>{{ t('verein', 'Groups') }}</h2>
-        <NcButton v-if="canManage && !showForm" variant="primary" @click="startAdd">{{ t('verein', 'Add group') }}</NcButton>
+        <NcButton v-if="canDefine && !showForm" variant="primary" @click="startAdd">{{ t('verein', 'Add group') }}</NcButton>
       </div>
       <p class="hint">{{ t('verein', 'Groups inside the club, e.g. training groups. A member can be in none, one or several. Joining and leaving are recorded for each stay, also when somebody joins again.') }}</p>
 
@@ -42,7 +42,7 @@
               <td>
                 <div class="row-actions">
                   <NcButton variant="secondary" @click="open(g)">{{ t('verein', 'Open') }}</NcButton>
-                  <NcActions v-if="canManage" force-menu :aria-label="t('verein', 'More actions for {name}', { name: g.name })">
+                  <NcActions v-if="canDefine" force-menu :aria-label="t('verein', 'More actions for {name}', { name: g.name })">
                     <NcActionButton close-after-click @click="startEdit(g)">{{ t('verein', 'Edit') }}</NcActionButton>
                     <NcActionButton close-after-click @click="removeGroup(g)">{{ t('verein', 'Delete') }}</NcActionButton>
                   </NcActions>
@@ -166,6 +166,8 @@ export default {
   components: { NcActionButton, NcActions, NcButton, NcSelect, NcTextField },
   setup() {
     const canManage = computed(() => can('verein.member.manage'))
+    // defining groups needs the permission for the whole club, not one limited to some groups (department heads)
+    const canDefine = computed(() => canManage.value && !Array.isArray(currentClub.value?.memberScope?.manage))
     // what members are charged is up to those who manage the fee categories
     const canLinkFee = computed(() => can('verein.club.manage'))
     const feeRates = computed(() => currentClub.value?.feeRates || [])
@@ -295,7 +297,7 @@ export default {
     })
 
     return {
-      t, formatDate, canManage, canLinkFee, feeRateOptions, feeRateName, groups, loaded, busy, showForm, form, selected, adding, editing, current, earlier, editingCurrent, memberOptions,
+      t, formatDate, canManage, canDefine, canLinkFee, feeRateOptions, feeRateName, groups, loaded, busy, showForm, form, selected, adding, editing, current, earlier, editingCurrent, memberOptions,
       open, startAdd, startEdit, saveGroup, removeGroup, addMembers, startEditPeriod, startEnd, savePeriod, removePeriod,
     }
   },

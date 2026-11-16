@@ -48,6 +48,13 @@ class RoleService {
      * categories (score.*, training.*, athlete.assign, musician.assign) which
      * are harmless to keep as preset suggestions but grant nothing real.
      */
+    /**
+     * The only permissions a role assignment limited to groups (department heads, issue #25) grants - and only for
+     * the members of those groups (memberGroupScope(), MemberScope). Every other permission of the role is ignored
+     * for such an assignment: finances, SEPA, roles and club settings concern the whole club.
+     */
+    public const SCOPABLE_PERMISSIONS = ['verein.member.view', 'verein.member.manage'];
+
     private const ENFORCED_PERMISSIONS = [
         'verein.member.view',
         'verein.member.manage',
@@ -83,7 +90,8 @@ class RoleService {
         MembershipMapper $membershipMapper,
         ClubMapper $clubMapper,
         private ?AuditLogService $auditLog = null,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?\OCA\Verein\Db\ClubGroupMapper $clubGroups = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->memberMapper = $memberMapper;
@@ -114,8 +122,45 @@ class RoleService {
                 return true;
             }
         }
+        // an assignment limited to groups grants only the member permissions, for those groups' members
+        if (in_array($permission, self::SCOPABLE_PERMISSIONS, true)) {
+            foreach ($this->scopedRoles($userId, $clubId) as $scoped) {
+                if (in_array($permission, $scoped['role']->getPermissionsArray(), true)) {
+                    return true;
+                }
+            }
+        }
 
         return false;
+    }
+
+    /**
+     * The groups whose members the permission covers for the user, or null for the whole club (Nextcloud admins,
+     * an assignment without groups, a role derived from the membership). Only meaningful for
+     * SCOPABLE_PERMISSIONS - for the others userHasPermission() is all there is.
+     *
+     * @return int[]|null
+     */
+    public function memberGroupScope(string $userId, string $permission, int $clubId): ?array {
+        if ($this->groupManager->isAdmin($userId)) {
+            return null;
+        }
+        foreach ($this->effectiveRoles($userId, $clubId) as $role) {
+            if (in_array($permission, $role->getPermissionsArray(), true)) {
+                return null;
+            }
+        }
+        $groups = [];
+        if (in_array($permission, self::SCOPABLE_PERMISSIONS, true)) {
+            foreach ($this->scopedRoles($userId, $clubId) as $scoped) {
+                if (in_array($permission, $scoped['role']->getPermissionsArray(), true)) {
+                    foreach ($scoped['groups'] as $groupId) {
+                        $groups[$groupId] = $groupId;
+                    }
+                }
+            }
+        }
+        return array_values($groups);
     }
 
     /**
@@ -131,11 +176,8 @@ class RoleService {
 
         $clubIds = [];
         foreach ($this->candidateClubIds($userId) as $clubId) {
-            foreach ($this->effectiveRoles($userId, $clubId) as $role) {
-                if (in_array($permission, $role->getPermissionsArray(), true)) {
-                    $clubIds[] = $clubId;
-                    break;
-                }
+            if ($this->userHasPermission($userId, $permission, $clubId)) {
+                $clubIds[] = $clubId;
             }
         }
 
@@ -154,7 +196,7 @@ class RoleService {
         }
         $ids = [];
         foreach ($this->candidateClubIds($userId) as $clubId) {
-            if ($this->effectiveRoles($userId, $clubId) !== []) {
+            if ($this->getPermissionsForClub($userId, $clubId) !== []) {
                 $ids[] = $clubId;
             }
         }
@@ -164,6 +206,8 @@ class RoleService {
     /**
      * All permissions the user holds in one club (everything for Nextcloud
      * admins) - lets the frontend hide what the user couldn't use anyway.
+     * Permissions from an assignment limited to groups are included (only the
+     * member ones); memberGroupScope() tells how far they reach.
      *
      * @return string[]
      */
@@ -178,13 +222,19 @@ class RoleService {
                 $permissions[$permission] = $permission;
             }
         }
+        foreach ($this->scopedRoles($userId, $clubId) as $scoped) {
+            foreach (array_intersect($scoped['role']->getPermissionsArray(), self::SCOPABLE_PERMISSIONS) as $permission) {
+                $permissions[$permission] = $permission;
+            }
+        }
         return array_values($permissions);
     }
 
     /**
      * The role ids that decide which sections of a club's own fields the user sees and may change
      * (CustomFieldService::access()), or null for "every section": Nextcloud admins and whoever may manage the
-     * club - they define the sections and could grant themselves any of them anyway.
+     * club - they define the sections and could grant themselves any of them anyway. A role assigned for some
+     * groups counts too: it decides about the fields of the members the user sees at all.
      *
      * @return int[]|null
      */
@@ -195,7 +245,11 @@ class RoleService {
         if ($this->userHasPermission($userId, 'verein.club.manage', $clubId)) {
             return null;
         }
-        return array_map(fn (Role $role) => (int)$role->getId(), $this->effectiveRoles($userId, $clubId));
+        $ids = array_map(fn (Role $role) => (int)$role->getId(), $this->effectiveRoles($userId, $clubId));
+        foreach ($this->scopedRoles($userId, $clubId) as $scoped) {
+            $ids[] = (int)$scoped['role']->getId();
+        }
+        return array_values(array_unique($ids));
     }
 
     public function isNextcloudAdmin(string $userId): bool {
@@ -203,18 +257,20 @@ class RoleService {
     }
 
     /**
-     * The roles a user effectively holds: explicit assignments plus the
-     * roles derived from their membership. Null club = across all clubs.
+     * The roles a user effectively holds for the whole club: explicit
+     * assignments without groups plus the roles derived from their
+     * membership. Null club = across all clubs. Assignments limited to
+     * groups are in scopedRoles().
      *
      * @return Role[]
      */
     private function effectiveRoles(string $userId, ?int $clubId): array {
         $roles = [];
 
-        $assignments = $clubId === null
-            ? $this->userRoleMapper->findByUserId($userId)
-            : $this->userRoleMapper->findByUserAndClub($userId, $clubId);
-        foreach ($assignments as $userRole) {
+        foreach ($this->assignments($userId, $clubId) as $userRole) {
+            if ($userRole->getGroupIdList() !== null) {
+                continue;
+            }
             try {
                 $role = $this->roleMapper->find($userRole->getRoleId());
             } catch (DoesNotExistException $e) {
@@ -228,6 +284,35 @@ class RoleService {
         }
 
         return array_values($roles);
+    }
+
+    /**
+     * Assignments limited to groups, with their group ids.
+     *
+     * @return array<int, array{role: Role, groups: int[]}>
+     */
+    private function scopedRoles(string $userId, ?int $clubId): array {
+        $out = [];
+        foreach ($this->assignments($userId, $clubId) as $userRole) {
+            $groups = $userRole->getGroupIdList();
+            if ($groups === null) {
+                continue;
+            }
+            try {
+                $role = $this->roleMapper->find($userRole->getRoleId());
+            } catch (DoesNotExistException $e) {
+                continue;
+            }
+            $out[] = ['role' => $role, 'groups' => $groups];
+        }
+        return $out;
+    }
+
+    /** @return UserRole[] */
+    private function assignments(string $userId, ?int $clubId): array {
+        return $clubId === null
+            ? $this->userRoleMapper->findByUserId($userId)
+            : $this->userRoleMapper->findByUserAndClub($userId, $clubId);
     }
 
     /**
@@ -393,20 +478,32 @@ class RoleService {
 
     /**
      * Everyone holding a role in the club, one entry per user: the names of
-     * the explicitly assigned roles ('roles', removable) and of the roles
-     * derived automatically from their membership ('automaticRoles').
+     * the explicitly assigned roles ('roles', removable; one limited to groups
+     * as "Role (Group, Group)") and of the roles derived automatically from
+     * their membership ('automaticRoles').
      *
      * @return array<int, array{userId: string, roles: string[], automaticRoles: string[]}>
      */
     public function getClubAssignments(int $clubId): array {
         $byUser = [];
+        $groupNames = [];
+        foreach ($this->clubGroups?->findByClub($clubId) ?? [] as $group) {
+            $groupNames[$group->getId()] = $group->getName();
+        }
         foreach ($this->userRoleMapper->findByClubId($clubId) as $userRole) {
             try {
                 $role = $this->roleMapper->find($userRole->getRoleId());
             } catch (DoesNotExistException $e) {
                 continue;
             }
-            $byUser[$userRole->getUserId()]['roles'][] = $role->getName();
+            $name = $role->getName();
+            $groups = $userRole->getGroupIdList();
+            if ($groups !== null) {
+                $names = array_map(fn (int $id) => $groupNames[$id] ?? ('#' . $id), $groups);
+                sort($names);
+                $name .= ' (' . implode(', ', $names) . ')';
+            }
+            $byUser[$userRole->getUserId()]['roles'][] = $name;
         }
 
         foreach ($this->memberMapper->findByClub($clubId) as $member) {
@@ -430,15 +527,32 @@ class RoleService {
         }
         return $result;
     }
+
     /**
+     * @param int[] $groupIds limits the assignment to the members of these groups of the club (only the member
+     *   permissions of the role then count, see SCOPABLE_PERMISSIONS); empty = the whole club
      * @throws ValidationException
      */
-    public function assignRole(string $userId, int $roleId, int $clubId): UserRole {
+    public function assignRole(string $userId, int $roleId, int $clubId, array $groupIds = []): UserRole {
         if ($clubId <= 0) {
             throw new ValidationException($this->l->t('Club is required'));
         }
         // Confirm the role actually exists before assigning it
         $this->roleMapper->find($roleId);
+
+        $groups = [];
+        foreach ($groupIds as $groupId) {
+            $groupId = (int)$groupId;
+            try {
+                $group = $this->clubGroups?->find($groupId);
+            } catch (DoesNotExistException $e) {
+                $group = null;
+            }
+            if ($group === null || $group->getClubId() !== $clubId) {
+                throw new ValidationException($this->l->t('The group does not exist'));
+            }
+            $groups[$groupId] = $groupId;
+        }
 
         if ($this->userRoleMapper->existsForUserAndRole($userId, $roleId, $clubId)) {
             throw new ValidationException($this->l->t('The role is already assigned to this account'));
@@ -448,6 +562,9 @@ class RoleService {
         $userRole->setUserId($userId);
         $userRole->setRoleId($roleId);
         $userRole->setClubId($clubId);
+        if ($groups !== []) {
+            $userRole->setGroupIds(json_encode(array_values($groups)));
+        }
         $currentUser = $this->userSession->getUser();
         $userRole->setGrantedBy($currentUser !== null ? $currentUser->getUID() : 'system');
 

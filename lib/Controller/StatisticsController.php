@@ -21,7 +21,8 @@ class StatisticsController extends Controller {
     public function __construct(
         string $appName,
         IRequest $request,
-        StatisticsService $statisticsService
+        StatisticsService $statisticsService,
+        private ?\OCA\Verein\Service\MemberScope $scope = null
     ) {
         parent::__construct($appName, $request);
         $this->statisticsService = $statisticsService;
@@ -34,7 +35,8 @@ class StatisticsController extends Controller {
     #[RequirePermission('verein.member.view')]
     public function getMemberStatistics(int $clubId): JSONResponse {
         try {
-            $stats = $this->statisticsService->getMemberStatistics($clubId);
+            // a department head gets the figures of their groups only
+            $stats = $this->statisticsService->getMemberStatistics($clubId, $this->scope?->memberIds($clubId));
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $stats

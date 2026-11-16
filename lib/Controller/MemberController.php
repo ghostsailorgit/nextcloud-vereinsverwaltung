@@ -51,7 +51,8 @@ class MemberController extends Controller {
         ?IL10N $l10n = null,
         private ?ClubGroupService $clubGroups = null,
         private ?WelcomeMailService $welcomeMail = null,
-        private ?CustomFieldService $customFields = null
+        private ?CustomFieldService $customFields = null,
+        private ?\OCA\Verein\Service\MemberScope $scope = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($AppName, $request);
@@ -87,6 +88,33 @@ class MemberController extends Controller {
         return $this->customAccess;
     }
 
+    /**
+     * A department head (role limited to groups, see MemberScope) reaches only the members of their groups:
+     * anyone else is "not found".
+     *
+     * @throws \OCA\Verein\Exception\NotFoundException
+     */
+    private function checkScope(int $memberId, string $permission = 'verein.member.view'): void {
+        $this->scope?->check($this->clubId(), $memberId, $permission);
+    }
+
+    /** @throws \OCA\Verein\Exception\PermissionDeniedException */
+    private function requireWholeClub(): void {
+        $this->scope?->requireWholeClub($this->clubId());
+    }
+
+    /**
+     * The member who pays someone's fee must be one the user reaches too.
+     *
+     * @throws \OCA\Verein\Exception\NotFoundException
+     */
+    private function checkPayerScope(array $data): void {
+        $payer = (int)($data['payerMemberId'] ?? 0);
+        if ($payer > 0) {
+            $this->checkScope($payer, 'verein.member.manage');
+        }
+    }
+
     private function clubId(): int {
         return (int)$this->request->getParam('clubId', 0);
     }
@@ -104,12 +132,18 @@ class MemberController extends Controller {
             } else {
                 $members = $this->memberService->findAll($this->clubId());
             }
+            $members = $this->scope?->filter($this->clubId(), $members) ?? $members;
             $groups = $this->clubGroups?->currentGroupNames($this->clubId()) ?? [];
             // one query for the whole club, not one per member
             $custom = $this->customFields?->valuesForClub($this->clubId(), $this->customAccess()['visible']) ?? [];
+            // whom the user may edit, where that is fewer than they see (member permissions limited to some groups)
+            $editable = $this->scope?->memberIds($this->clubId(), 'verein.member.manage');
             return new JSONResponse([
                 'status' => 'ok',
-                'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? []) + ['groups' => $groups[$m->getId()] ?? []], $members)
+                'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? []) + [
+                    'groups' => $groups[$m->getId()] ?? [],
+                    'editable' => $editable === null || in_array((int)$m->getId(), $editable, true),
+                ], $members)
             ]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
@@ -125,6 +159,11 @@ class MemberController extends Controller {
      */
     #[RequirePermission('verein.member.manage')]
     public function searchUsers() {
+        try {
+            $this->requireWholeClub();
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
         $q = trim((string)$this->request->getParam('query', ''));
         if (mb_strlen($q) < 2) {
             return new JSONResponse(['status' => 'ok', 'users' => []]);
@@ -156,6 +195,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function lookup() {
         try {
+            $this->requireWholeClub();
             $q = (string)$this->request->getParam('query', '');
             $visible = $this->visibleClubIds();
             $members = $this->memberService->lookupInOtherClubs($this->clubId(), $q, $visible);
@@ -182,6 +222,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function attach() {
         try {
+            $this->requireWholeClub();
             $memberId = (int)$this->request->getParam('memberId', 0);
             if ($memberId <= 0) {
                 return new JSONResponse(['status' => 'error', 'message' => $this->l->t('memberId is required')], 400);
@@ -223,6 +264,7 @@ class MemberController extends Controller {
     public function show(int $id) {
         try {
             $member = $this->memberService->find($this->clubId(), $id);
+            $this->checkScope($id);
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $this->present($member)
@@ -265,8 +307,15 @@ class MemberController extends Controller {
 
             // the own fields are checked before anything is written
             $custom = $this->readCustomFields(true);
+            $this->checkPayerScope($data);
+            // a department head adds new members to one of their groups, or they would vanish from their view at once
+            $groupId = $this->scopedGroupForNewMember();
             $member = $this->memberService->create($this->clubId(), $data);
             $this->customFields?->saveValues($this->clubId(), $member->getId(), $custom);
+            if ($groupId !== null) {
+                $joined = (string)($data['joinDate'] ?? '');
+                $this->clubGroups?->addMember($this->clubId(), $groupId, $member->getId(), preg_match('/^\d{4}-\d{2}-\d{2}$/', $joined) ? $joined : date('Y-m-d'));
+            }
             return new JSONResponse([
                 'status' => 'ok',
                 'data' => $this->present($member)
@@ -274,6 +323,24 @@ class MemberController extends Controller {
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
+    }
+
+    /**
+     * For someone who may manage members only in some groups: the group (form field groupId) a new member joins -
+     * required, and one of theirs. Null for everyone else.
+     *
+     * @throws \OCA\Verein\Exception\ValidationException
+     */
+    private function scopedGroupForNewMember(): ?int {
+        $groups = $this->scope?->groups($this->clubId(), 'verein.member.manage');
+        if ($groups === null) {
+            return null;
+        }
+        $groupId = (int)$this->request->getParam('groupId', 0);
+        if (!in_array($groupId, $groups, true)) {
+            throw new \OCA\Verein\Exception\ValidationException($this->l->t('Please choose one of your groups for the new member'));
+        }
+        return $groupId;
     }
 
     /**
@@ -335,6 +402,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function update($id) {
         try {
+            $this->checkScope((int)$id, 'verein.member.manage');
             $data = $this->readMemberParams();
             if (!$this->canManageRoles()) {
                 // keep the current role and account link untouched
@@ -362,6 +430,7 @@ class MemberController extends Controller {
             }
 
             $custom = $this->readCustomFields(false);
+            $this->checkPayerScope($data);
             $member = $this->memberService->update($this->clubId(), (int)$id, $data);
             $this->customFields?->saveValues($this->clubId(), $member->getId(), $custom);
             return new JSONResponse([
@@ -382,6 +451,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function destroy($id) {
         try {
+            $this->checkScope((int)$id, 'verein.member.manage');
             $this->memberService->remove($this->clubId(), (int)$id);
             // the club's own fields belong to the membership
             $this->customFields?->deleteForMember($this->clubId(), (int)$id);
@@ -408,6 +478,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.role.manage')]
     public function deactivate($id) {
         try {
+            $this->checkScope((int)$id);
             $member = $this->memberService->deactivate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (\Throwable $e) {
@@ -423,6 +494,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function sendWelcome($id) {
         try {
+            $this->checkScope((int)$id, 'verein.member.manage');
             $this->welcomeMail->send($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok']);
         } catch (\Throwable $e) {
@@ -436,6 +508,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.role.manage')]
     public function activate($id) {
         try {
+            $this->checkScope((int)$id);
             $member = $this->memberService->activate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
         } catch (\Throwable $e) {
@@ -458,6 +531,7 @@ class MemberController extends Controller {
     public function anonymize($id) {
         try {
             $this->memberService->find($this->clubId(), (int)$id);
+            $this->checkScope((int)$id);
             $member = $this->memberService->anonymize((int)$id);
             $this->customFields?->deleteForPerson((int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
@@ -482,6 +556,7 @@ class MemberController extends Controller {
     public function export($id) {
         try {
             $this->memberService->find($this->clubId(), (int)$id);
+            $this->checkScope((int)$id);
             // viewing members does not include seeing what they paid
             $uid = $this->userSession->getUser()?->getUID() ?? '';
             $mayReadFinances = $this->roleService->userHasPermission($uid, 'verein.finance.read', $this->clubId());

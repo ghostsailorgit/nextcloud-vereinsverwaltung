@@ -224,7 +224,11 @@ class RoleController extends ApiController {
                 return new JSONResponse(['status' => 'error', 'message' => $this->l->t('The Nextcloud account does not exist')], 400);
             }
 
-            $userRole = $this->roleService->assignRole($userId, $roleId, $clubId);
+            // optional: only for the members of these groups (department heads); JSON list or comma-separated
+            $raw = $this->request->getParam('groupIds', '');
+            $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+            $groupIds = is_array($decoded) ? $decoded : array_filter(explode(',', (string)$raw), fn ($v) => trim($v) !== '');
+            $userRole = $this->roleService->assignRole($userId, $roleId, $clubId, array_map('intval', $groupIds));
             return new JSONResponse($userRole->jsonSerialize(), 201);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);

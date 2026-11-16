@@ -112,6 +112,19 @@
           :placeholder="t('verein', 'Select role…')"
         />
 
+        <NcSelect
+          v-if="groups.length"
+          v-model="assign.groups"
+          :options="groups"
+          :reduce="g => g.id"
+          label="name"
+          multiple
+          :close-on-select="false"
+          :input-label="t('verein', 'Only for these groups (optional)')"
+          :placeholder="t('verein', 'Whole club')"
+        />
+        <p v-if="groups.length" class="hint">{{ t('verein', 'For department heads: with groups chosen, the role only lets them see and edit the members of these groups (and only the permissions for members count). Without groups it applies to the whole club.') }}</p>
+
         <div class="form-actions">
           <NcButton variant="primary" @click="assignRoleToUser">{{ t('verein', 'Assign') }}</NcButton>
         </div>
@@ -192,6 +205,8 @@ export default {
     return {
       roles: [],
       assignments: [],
+      // the club's groups, to limit an assignment to some of them
+      groups: [],
       permissionsList: [],
       showForm: false,
       editingRole: null,
@@ -205,6 +220,8 @@ export default {
         // the picked Nextcloud account ({ id, user, displayName, ... }), not a club Member
         selectedUser: null,
         roleId: null,
+        // optional: only for these groups (department heads), empty = whole club
+        groups: [],
         // remote Nextcloud-account search results (NcSelectUsersModel[])
         searchResults: [],
         // debounce timer
@@ -216,6 +233,7 @@ export default {
     this.loadRoles()
     this.loadPermissions()
     this.loadAssignments()
+    this.loadGroups()
   },
   methods: {
     permissionLabel(id) {
@@ -238,6 +256,15 @@ export default {
       } catch (e) {
         console.error('Error loading assignments', e)
         this.assignments = []
+      }
+    },
+    async loadGroups() {
+      try {
+        const res = await axios.get(generateUrl('/apps/verein/groups'), { params: { clubId: clubState.currentId } })
+        this.groups = res.data?.data || []
+      } catch (e) {
+        // without the permission to see members there is nothing to choose from: the role applies to the whole club
+        this.groups = []
       }
     },
     async removeAssignments(entry) {
@@ -334,13 +361,15 @@ export default {
         const payload = {
           userId,
           roleId: this.assign.roleId,
-          clubId: clubState.currentId
+          clubId: clubState.currentId,
+          groupIds: this.assign.groups
         }
         await axios.post(generateUrl('/apps/verein/roles/users'), payload)
         showSuccess(t('verein', 'Role assigned'))
         // clear selection but keep search results
         this.assign.selectedUser = null
         this.assign.roleId = null
+        this.assign.groups = []
         this.loadAssignments()
       } catch (e) {
         console.error('Error assigning role', e)

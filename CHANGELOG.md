@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.20.0] - 2026-11-16
+
+### ✨ Neu
+- **Abteilungsleitungen** ([#25](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/25)): Eine Rolle lässt sich unter „Rollen“ nur für bestimmte Gruppen zuweisen, z. B. „Abteilungsleitung“ nur für „Fußball“. Wer so eine Rolle hat, sieht und bearbeitet nur die Mitglieder, die gerade in einer dieser Gruppen sind: in der Mitgliederliste, bei den Gruppen, in Statistik, Export, Datenauskunft und Bestandsmeldung. Neue Mitglieder legt er in einer seiner Gruppen an. Gruppen anlegen, CSV-Import und Personen aus anderen Vereinen übernehmen bleiben dem ganzen Verein vorbehalten. Eine auf Gruppen beschränkte Rolle gibt nur die Rechte für Mitglieder weiter; Finanzen, SEPA, Rollen und Vereinseinstellungen gelten immer für den ganzen Verein. Der Vorstand und alle Rollen ohne Gruppen sehen weiter alles.
+
+---
+
 ## [1.19.0] - 2026-11-16
 
 ### ✨ Neu

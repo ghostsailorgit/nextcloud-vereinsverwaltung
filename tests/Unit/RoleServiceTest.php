@@ -328,4 +328,95 @@ class RoleServiceTest extends TestCase {
         $this->assertSame(['role2'], $result['max']['roles']);
         $this->assertSame(['role1'], $result['max']['automaticRoles']);
     }
+
+    private function assignForGroups(string $uid, int $roleId, int $clubId, array $groups): void {
+        $a = new UserRole();
+        $a->setUserId($uid);
+        $a->setRoleId($roleId);
+        $a->setClubId($clubId);
+        $a->setGroupIds(json_encode($groups));
+        $this->assignments[] = $a;
+    }
+
+    public function testAnAssignmentForGroupsGrantsOnlyTheMemberPermissionsForThoseGroups(): void {
+        $this->role(1, ['verein.member.view', 'verein.member.manage', 'verein.finance.read', 'verein.club.manage']);
+        $this->assignForGroups('head', 1, 1, [5, 6]);
+
+        $this->assertTrue($this->service->userHasPermission('head', 'verein.member.view', 1));
+        $this->assertTrue($this->service->userHasPermission('head', 'verein.member.manage', 1));
+        $this->assertFalse($this->service->userHasPermission('head', 'verein.finance.read', 1), 'finances concern the whole club');
+        $this->assertFalse($this->service->userHasPermission('head', 'verein.club.manage', 1));
+        $this->assertFalse($this->service->userHasPermission('head', 'verein.member.view', 2), 'still only in its club');
+        $this->assertSame([5, 6], $this->service->memberGroupScope('head', 'verein.member.view', 1));
+        $this->assertEqualsCanonicalizing(['verein.member.view', 'verein.member.manage'], $this->service->getPermissionsForClub('head', 1));
+        $this->assertSame([1], $this->service->getAccessibleClubIds('head'));
+        $this->assertSame([1], $this->service->getClubIdsWithPermission('head', 'verein.member.manage'));
+        $this->assertSame([1], $this->service->sectionRoleIds('head', 1), 'the role counts for sections of own fields');
+    }
+
+    public function testTheWholeClubWinsOverGroups(): void {
+        $this->role(1, ['verein.member.view', 'verein.member.manage']);
+        $this->role(2, ['verein.member.view']);
+        $this->assignForGroups('head', 1, 1, [5]);
+        $this->assign('head', 2, 1);
+
+        $this->assertNull($this->service->memberGroupScope('head', 'verein.member.view', 1), 'seeing: the whole club');
+        $this->assertSame([5], $this->service->memberGroupScope('head', 'verein.member.manage', 1), 'editing: still only group 5');
+        $this->groupManager->method('isAdmin')->willReturnCallback(fn ($uid) => $uid === 'admin');
+        $this->assertNull($this->service->memberGroupScope('admin', 'verein.member.manage', 1));
+    }
+
+    public function testGroupsOfSeveralAssignmentsAddUpAndAnEmptyListMeansTheWholeClub(): void {
+        $this->role(1, ['verein.member.view']);
+        $this->role(2, ['verein.member.view']);
+        $this->assignForGroups('head', 1, 1, [5]);
+        $this->assignForGroups('head', 2, 1, [7, 5]);
+        $this->assertEqualsCanonicalizing([5, 7], $this->service->memberGroupScope('head', 'verein.member.view', 1));
+
+        $this->assignForGroups('other', 1, 1, []);
+        $this->assertNull($this->service->memberGroupScope('other', 'verein.member.view', 1));
+        $this->assertSame([], $this->service->memberGroupScope('nobody', 'verein.member.view', 1));
+    }
+
+    public function testClubAssignmentsNameTheGroups(): void {
+        $this->role(1, ['verein.member.view']);
+        $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
+        $g = fn (int $id, string $name) => (function () use ($id, $name) {
+            $group = new \OCA\Verein\Db\ClubGroup();
+            $group->setId($id);
+            $group->setClubId(1);
+            $group->setName($name);
+            return $group;
+        })();
+        $groups->method('findByClub')->willReturn([$g(5, 'Tennis'), $g(6, 'Fußball')]);
+        $service = new RoleService($this->roleMapper, $this->userRoleMapper, $this->groupManager, $this->createMock(IUserSession::class),
+            $this->createMock(LoggerInterface::class), $this->memberMapper, $this->membershipMapper, $this->clubMapper,
+            l10n: SourceL10n::fromAppLanguage('de'), clubGroups: $groups);
+        $this->assignForGroups('head', 1, 1, [5, 6]);
+        $this->userRoleMapper->method('findByClubId')->willReturn($this->assignments);
+        $this->memberMapper->method('findByClub')->willReturn([]);
+
+        $this->assertSame([['userId' => 'head', 'roles' => ['role1 (Fußball, Tennis)'], 'automaticRoles' => []]], $service->getClubAssignments(1));
+    }
+
+    public function testAssigningForAGroupOfAnotherClubIsRejected(): void {
+        $this->role(1, ['verein.member.view']);
+        $groups = $this->createMock(\OCA\Verein\Db\ClubGroupMapper::class);
+        $foreign = new \OCA\Verein\Db\ClubGroup();
+        $foreign->setId(9);
+        $foreign->setClubId(2);
+        $groups->method('find')->willReturnCallback(fn (int $id) => $id === 9 ? $foreign : throw new DoesNotExistException('none'));
+        $service = new RoleService($this->roleMapper, $this->userRoleMapper, $this->groupManager, $this->createMock(IUserSession::class),
+            $this->createMock(LoggerInterface::class), $this->memberMapper, $this->membershipMapper, $this->clubMapper,
+            l10n: SourceL10n::fromAppLanguage('de'), clubGroups: $groups);
+
+        foreach ([[9], [42]] as $ids) {
+            try {
+                $service->assignRole('head', 1, 1, $ids);
+                $this->fail('accepted group ' . json_encode($ids));
+            } catch (ValidationException $e) {
+                $this->assertStringContainsString('Gruppe gibt es nicht', $e->getMessage());
+            }
+        }
+    }
 }

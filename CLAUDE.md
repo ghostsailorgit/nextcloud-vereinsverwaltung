@@ -59,6 +59,12 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
   `fee_rate_id` (only with `verein.club.manage`, never the default category): members at the end of the billing period pay it on top of their own fee; such fees have `verein_fees.group_id` and are idempotent per member, group and months on their own.
   A stay can carry its own `fee_rate_id` (same permission, never the default) that replaces the group's for that member, also in a group without one.
 
+- **Department heads (#25):** a role assignment can be limited to groups (`verein_user_roles.group_ids`). It then grants only
+  `RoleService::SCOPABLE_PERMISSIONS` (member view/manage), for the people currently in those groups. The middleware only knows
+  the user holds the permission *somewhere* in the club, so every place that hands out or changes members must go through
+  `MemberScope` (`filter`/`check`/`memberIds`, or `requireWholeClub()` for club-wide things). A new endpoint under a member
+  permission that skips it leaks the whole club to department heads.
+
 ## Rules that are easy to get wrong
 1. **Every route needs `#[RequirePermission('verein.x')]`** (club-scoped by default; `clubScoped: false`
    for global things). `tests/Unit/RoutePermissionsTest` fails for any unprotected route unless it is on its
