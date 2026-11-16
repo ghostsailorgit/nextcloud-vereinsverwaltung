@@ -1047,7 +1047,10 @@ OC.L10N.register(
         "Date": "Datum",
         "Selection": "Auswahlliste",
         "Yes/no": "Ja/Nein",
-        "More details": "Weitere Angaben"
+        "More details": "Weitere Angaben",
+        "Left, date unknown": "Ausgetreten, Datum unbekannt",
+        "date unknown": "Datum unbekannt",
+        "unknown": "unbekannt"
     },
     "nplurals=2; plural=(n != 1);"
 );

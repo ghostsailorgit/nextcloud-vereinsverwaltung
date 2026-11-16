@@ -38,6 +38,7 @@
           <dt>{{ t('verein', 'Member since') }}</dt>
           <dd>{{ formatDate(m.joinDate) }}<span v-if="m.membershipYears !== null"> ({{ n('verein', '%n year', '%n years', m.membershipYears) }})</span></dd>
           <dt v-if="m.leaveDate">{{ t('verein', 'Left on') }}</dt><dd v-if="m.leaveDate">{{ formatDate(m.leaveDate) }}</dd>
+          <template v-else-if="m.leaveUnknown"><dt>{{ t('verein', 'Left on') }}</dt><dd>{{ t('verein', 'date unknown') }}</dd></template>
           <template v-if="m.groups && m.groups.length">
             <dt>{{ t('verein', 'Groups') }}</dt>
             <dd>

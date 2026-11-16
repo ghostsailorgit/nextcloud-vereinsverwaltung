@@ -146,7 +146,8 @@ class CsvExporter {
                 $m['age'] ?? '',
                 $m['joinDate'] ?? '',
                 $m['membershipYears'] ?? '',
-                $m['leaveDate'] ?? '',
+                // "unknown" round-trips: the import reads it back as left at an unknown date
+                !empty($m['leaveUnknown']) && empty($m['leaveDate']) ? $this->l->t('unknown') : ($m['leaveDate'] ?? ''),
                 !empty($m['foundingMember']) ? $yes : $no,
                 !empty($m['feeExemptJoinYear']) ? $yes : $no,
                 !empty($m['honoraryMember']) ? $yes : $no,

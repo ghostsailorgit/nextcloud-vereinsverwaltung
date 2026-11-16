@@ -161,7 +161,11 @@
         </label>
         <label class="date-field">
           <span>{{ t('verein', 'Date left') }}</span>
-          <input v-model="formData.leaveDate" type="date" class="form-input" />
+          <input v-model="formData.leaveDate" type="date" class="form-input" :disabled="formData.leaveUnknown" />
+        </label>
+        <label class="checkbox-field">
+          <input v-model="formData.leaveUnknown" type="checkbox" :disabled="!!formData.leaveDate" />
+          <span>{{ t('verein', 'Left, date unknown') }}</span>
         </label>
         <NcSelect
           v-model="formData.role"
@@ -494,6 +498,7 @@ const emptyFormData = () => ({
   email: '',
   joinDate: '',
   leaveDate: '',
+  leaveUnknown: false,
   role: 'member',
   foundingMember: false,
   feeExemptJoinYear: false,

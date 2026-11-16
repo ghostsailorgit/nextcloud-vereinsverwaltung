@@ -22,7 +22,7 @@ Verein ──< Mitgliedschaft >── Person ── (optional) Nextcloud-Konto
 | `verein_clubs` | Name (eindeutig), Team-Ordner, Kalendergruppen, Zuordnung „Vereinsfunktion → App-Rolle“ |
 | `verein_club_accounts` | Bankkonten eines Vereins, ein Standardkonto |
 | `verein_members` | Personen: Anschrift, Geburtsdatum, eigene IBAN/BIC, verknüpftes Nextcloud-Konto, `anonymized_at` (siehe „Anonymisieren“) |
-| `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt, Mandat (Referenz, Datum, Datei), eigene Mitgliedsnummer (`member_number`, je Verein eindeutig, geprüft im `MemberService`) |
+| `verein_memberships` | Person × Verein: Funktion, Eintritt, Austritt (Datum oder `leave_unknown`: ausgetreten, Datum unbekannt), Mandat (Referenz, Datum, Datei), eigene Mitgliedsnummer (`member_number`, je Verein eindeutig, geprüft im `MemberService`) |
 | `verein_fee_rates` | Beitragskategorien eines Vereins (Name, Betrag je Zahlung oder Altersstufen als JSON mit Stichtag, Zahlungsintervall, eine Standardkategorie; 0 € = beitragsfrei) |
 | `verein_fees` | Beiträge je Person und Verein; `period` kennzeichnet Beiträge aus dem Beitragslauf (2026, 2026-H1, 2026-Q1 oder 2026-03), `dunning_level` (0-3) und `last_dunned_at` das Mahnwesen; `group_id`: Gruppe, zu der ein Beitrag gehört (leer = eigener Beitrag des Mitglieds) |
 | `verein_roles` | Rollendefinitionen (gelten für alle Vereine, nur Nextcloud-Admins ändern sie) |

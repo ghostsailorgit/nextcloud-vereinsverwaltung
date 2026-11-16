@@ -139,7 +139,8 @@ class AssociationReportService {
 
     /** Whoever has joined by that day (or has no join date) and had not left before it. */
     private function isMemberOn(Member $member, string $date): bool {
-        if ($member->getDeceased()) {
+        // left at an unknown date: not counted, there is no day to compare with
+        if ($member->getDeceased() || $member->getMembership()?->getLeaveUnknown()) {
             return false;
         }
         $join = substr(trim((string)$member->getJoinDate()), 0, 10);

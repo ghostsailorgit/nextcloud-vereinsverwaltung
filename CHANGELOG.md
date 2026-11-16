@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.18.0] - 2026-11-16
+
+### ✨ Neu
+- **Ausgetreten, Datum unbekannt:** Für Mitglieder, bei denen nur bekannt ist, dass sie ausgetreten sind (etwa aus alten Listen), gibt es neben dem Austrittsdatum einen Haken. Sie zählen überall als ehemalige Mitglieder: kein Beitrag, kein Eintrag im Vereinskalender, keine automatischen Rechte, nicht in der Bestandsmeldung. Im CSV-Import wird in der Spalte „Austritt“ auch „unbekannt“ (oder „ausgetreten“, „?“) verstanden, der Export schreibt „unbekannt“.
+
+---
+
 ## [1.17.0] - 2026-11-15
 
 ### ✨ Neu

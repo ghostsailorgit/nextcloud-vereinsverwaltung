@@ -304,6 +304,17 @@ class FeeRunServiceTest extends TestCase {
         $this->assertSame([null, 5], array_map(fn (Fee $f) => $f->getGroupId(), $written));
     }
 
+    public function testWhoLeftAtAnUnknownDatePaysNothing(): void {
+        $this->rate(1, 'Erwachsene', 24.0, true);
+        $this->member(10, 'Weg', 'Unbekannt');
+        $this->memberList[0]->getMembership()->setLeaveUnknown(true);
+
+        $plan = $this->service->plan(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame([], $plan['included']);
+        $this->assertTrue($this->memberList[0]->isFormer());
+    }
+
     public function testEveryActiveMemberGetsTheirCategoryOrTheDefault(): void {
         $this->rate(1, 'Erwachsene', 24.0, true);
         $this->rate(2, 'Kinder', 8.5);

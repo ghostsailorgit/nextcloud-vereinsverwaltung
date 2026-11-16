@@ -273,7 +273,7 @@ class MemberService {
         $memberships = $this->membershipMapper->findByMember($id);
         if (!$member->getDeceased()) {
             foreach ($memberships as $membership) {
-                if (empty($membership->getLeaveDate())) {
+                if (empty($membership->getLeaveDate()) && !$membership->getLeaveUnknown()) {
                     throw new ValidationException(
                         $this->l->t('The person is still an active member of at least one club and cannot be anonymized')
                     );
@@ -405,6 +405,8 @@ class MemberService {
         $membership->setRole((string)($data['role'] ?? 'member'));
         $membership->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
         $membership->setLeaveDate($this->nullIfEmpty($data['leaveDate'] ?? null));
+        // a known date wins over "date unknown"
+        $membership->setLeaveUnknown($membership->getLeaveDate() === null && $this->toBool($data['leaveUnknown'] ?? false));
         $membership->setFoundingMember($this->toBool($data['foundingMember'] ?? false));
         $membership->setFeeExemptJoinYear($this->toBool($data['feeExemptJoinYear'] ?? false));
         $honorary = $this->toBool($data['honoraryMember'] ?? false);

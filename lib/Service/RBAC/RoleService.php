@@ -235,7 +235,7 @@ class RoleService {
             if ($clubId !== null && $membership->getClubId() !== $clubId) {
                 continue;
             }
-            if (!empty($membership->getLeaveDate()) || $membership->getDeactivated()) {
+            if (!empty($membership->getLeaveDate()) || $membership->getLeaveUnknown() || $membership->getDeactivated()) {
                 continue;
             }
             $role = $this->mappedRole($membership->getClubId(), $membership->getRole());

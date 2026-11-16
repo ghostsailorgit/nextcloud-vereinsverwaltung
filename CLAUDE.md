@@ -36,7 +36,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
 - **Person (`verein_members`)**: name, address, birth date, own IBAN/BIC, `user_id` (linked Nextcloud
   account, unique). One row per human, shared by all clubs.
 - **Membership (`verein_memberships`)**: person x club - role (`member|treasurer|admin`=Vorstand),
-  join/leave date, founding flag, `deactivated` (see rule 4), SEPA mandate (reference, signature date, signed file path), the club's own
+  join/leave date (or `leave_unknown`: left at an unknown date - counts as left everywhere `isFormer()`/a leave date is checked), founding flag, `deactivated` (see rule 4), SEPA mandate (reference, signature date, signed file path), the club's own
   `member_number` (optional, unique per club - checked by `MemberService` before anything is written, kept when a caller does not send it).
   `Member` (entity) exposes the membership fields of the club it was loaded for via `setMembership()`.
 - **Fee categories (`verein_fee_rates`)** per club (name, amount per payment, payment interval, one default; 0 = fee-free);

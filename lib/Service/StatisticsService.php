@@ -167,7 +167,8 @@ class StatisticsService {
         $periods = [];
         foreach ($members as $member) {
             $since = $this->memberSince($member);
-            if ($since === null || ($member->getDeceased() && empty($member->getLeaveDate()))) {
+            // deceased or left without a date: when they stopped being a member is unknown
+            if ($since === null || (($member->getDeceased() || $member->getMembership()?->getLeaveUnknown()) && empty($member->getLeaveDate()))) {
                 continue;
             }
             $periods[] = [$since, $this->day($member->getLeaveDate())];

@@ -151,7 +151,7 @@ class Member extends Entity implements JsonSerializable {
      * A member is "ehemalig" (former) once they've left or passed away.
      */
     public function isFormer(): bool {
-        return $this->deceased || !empty($this->getLeaveDate());
+        return $this->deceased || !empty($this->getLeaveDate()) || (bool)$this->membership?->getLeaveUnknown();
     }
 
     /**
@@ -211,6 +211,7 @@ class Member extends Entity implements JsonSerializable {
             'role' => $this->getRole(),
             'joinDate' => $this->getJoinDate(),
             'leaveDate' => $this->getLeaveDate(),
+            'leaveUnknown' => (bool)$this->membership?->getLeaveUnknown(),
             'foundingMember' => $this->getFoundingMember(),
             'deactivated' => $this->getDeactivated(),
             'feeExemptJoinYear' => $this->getFeeExemptJoinYear(),

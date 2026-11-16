@@ -27,6 +27,8 @@ use OCP\AppFramework\Db\Entity;
  * @method bool getFoundingMember()
  * @method void setFoundingMember(bool $foundingMember)
  * @method bool getMandateOnPaper()
+ * @method bool getLeaveUnknown()
+ * @method void setLeaveUnknown(bool $leaveUnknown)
  * @method void setMandateOnPaper(bool $mandateOnPaper)
  * @method ?int getPayerMemberId()
  * @method void setPayerMemberId(?int $payerMemberId)
@@ -66,6 +68,8 @@ class Membership extends Entity implements JsonSerializable {
     protected bool $honoraryMember = false;
     protected bool $honoraryPaysFee = false;
     protected bool $mandateOnPaper = false;
+    // left at an unknown date: counts as left like a leave date does
+    protected bool $leaveUnknown = false;
     // someone else in the club pays this member's fees, see FeePayer
     protected ?int $payerMemberId = null;
     protected ?string $mandateReference = null;
@@ -87,6 +91,7 @@ class Membership extends Entity implements JsonSerializable {
         $this->addType('honoraryMember', 'bool');
         $this->addType('honoraryPaysFee', 'bool');
         $this->addType('mandateOnPaper', 'bool');
+        $this->addType('leaveUnknown', 'bool');
         $this->addType('payerMemberId', 'integer');
         $this->addType('feeRateId', 'integer');
     }
@@ -114,6 +119,7 @@ class Membership extends Entity implements JsonSerializable {
             'honoraryMember' => $this->honoraryMember,
             'honoraryPaysFee' => $this->honoraryPaysFee,
             'mandateOnPaper' => $this->mandateOnPaper,
+            'leaveUnknown' => $this->leaveUnknown,
             'payerMemberId' => $this->payerMemberId,
             'mandateReference' => $this->mandateReference,
             'memberNumber' => $this->memberNumber,
