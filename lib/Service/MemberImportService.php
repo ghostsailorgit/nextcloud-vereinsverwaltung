@@ -351,6 +351,13 @@ class MemberImportService {
             $warnings[] = $this->l->t('Gender “%s” unknown, left empty', [$gender]);
         }
 
+        // "left" without a date: old lists often only know that someone left
+        $leave = mb_strtolower(trim($record['leaveDate'] ?? ''));
+        if (in_array($leave, ['unbekannt', 'unknown', $this->l->t('unknown'), '?', 'ja', 'yes', 'x', 'ausgetreten', 'left'], true)) {
+            $data['leaveUnknown'] = true;
+            $record['leaveDate'] = '';
+        }
+
         foreach (['birthDate' => $this->l->t('Date of birth'), 'joinDate' => $this->l->t('Date joined'), 'leaveDate' => $this->l->t('Date left'), 'mandateDate' => $this->l->t('Date of signature')] as $field => $label) {
             $raw = trim($record[$field] ?? '');
             $date = $this->parseDate($raw);

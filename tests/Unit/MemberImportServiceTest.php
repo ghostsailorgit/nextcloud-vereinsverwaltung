@@ -110,6 +110,18 @@ class MemberImportServiceTest extends TestCase {
         $this->assertNull($rows[3]['data']['memberNumber']);
     }
 
+    public function testLeftWithoutADateIsUnderstood(): void {
+        $csv = "Nachname;Vorname;Austritt\nAlt;Ida;unbekannt\nAlt;Ole;31.12.2020\nAlt;Per;\n";
+
+        $rows = $this->service->plan(self::CLUB, $csv, false)['rows'];
+
+        $this->assertSame(['ok', 'ok', 'ok'], array_column($rows, 'status'));
+        $this->assertTrue($rows[0]['data']['leaveUnknown']);
+        $this->assertNull($rows[0]['data']['leaveDate']);
+        $this->assertArrayNotHasKey('leaveUnknown', $rows[1]['data']);
+        $this->assertSame('2020-12-31', $rows[1]['data']['leaveDate']);
+    }
+
     public function testTheEnglishExportCanBeImportedAgainToo(): void {
         // headers exactly as CsvExporter writes them for an English-speaking user (no translation table = English)
         $export = (new CsvExporter())->formatMembers([[

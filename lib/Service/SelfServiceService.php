@@ -118,6 +118,7 @@ class SelfServiceService {
                 'memberNumber' => $membership->getMemberNumber(),
                 'joinDate' => $membership->getJoinDate(),
                 'leaveDate' => $membership->getLeaveDate(),
+                'leaveUnknown' => $membership->getLeaveUnknown(),
                 'foundingMember' => $membership->getFoundingMember(),
                 'feeExemptJoinYear' => $membership->getFeeExemptJoinYear(),
                 'honoraryMember' => $membership->getHonoraryMember(),
