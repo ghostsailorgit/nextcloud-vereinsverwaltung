@@ -215,22 +215,24 @@
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
 
-        <template v-if="customFields.length">
-          <h3 class="form-subheader">{{ t('verein', 'More details') }}</h3>
-          <template v-for="f in customFields" :key="f.id">
+        <!-- the own fields, grouped by section; the server sends only what the user may see, read-only where they may not change it -->
+        <template v-for="group in customGroups" :key="group.key">
+          <h3 class="form-subheader">{{ group.name || t('verein', 'More details') }}</h3>
+          <template v-for="f in group.fields" :key="f.id">
             <label v-if="f.type === 'date'" class="date-field">
-              <span>{{ f.required ? f.label + ' *' : f.label }}</span>
-              <input v-model="formData.custom[f.id]" type="date" class="form-input" />
+              <span>{{ fieldLabel(f) }}</span>
+              <input v-model="formData.custom[f.id]" type="date" class="form-input" :disabled="!f.editable" />
             </label>
             <NcSelect
               v-else-if="f.type === 'select'"
               v-model="formData.custom[f.id]"
               :options="f.options"
-              :input-label="f.required ? f.label + ' *' : f.label"
+              :input-label="fieldLabel(f)"
               :placeholder="t('verein', 'Select…')"
+              :disabled="!f.editable"
             />
             <label v-else-if="f.type === 'checkbox'" class="checkbox-field">
-              <input type="checkbox" :checked="formData.custom[f.id] === '1'" @change="formData.custom[f.id] = $event.target.checked ? '1' : ''" />
+              <input type="checkbox" :checked="formData.custom[f.id] === '1'" :disabled="!f.editable" @change="formData.custom[f.id] = $event.target.checked ? '1' : ''" />
               <span>{{ f.label }}</span>
             </label>
             <NcTextField
@@ -238,8 +240,9 @@
               :model-value="formData.custom[f.id] ?? ''"
               @update:model-value="formData.custom[f.id] = $event"
               :type="f.type === 'number' ? 'number' : 'text'"
-              :label="f.required ? f.label + ' *' : f.label"
+              :label="fieldLabel(f)"
               :maxlength="f.type === 'text' ? 500 : undefined"
+              :disabled="!f.editable"
             />
           </template>
         </template>
@@ -688,6 +691,18 @@ export default {
     // the club's own fields (form, list columns)
     const customFields = ref([])
     const customListFields = computed(() => customFields.value.filter(f => f.showInList))
+    // fields without a section first, then one group per section in the order of their fields
+    const customGroups = computed(() => {
+      const groups = new Map([['none', { key: 'none', name: null, fields: [] }]])
+      for (const f of customFields.value) {
+        const key = f.sectionId ? 's' + f.sectionId : 'none'
+        if (!groups.has(key)) groups.set(key, { key, name: f.sectionName || '', fields: [] })
+        groups.get(key).fields.push(f)
+      }
+      return [...groups.values()].filter(g => g.fields.length)
+    })
+    // a field the user may not change is not marked as required: they cannot fill it in anyway
+    const fieldLabel = (f) => (f.required && f.editable && f.type !== 'checkbox') ? f.label + ' *' : f.label
     const loadCustomFields = async () => {
       try {
         customFields.value = (await api.get('custom-fields')).data.data || []
@@ -792,7 +807,9 @@ export default {
       try {
         // the own fields go as JSON: the API sends form fields, an object would arrive as "[object Object]"
         const { custom, ...fields } = formData
-        const payload = { ...fields, customFields: JSON.stringify(custom || {}) }
+        // only the fields the user may change (the server ignores the others anyway)
+        const editable = Object.fromEntries(Object.entries(custom || {}).filter(([id]) => customFields.value.some(f => String(f.id) === id && f.editable)))
+        const payload = { ...fields, customFields: JSON.stringify(editable) }
         const response = editingId.value
           ? await api.put(`members/${editingId.value}`, payload)
           : await api.post('members', payload)
@@ -980,6 +997,8 @@ export default {
       filteredMembers,
       customFields,
       customListFields,
+      customGroups,
+      fieldLabel,
       formatFieldValue,
       displayName,
       roleLabel,

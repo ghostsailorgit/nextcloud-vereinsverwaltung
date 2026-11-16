@@ -181,6 +181,23 @@ class RoleService {
         return array_values($permissions);
     }
 
+    /**
+     * The role ids that decide which sections of a club's own fields the user sees and may change
+     * (CustomFieldService::access()), or null for "every section": Nextcloud admins and whoever may manage the
+     * club - they define the sections and could grant themselves any of them anyway.
+     *
+     * @return int[]|null
+     */
+    public function sectionRoleIds(string $userId, int $clubId): ?array {
+        if ($userId === '') {
+            return [];
+        }
+        if ($this->userHasPermission($userId, 'verein.club.manage', $clubId)) {
+            return null;
+        }
+        return array_map(fn (Role $role) => (int)$role->getId(), $this->effectiveRoles($userId, $clubId));
+    }
+
     public function isNextcloudAdmin(string $userId): bool {
         return $this->groupManager->isAdmin($userId);
     }

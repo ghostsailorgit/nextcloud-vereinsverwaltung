@@ -57,15 +57,16 @@ class SelfServiceService {
      *   (MemberController::export()) must already have confirmed the person is a member of it;
      *   this method does not check permissions itself, same as forUser().
      * @param bool $includeFees false leaves the fees out (the caller may see the member but not the finances)
+     * @param int[]|null $onlyFields the own fields the caller sees (CustomFieldService::access()), null = all
      * @throws NotFoundException
      */
-    public function forMemberId(int $memberId, ?int $onlyClubId = null, bool $includeFees = true): array {
+    public function forMemberId(int $memberId, ?int $onlyClubId = null, bool $includeFees = true, ?array $onlyFields = null): array {
         try {
             $person = $this->members->find($memberId);
         } catch (DoesNotExistException $e) {
             throw new NotFoundException($this->l->t('Member not found'));
         }
-        $data = $this->buildExport($person, $person->getUserId(), $onlyClubId);
+        $data = $this->buildExport($person, $person->getUserId(), $onlyClubId, $onlyFields);
         if (!$includeFees) {
             unset($data['fees']);
             $data['feesOmitted'] = true;
@@ -94,7 +95,7 @@ class SelfServiceService {
     /**
      * @return array<string, mixed>
      */
-    private function buildExport(Member $person, ?string $userId, ?int $onlyClubId = null): array {
+    private function buildExport(Member $person, ?string $userId, ?int $onlyClubId = null, ?array $onlyFields = null): array {
         $clubNames = [];
         $memberships = [];
         foreach ($this->memberships->findByMember($person->getId()) as $membership) {
@@ -126,7 +127,7 @@ class SelfServiceService {
                 'isFormer' => $view->isFormer(),
                 'groups' => $this->groupsOf($person->getId(), $club->getId()),
                 // what the club stores in its own fields is part of the person's data (Art. 15 GDPR)
-                'customFields' => $this->customFields?->labelledValuesFor($club->getId(), $person->getId()) ?? [],
+                'customFields' => $this->customFields?->labelledValuesFor($club->getId(), $person->getId(), $onlyFields) ?? [],
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [
                     'reference' => $membership->getEffectiveMandateReference(),

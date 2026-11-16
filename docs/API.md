@@ -89,6 +89,10 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | POST | `/custom-fields` | `verein.club.manage` |
 | PUT | `/custom-fields/{id}` | `verein.club.manage` |
 | DELETE | `/custom-fields/{id}` | `verein.club.manage` |
+| GET | `/custom-sections` | `verein.club.manage` |
+| POST | `/custom-sections` | `verein.club.manage` |
+| PUT | `/custom-sections/{id}` | `verein.club.manage` |
+| DELETE | `/custom-sections/{id}` | `verein.club.manage` |
 
 ## ClubGroup
 

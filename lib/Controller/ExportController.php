@@ -41,7 +41,9 @@ class ExportController extends Controller {
         CsvExporter $csvExporter,
         PdfExporter $pdfExporter,
         LoggerInterface $logger,
-        private ?\OCA\Verein\Service\CustomFieldService $customFields = null
+        private ?\OCA\Verein\Service\CustomFieldService $customFields = null,
+        private ?\OCA\Verein\Service\RBAC\RoleService $roles = null,
+        private ?\OCP\IUserSession $userSession = null
     ) {
         parent::__construct($appName, $request);
         $this->memberService = $memberService;
@@ -66,10 +68,13 @@ class ExportController extends Controller {
 
             // Format and export (works with empty array too)
             $formatted = $this->csvExporter->formatMembers($members);
-            // the club's own fields as further columns, headed by their names (the import reads them back the same way)
-            if ($this->customFields !== null) {
-                $fields = $this->customFields->fields($clubId);
-                $values = $this->customFields->valuesForClub($clubId);
+            // the club's own fields as further columns, headed by their names (the import reads them back the same way);
+            // only those the user sees - without the collaborators to tell, none
+            if ($this->customFields !== null && $this->roles !== null && $this->userSession !== null) {
+                $roleIds = $this->roles->sectionRoleIds($this->userSession->getUser()?->getUID() ?? '', $clubId);
+                $visible = $this->customFields->access($clubId, $roleIds)['visible'];
+                $fields = $this->customFields->fields($clubId, $visible);
+                $values = $this->customFields->valuesForClub($clubId, $visible);
                 foreach ($fields as $field) {
                     $formatted['headers'][] = $field->getLabel();
                 }
