@@ -50,6 +50,7 @@ class MemberImportService {
         'eintritt' => 'joinDate', 'eintrittsdatum' => 'joinDate', 'mitgliedseit' => 'joinDate', 'joindate' => 'joinDate', 'datejoined' => 'joinDate', 'joined' => 'joinDate',
         'austritt' => 'leaveDate', 'austrittsdatum' => 'leaveDate', 'leavedate' => 'leaveDate', 'dateleft' => 'leaveDate', 'left' => 'leaveDate',
         'rolle' => 'role', 'funktion' => 'role', 'role' => 'role', 'position' => 'role',
+        'amt' => 'office', 'vereinsamt' => 'office', 'office' => 'office',
         'beitragskategorie' => 'feeRate', 'kategorie' => 'feeRate', 'feerate' => 'feeRate', 'feecategory' => 'feeRate', 'category' => 'feeRate',
         'mandatsreferenz' => 'mandateReference', 'mandatereference' => 'mandateReference',
         'mandatsdatum' => 'mandateDate', 'mandatunterschriebenam' => 'mandateDate', 'mandatedate' => 'mandateDate', 'dateofsignature' => 'mandateDate',
@@ -91,7 +92,12 @@ class MemberImportService {
      * @throws ValidationException
      */
     public function plan(int $clubId, string $csv, bool $mayAssignRoles, ?array $sectionRoleIds = null): array {
-        $this->clubs->find($clubId);
+        $club = $this->clubs->find($clubId);
+        // offices are checked against the club's list and stored in its spelling
+        $officesByKey = [];
+        foreach ($club->getOfficeList() as $office) {
+            $officesByKey[mb_strtolower($office)] = $office;
+        }
         $editable = $this->customFields?->access($clubId, $sectionRoleIds)['editable'];
         // a column named like one of the club's own fields fills that field
         $customByKey = [];
@@ -130,6 +136,14 @@ class MemberImportService {
                 }
             }
             [$data, $errors, $warnings] = $this->toMemberData($record, $ratesByName, $mayAssignRoles);
+            if (($data['office'] ?? null) !== null) {
+                $known = $officesByKey[mb_strtolower($data['office'])] ?? null;
+                if ($known === null) {
+                    $errors[] = $this->l->t('Office “%s” unknown (see the club’s list of offices)', [$data['office']]);
+                } else {
+                    $data['office'] = $known;
+                }
+            }
             if ($errors === [] && $this->customFields !== null) {
                 try {
                     $data['custom'] = $this->customFields->validateValues($clubId, $custom, true, $editable);
@@ -328,6 +342,7 @@ class MemberImportService {
             'iban' => $this->nullIfEmpty(isset($record['iban']) ? strtoupper(str_replace(' ', '', $record['iban'])) : null),
             'mandateReference' => $this->nullIfEmpty($record['mandateReference'] ?? null),
             'memberNumber' => $this->nullIfEmpty($record['memberNumber'] ?? null),
+            'office' => $this->nullIfEmpty($record['office'] ?? null),
             'userId' => null,
             'role' => 'member',
         ];

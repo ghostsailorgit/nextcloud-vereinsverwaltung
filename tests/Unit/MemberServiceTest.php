@@ -539,4 +539,30 @@ class MemberServiceTest extends TestCase {
         // visible in the log of both clubs
         $this->assertSame([[1, 'member', 8, 'anonymize'], [2, 'member', 8, 'anonymize']], $logged);
     }
+
+    public function testAnOfficeMustBeOneOfTheClubsAndIsStoredInItsSpelling(): void {
+        $clubs = $this->createMock(ClubMapper::class);
+        $clubs->method('find')->willReturnCallback(function () {
+            $club = new Club();
+            $club->setOffices(json_encode(['1. Vorsitzender', 'Schriftführerin']));
+            return $club;
+        });
+        $service = new MemberService($this->members, $this->memberships, $this->fees, $clubs, $this->userManager, $this->feeRates, l10n: SourceL10n::fromAppLanguage('de'));
+        $normalise = new \ReflectionMethod(MemberService::class, 'normaliseOffice');
+
+        $this->assertSame('Schriftführerin', $normalise->invoke($service, 1, ['office' => ' schriftführerin '])['office']);
+        $this->assertNull($normalise->invoke($service, 1, ['office' => ''])['office']);
+        $this->assertSame([], $normalise->invoke($service, 1, []), 'not sent = unchanged');
+
+        $ms = $this->numbered(7, 1, null);
+        $apply = new \ReflectionMethod(MemberService::class, 'applyMembershipData');
+        $apply->invoke($service, $ms, ['role' => 'admin', 'office' => '1. Vorsitzender']);
+        $this->assertSame('1. Vorsitzender', $ms->getOffice());
+        $this->assertSame('admin', $ms->getRole(), 'the office changes no rights');
+        $apply->invoke($service, $ms, ['role' => 'admin']);
+        $this->assertSame('1. Vorsitzender', $ms->getOffice(), 'kept when not sent');
+
+        $this->expectExceptionMessage('„Kassenwart“ ist keines der Ämter des Vereins');
+        $normalise->invoke($service, 1, ['office' => 'Kassenwart']);
+    }
 }

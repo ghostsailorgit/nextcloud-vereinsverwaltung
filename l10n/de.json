@@ -545,7 +545,6 @@
         "Send the letters by email where an email address is known (the rest as PDF)": "Schreiben per E-Mail verschicken, wo eine E-Mail-Adresse bekannt ist (der Rest als PDF)",
         "Send the membership confirmation to {email}?": "Mitgliedsbestätigung an {email} senden?",
         "Sender name": "Absendername",
-        "Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only.": "Wird nur auf Wunsch verschickt: beim Anlegen eines Mitglieds oder über das Menü des Mitglieds, nie beim Import. Die IBAN des Mitglieds erscheint nur gekürzt.",
         "Sep": "Sep",
         "Show": "Anzeigen",
         "Shown at the end of the club’s emails. The image must be publicly reachable, e.g. on the club’s website. Many mail programs only show it after a confirmation.": "Erscheint am Ende der E-Mails des Vereins. Das Bild muss öffentlich erreichbar sein, zum Beispiel auf der Website des Vereins. Viele Mailprogramme zeigen es erst nach einer Bestätigung an.",
@@ -1083,7 +1082,23 @@
         "Only possible with this permission for the whole club, not only for some groups": "Nur mit diesem Recht für den ganzen Verein möglich, nicht nur für einzelne Gruppen",
         "Please choose one of your groups for the new member": "Bitte für das neue Mitglied eine deiner Gruppen auswählen",
         "The group does not exist": "Die Gruppe gibt es nicht",
-        "Whole club": "Ganzer Verein"
+        "Whole club": "Ganzer Verein",
+        "A club can have at most %s offices": "Ein Verein kann höchstens %s Ämter haben",
+        "An office is chosen in the member form and shown in the member list. It is a title only: the permissions still come from the position (member, treasurer, board).": "Das Amt wird im Mitgliederformular gewählt und in der Mitgliederliste angezeigt. Es ist nur eine Bezeichnung: Die Rechte kommen weiter aus der Funktion (Mitglied, Kassierer, Vorstand).",
+        "An office may have at most %s characters": "Ein Amt darf höchstens %s Zeichen haben",
+        "Membership confirmation as PDF": "Mitgliedsbestätigung als PDF",
+        "Office": "Amt",
+        "Office “%s” unknown (see the club’s list of offices)": "Amt „%s“ unbekannt (siehe die Ämter des Vereins)",
+        "Offices": "Ämter",
+        "Offices in the club (one per line), e.g. 1st chair, secretary, youth leader": "Ämter im Verein (eins pro Zeile), z. B. 1. Vorsitzender, Schriftführerin, Jugendwart",
+        "PDF export is not available": "Der PDF-Export ist nicht verfügbar",
+        "Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only. The same text is attached as a PDF letter with the logo and can be downloaded from the member’s actions.": "Wird nur auf Wunsch verschickt: beim Anlegen eines Mitglieds oder über die Aktionen des Mitglieds, nie beim Import. Die IBAN des Mitglieds erscheint nur gekürzt. Derselbe Text liegt als PDF-Brief mit Logo bei und lässt sich über die Aktionen des Mitglieds herunterladen.",
+        "The PDF could not be created": "Das PDF konnte nicht erstellt werden",
+        "membership confirmation created as PDF": "Mitgliedsbestätigung als PDF erstellt",
+        "membership confirmation sent": "Mitgliedsbestätigung verschickt",
+        "membership-confirmation_%s.pdf": "mitgliedsbestaetigung_%s.pdf",
+        "membership-confirmation_{number}.pdf": "mitgliedsbestaetigung_{number}.pdf",
+        "“%s” is not one of the club's offices": "„%s“ ist keines der Ämter des Vereins"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

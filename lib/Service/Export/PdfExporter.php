@@ -308,6 +308,59 @@ class PdfExporter {
     }
 
     /**
+     * The membership confirmation as a letter: the club's text (WelcomeMailService), the logo top right when there is one.
+     *
+     * @param array{club: string, clubAddress: string[], address: string[], date: string, subject: string, paragraphs: string[], logo: ?string, fileName: string} $data
+     * @return array{content: string, filename: string, mimeType: string}
+     */
+    public function membershipConfirmation(array $data): array {
+        $this->requireTcpdf();
+        $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetCreator($this->doc->t('Club Management'));
+        $pdf->SetAuthor($data['club']);
+        $pdf->SetTitle($data['subject']);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(25, 20, 20);
+        $pdf->SetAutoPageBreak(true, 20);
+        $pdf->AddPage();
+
+        if ($data['logo'] !== null) {
+            try {
+                // fitted into 60 x 25 mm at the top right, proportions kept
+                $pdf->Image('@' . $data['logo'], 130, 12, 60, 25, '', '', '', true, 300, '', false, false, 0, 'RT');
+            } catch (\Throwable $e) {
+                // an image TCPDF cannot read: the letter without it
+            }
+        }
+
+        $pdf->SetXY(20, 45);
+        $pdf->SetFont(self::FONT, '', 7);
+        $pdf->Cell(85, 4, implode(' · ', array_merge([$data['club']], $data['clubAddress'])), 'B', 1);
+        $pdf->SetFont(self::FONT, '', 10);
+        $pdf->SetX(20);
+        $pdf->MultiCell(85, 5, implode("\n", $data['address']), 0, 'L', false, 1);
+
+        $pdf->SetXY(125, 50);
+        $pdf->Cell(60, 5, $data['date'], 0, 1, 'R');
+
+        $pdf->SetXY(25, 100);
+        $pdf->SetFont(self::FONT, 'B', 12);
+        $pdf->MultiCell(0, 7, $data['subject'], 0, 'L', false, 1);
+        $pdf->Ln(4);
+        $pdf->SetFont(self::FONT, '', 10);
+        foreach ($data['paragraphs'] as $paragraph) {
+            if (trim($paragraph) === '') {
+                continue;
+            }
+            $pdf->MultiCell(0, 5, $paragraph, 0, 'L', false, 1);
+            $pdf->Ln(3);
+        }
+
+        return ['content' => $pdf->Output('', 'S'), 'filename' => $data['fileName'], 'mimeType' => 'application/pdf'];
+    }
+
+    /**
      * The paragraphs of a reminder letter, in the document language - shared by the PDF and the email
      * (DunningMailService), so both say exactly the same.
      *

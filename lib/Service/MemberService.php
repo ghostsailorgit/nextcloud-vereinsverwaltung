@@ -118,6 +118,7 @@ class MemberService {
         $this->clubMapper->find($clubId);
         // before anything is written: a refused number must not leave a person without membership behind
         $this->checkMemberNumber($clubId, $data, null);
+        $data = $this->normaliseOffice($clubId, $data);
         $member = new Member();
         $this->applyPersonData($member, $data);
         $member->setCreatedAt(date('Y-m-d H:i:s'));
@@ -146,6 +147,7 @@ class MemberService {
         $this->clubMapper->find($clubId);
         $member = $this->mapper->find($memberId);
         $this->checkMemberNumber($clubId, $data, $memberId);
+        $data = $this->normaliseOffice($clubId, $data);
 
         try {
             $this->membershipMapper->findByMemberAndClub($memberId, $clubId);
@@ -168,6 +170,7 @@ class MemberService {
     public function update(int $clubId, int $id, array $data): Member {
         $member = $this->find($clubId, $id);
         $this->checkMemberNumber($clubId, $data, $id);
+        $data = $this->normaliseOffice($clubId, $data);
         $before = $member->jsonSerialize();
 
         $this->applyPersonData($member, $data);
@@ -401,6 +404,30 @@ class MemberService {
         }
     }
 
+    /**
+     * An office must be one of the club's list (Club::getOfficeList()), compared without case and stored in the club's
+     * spelling; empty = none. Not sent = unchanged.
+     *
+     * @throws ValidationException
+     */
+    private function normaliseOffice(int $clubId, array $data): array {
+        if (!array_key_exists('office', $data)) {
+            return $data;
+        }
+        $office = trim(is_scalar($data['office']) ? (string)$data['office'] : '');
+        if ($office === '') {
+            $data['office'] = null;
+            return $data;
+        }
+        foreach ($this->clubMapper->find($clubId)->getOfficeList() as $known) {
+            if (mb_strtolower($known) === mb_strtolower($office)) {
+                $data['office'] = $known;
+                return $data;
+            }
+        }
+        throw new ValidationException($this->l->t('“%s” is not one of the club\'s offices', [$office]));
+    }
+
     private function applyMembershipData(Membership $membership, array $data): void {
         $membership->setRole((string)($data['role'] ?? 'member'));
         $membership->setJoinDate($this->nullIfEmpty($data['joinDate'] ?? null));
@@ -419,6 +446,9 @@ class MemberService {
         // only when sent: callers that do not know the field (e.g. adding a person from another club) keep it
         if (array_key_exists('memberNumber', $data)) {
             $membership->setMemberNumber(self::memberNumber($data['memberNumber']));
+        }
+        if (array_key_exists('office', $data)) {
+            $membership->setOffice($data['office']);
         }
         $this->applyFeeRate($membership, $data);
         $this->applyPayer($membership, $data);
