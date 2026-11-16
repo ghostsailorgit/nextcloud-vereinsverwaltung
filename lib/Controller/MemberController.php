@@ -389,6 +389,7 @@ class MemberController extends Controller {
             'deceased' => $this->request->getParam('deceased', false),
             'mandateReference' => $this->request->getParam('mandateReference'),
             'memberNumber' => $this->request->getParam('memberNumber'),
+            'office' => $this->request->getParam('office'),
             'mandateDate' => $this->request->getParam('mandateDate'),
             'mandateFile' => $this->request->getParam('mandateFile'),
             'userId' => $this->request->getParam('userId'),
@@ -481,6 +482,23 @@ class MemberController extends Controller {
             $this->checkScope((int)$id);
             $member = $this->memberService->deactivate($this->clubId(), (int)$id);
             return new JSONResponse(['status' => 'ok', 'data' => $this->present($member)]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * The membership confirmation as a PDF letter, e.g. to print or hand over. A file download, so a GET.
+     *
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    #[RequirePermission('verein.member.manage')]
+    public function welcomePdf($id) {
+        try {
+            $this->checkScope((int)$id, 'verein.member.manage');
+            $file = $this->welcomeMail->pdf($this->clubId(), (int)$id);
+            return new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }

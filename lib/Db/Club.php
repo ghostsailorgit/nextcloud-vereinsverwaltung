@@ -54,6 +54,8 @@ class Club extends Entity implements JsonSerializable {
     protected ?string $mailLogoUrl = null;
     protected ?string $welcomeSubject = null;
     protected ?string $welcomeBody = null;
+    // JSON list of the club's offices (1st chair, secretary, ...)
+    protected ?string $offices = null;
     protected ?string $createdAt = null;
     protected ?string $updatedAt = null;
 
@@ -83,6 +85,12 @@ class Club extends Entity implements JsonSerializable {
         return $result;
     }
 
+    /** @return string[] the club's offices in their order */
+    public function getOfficeList(): array {
+        $list = json_decode((string)$this->offices, true);
+        return is_array($list) ? array_values(array_map('strval', $list)) : [];
+    }
+
     public function jsonSerialize(): array {
         return [
             'id' => $this->id,
@@ -96,6 +104,7 @@ class Club extends Entity implements JsonSerializable {
             'mailLogoUrl' => $this->mailLogoUrl,
             'welcomeSubject' => $this->welcomeSubject,
             'welcomeBody' => $this->welcomeBody,
+            'offices' => $this->getOfficeList(),
             'calendarGroups' => $this->getCalendarGroupsArray(),
             'roleMapping' => (object)$this->getRoleMappingArray(),
         ];

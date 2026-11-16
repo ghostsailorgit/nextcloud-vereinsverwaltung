@@ -40,6 +40,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setFeeExemptJoinYear(bool $feeExemptJoinYear)
  * @method ?string getMandateReference()
  * @method ?string getMemberNumber()
+ * @method ?string getOffice()
+ * @method void setOffice(?string $office)
  * @method void setMemberNumber(?string $memberNumber)
  * @method void setMandateReference(?string $mandateReference)
  * @method ?string getMandateDate()
@@ -75,6 +77,8 @@ class Membership extends Entity implements JsonSerializable {
     protected ?string $mandateReference = null;
     // the club's own member number; null = none (the list then shows the internal id)
     protected ?string $memberNumber = null;
+    // the office held (one of the club's list, Club::getOfficeList()); only a title, the rights come from the role
+    protected ?string $office = null;
     protected ?string $mandateDate = null;
     protected ?string $mandateFile = null;
     protected ?int $feeRateId = null;
@@ -123,6 +127,7 @@ class Membership extends Entity implements JsonSerializable {
             'payerMemberId' => $this->payerMemberId,
             'mandateReference' => $this->mandateReference,
             'memberNumber' => $this->memberNumber,
+            'office' => $this->office,
             'mandateDate' => $this->mandateDate,
             'mandateFile' => $this->mandateFile,
             'feeRateId' => $this->feeRateId,

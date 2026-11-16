@@ -65,16 +65,17 @@ import { absoluteUrl } from '../absoluteUrl'
 import { extractErrorMessage } from '../errorMessage'
 import { t } from '@nextcloud/l10n'
 import { clubState, currentClub, loadClubs, loadMe, setCurrentClub, can } from '../store/club'
-import Members from './Members.vue'
-import Finance from './Finance.vue'
-import Groups from './Groups.vue'
-// Lazy-load Statistics (includes Chart.js ~500KB) for better initial load
+// Every tab is loaded when it is first opened: the start needs only the navigation and the tab shown first
+// (Statistics brings Chart.js, the others their own Nextcloud components).
+const Members = defineAsyncComponent(() => import('./Members.vue'))
+const Finance = defineAsyncComponent(() => import('./Finance.vue'))
+const Groups = defineAsyncComponent(() => import('./Groups.vue'))
 const Statistics = defineAsyncComponent(() => import('./Statistics.vue'))
-import Roles from './Roles.vue'
-import SepaExport from './SepaExport.vue'
-import Clubs from './Clubs.vue'
-import Me from './Me.vue'
-import AuditLog from './AuditLog.vue'
+const Roles = defineAsyncComponent(() => import('./Roles.vue'))
+const SepaExport = defineAsyncComponent(() => import('./SepaExport.vue'))
+const Clubs = defineAsyncComponent(() => import('./Clubs.vue'))
+const Me = defineAsyncComponent(() => import('./Me.vue'))
+const AuditLog = defineAsyncComponent(() => import('./AuditLog.vue'))
 
 export default {
   name: 'App',

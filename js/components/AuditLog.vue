@@ -91,11 +91,13 @@ const ACTIONS = {
   flag_overdue: t('verein', 'marked as overdue'),
   dunning: t('verein', 'reminder sent'),
   dunning_email: t('verein', 'reminders sent by email'),
-  sepa_notice: t('verein', 'advance notice of the direct debit sent')
+  sepa_notice: t('verein', 'advance notice of the direct debit sent'),
+  welcome_mail: t('verein', 'membership confirmation sent'),
+  welcome_pdf: t('verein', 'membership confirmation created as PDF')
 }
 
 const FIELDS = {
-  name: t('verein', 'Name'), firstName: t('verein', 'First name'), fullName: t('verein', 'Name'), salutation: t('verein', 'Title'),
+  office: t('verein', 'Office'), name: t('verein', 'Name'), firstName: t('verein', 'First name'), fullName: t('verein', 'Name'), salutation: t('verein', 'Title'),
   address: t('verein', 'Address'), street: t('verein', 'Street'), postalCode: t('verein', 'Postal code'), city: t('verein', 'City'),
   email: t('verein', 'Email'), phone: t('verein', 'Phone'), gender: t('verein', 'Gender'), iban: 'IBAN', bic: 'BIC', birthDate: t('verein', 'Date of birth'), age: t('verein', 'Age'),
   role: t('verein', 'Position'), joinDate: t('verein', 'Joined'), leaveDate: t('verein', 'Left'), foundingMember: t('verein', 'Founding member'),

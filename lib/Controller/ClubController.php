@@ -211,6 +211,8 @@ class ClubController extends Controller {
             'mailLogoUrl' => $this->request->getParam('mailLogoUrl'),
             'welcomeSubject' => $this->request->getParam('welcomeSubject'),
             'welcomeBody' => $this->request->getParam('welcomeBody'),
+            // not sent = unchanged
+            'offices' => $this->request->getParam('offices'),
         ];
     }
 

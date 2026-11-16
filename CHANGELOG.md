@@ -4,6 +4,17 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.21.0] - 2026-11-16
+
+### ✨ Neu
+- **Ämter:** Unter „Verein“ trägt man die Ämter des Vereins ein, z. B. 1. Vorsitzender, Schriftführerin, Jugendwart. Im Mitgliederformular wählt man das Amt eines Mitglieds; es steht in der Mitgliederliste neben der Funktion, lässt sich suchen, ist Teil von CSV-Export und -Import (Spalte „Amt“), „Meine Daten“ und dem Platzhalter `{amt}`. Das Amt ist nur eine Bezeichnung: Die Rechte kommen weiter aus der Funktion Mitglied, Kassierer oder Vorstand.
+- **Mitgliedsbestätigung als PDF:** Derselbe Text wie in der E-Mail als Brief mit Absender, Anschrift, Datum und Vereinslogo. Er lässt sich über die Aktionen des Mitglieds herunterladen und hängt der E-Mail an. Das Logo wird über Nextclouds eigenen Zugang geholt (nur PNG oder JPEG bis 1 MB, keine internen Adressen); klappt das nicht, entsteht der Brief ohne Logo.
+
+### ⚡ Schneller
+- Die Reiter werden erst beim ersten Öffnen geladen. Der Startcode ist dadurch nur noch etwa halb so groß (646 statt 1.261 KB, komprimiert 177 statt 305 KB).
+
+---
+
 ## [1.20.0] - 2026-11-16
 
 ### ✨ Neu

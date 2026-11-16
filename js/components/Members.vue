@@ -177,6 +177,13 @@
           :disabled="!canManageRoles"
         />
         <NcSelect
+          v-if="officeOptions.length"
+          v-model="formData.office"
+          :options="officeOptions"
+          :input-label="t('verein', 'Office')"
+          :placeholder="t('verein', 'none')"
+        />
+        <NcSelect
           v-model="formData.feeRateId"
           class="fee-rate-select"
           :options="feeRateOptions"
@@ -385,6 +392,7 @@
                 <!-- position plus the status where it is not simply "active" (one column less, so the list fits) -->
                 <div class="status-cell">
                 <span :class="['role-badge', member.role]">{{ roleLabel(member.role) }}</span>
+                <small v-if="member.office" class="office">{{ member.office }}</small>
                 <span v-if="member.deceased" class="status-badge deceased">{{ t('verein', 'Deceased') }}</span>
                 <span v-if="member.anonymizedAt" class="status-badge anonymized" :title="t('verein', 'Personal data was permanently removed')">{{ t('verein', 'Anonymized') }}</span>
                 <span v-else-if="member.isFormer" class="status-badge former">{{ t('verein', 'Former') }}</span>
@@ -425,6 +433,13 @@
                       @click="sendWelcome(member)"
                     >
                       {{ t('verein', 'Send membership confirmation') }}
+                    </NcActionButton>
+                    <NcActionButton
+                      v-if="canManage && member.editable !== false && canSendWelcome"
+                      close-after-click
+                      @click="downloadWelcomePdf(member)"
+                    >
+                      {{ t('verein', 'Membership confirmation as PDF') }}
                     </NcActionButton>
                     <NcActionButton
                       close-after-click
@@ -516,6 +531,7 @@ const emptyFormData = () => ({
   bic: '',
   mandateReference: '',
   memberNumber: '',
+  office: null,
   custom: {},
   mandateDate: '',
   mandateFile: '',
@@ -781,6 +797,32 @@ export default {
         showError(extractErrorMessage(error, t('verein', 'The membership confirmation could not be sent')))
       }
     }
+    // the club's offices to choose from (Club tab); an office no longer on the list stays selectable for the member who has it
+    const officeOptions = computed(() => {
+      const list = [...(currentClub.value?.offices || [])]
+      if (formData.office && !list.includes(formData.office)) list.push(formData.office)
+      return list
+    })
+    const downloadWelcomePdf = async (member) => {
+      try {
+        const response = await api.get(`members/${member.id}/welcome-pdf`, { responseType: 'blob' })
+        const url = URL.createObjectURL(response.data)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = t('verein', 'membership-confirmation_{number}.pdf', { number: member.memberNumber || member.id })
+        a.click()
+        URL.revokeObjectURL(url)
+      } catch (error) {
+        // the error body arrives as a Blob because of responseType
+        let message = t('verein', 'The PDF could not be created')
+        try {
+          message = JSON.parse(await error.response.data.text()).message || message
+        } catch (e) {
+          // keep the generic message
+        }
+        showError(message)
+      }
+    }
     const sendWelcome = async (member) => {
       if (!(await confirmAction(t('verein', 'Send membership confirmation'), t('verein', 'Send the membership confirmation to {email}?', { email: member.email }), { labelConfirm: t('verein', 'Send') }))) return
       await postWelcome(member.id)
@@ -992,6 +1034,8 @@ export default {
       editingId,
       formData,
       roleOptions,
+      officeOptions,
+      downloadWelcomePdf,
       salutationOptions,
       category,
       categories,
@@ -1324,6 +1368,8 @@ export default {
     }
   }
 }
+
+.office { color: var(--color-text-maxcontrast); margin-left: 6px; white-space: nowrap; }
 
 .role-badge {
   display: inline-block;

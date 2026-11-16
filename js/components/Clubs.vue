@@ -57,8 +57,14 @@
           :placeholder="t('verein', 'e.g. https://example.org/logo.png')"
           :helper-text="t('verein', 'Shown at the end of the club’s emails. The image must be publicly reachable, e.g. on the club’s website. Many mail programs only show it after a confirmation.')"
         />
+        <h4 class="wide">{{ t('verein', 'Offices') }}</h4>
+        <label class="wide welcome-body">
+          <span>{{ t('verein', 'Offices in the club (one per line), e.g. 1st chair, secretary, youth leader') }}</span>
+          <textarea v-model="form.offices" rows="4" />
+        </label>
+        <p class="wide hint">{{ t('verein', 'An office is chosen in the member form and shown in the member list. It is a title only: the permissions still come from the position (member, treasurer, board).') }}</p>
         <h4 class="wide">{{ t('verein', 'Membership confirmation by email') }}</h4>
-        <p class="wide hint">{{ t('verein', 'Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only.') }}</p>
+        <p class="wide hint">{{ t('verein', 'Sent only on request: when adding a member or from the member’s actions, never when importing. The member’s IBAN appears shortened only. The same text is attached as a PDF letter with the logo and can be downloaded from the member’s actions.') }}</p>
         <NcTextField
           class="wide"
           :model-value="form.welcomeSubject"
@@ -72,7 +78,7 @@
         </label>
         <details class="wide">
           <summary>{{ t('verein', 'Available placeholders') }}</summary>
-          <p class="hint"><code>{vorname} {nachname} {name} {anrede} {strasse} {plz} {ort} {email} {telefon} {geburtsdatum} {eintritt} {mitgliedsnummer} {beitragskategorie} {iban} {mandatsreferenz} {verein} {vereinsstrasse} {vereinsplz} {vereinsort} {vereinsiban} {vereinsbic} {glaeubigerid}</code></p>
+          <p class="hint"><code>{vorname} {nachname} {name} {anrede} {strasse} {plz} {ort} {email} {telefon} {geburtsdatum} {eintritt} {mitgliedsnummer} {beitragskategorie} {iban} {mandatsreferenz} {verein} {vereinsstrasse} {vereinsplz} {vereinsort} {vereinsiban} {vereinsbic} {glaeubigerid} {amt}</code></p>
         </details>
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>
@@ -272,7 +278,7 @@ export default {
     const busy = ref(false)
     const newClubName = ref('')
     const accountForm = reactive(emptyAccount())
-    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '', mailLogoUrl: '', welcomeSubject: '', welcomeBody: '' })
+    const form = reactive({ name: '', street: '', postalCode: '', city: '', documentsPath: '', calendarGroups: '', mailSenderName: '', mailReplyTo: '', mailLogoUrl: '', welcomeSubject: '', welcomeBody: '', offices: '' })
 
     const club = computed(() => currentClub.value)
     const isAdmin = computed(() => clubState.isAdmin)
@@ -317,6 +323,7 @@ export default {
         mailLogoUrl: c?.mailLogoUrl || '',
         welcomeSubject: c?.welcomeSubject || '',
         welcomeBody: c?.welcomeBody || '',
+        offices: (c?.offices || []).join('\n'),
         calendarGroups: (c?.calendarGroups || []).join(', ')
       })
     }

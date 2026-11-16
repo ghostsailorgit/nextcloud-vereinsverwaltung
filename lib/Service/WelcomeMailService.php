@@ -20,7 +20,8 @@ use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 
 /**
- * The membership confirmation by email, with the club's own text and placeholders.
+ * The membership confirmation by email, with the club's own text and placeholders, and the same text as a PDF letter
+ * with the club's logo (to download, and attached to the email when the server can make PDFs).
  *
  * Only ever sent on request for one member: creating or importing members sends nothing by itself. A member's IBAN appears
  * shortened only, because email is not encrypted; the club's own bank details are public anyway and appear in full.
@@ -50,6 +51,7 @@ class WelcomeMailService {
         'clubiban' => 'clubIban', 'vereinsiban' => 'clubIban',
         'clubbic' => 'clubBic', 'vereinsbic' => 'clubBic',
         'creditorid' => 'creditorId', 'glaeubigerid' => 'creditorId',
+        'office' => 'office', 'amt' => 'office',
     ];
 
     private IL10N $l;
@@ -63,7 +65,10 @@ class WelcomeMailService {
         private ClubMailer $mail,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
-        ?DocumentL10n $documentL10n = null
+        ?DocumentL10n $documentL10n = null,
+        private ?\OCA\Verein\Service\Export\PdfExporter $pdf = null,
+        private ?ClubLogo $logo = null,
+        private ?Clock $clock = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -74,6 +79,45 @@ class WelcomeMailService {
      * @throws \OCA\Verein\Exception\NotFoundException if the person is not a member of this club
      */
     public function send(int $clubId, int $memberId): void {
+        [$member, $club, $renderedSubject, $paragraphs] = $this->prepare($clubId, $memberId);
+        $email = trim((string)$member->getEmail());
+        if (!$this->mail->isUsable($email)) {
+            throw new ValidationException($this->l->t('The member has no usable email address'));
+        }
+
+        // the PDF as well where the server can make one; without TCPDF the email goes out alone
+        $attachment = null;
+        try {
+            $file = $this->letter($member, $club, $renderedSubject, $paragraphs);
+            $attachment = ['content' => $file['content'], 'name' => $file['filename'], 'type' => $file['mimeType']];
+        } catch (\OCA\Verein\Exception\DependencyMissingException $e) {
+        }
+
+        if (!$this->mail->send($club, $email, $member->getFullName(), 'verein.welcome', $renderedSubject, $paragraphs, $attachment)) {
+            throw new ValidationException($this->l->t('The email could not be sent. The reason is in the Nextcloud log.'));
+        }
+        $this->auditLog?->record($clubId, 'member', $memberId, 'welcome_mail');
+    }
+
+    /**
+     * The membership confirmation as a PDF letter (with the club's logo when it can be loaded), e.g. to print.
+     *
+     * @return array{content: string, filename: string, mimeType: string}
+     * @throws ValidationException if the club has no text
+     * @throws \OCA\Verein\Exception\DependencyMissingException without TCPDF
+     */
+    public function pdf(int $clubId, int $memberId): array {
+        [$member, $club, $subject, $paragraphs] = $this->prepare($clubId, $memberId);
+        $file = $this->letter($member, $club, $subject, $paragraphs);
+        $this->auditLog?->record($clubId, 'member', $memberId, 'welcome_pdf');
+        return $file;
+    }
+
+    /**
+     * @return array{0: Member, 1: Club, 2: string, 3: string[]} the member, the club, the subject and the paragraphs
+     * @throws ValidationException
+     */
+    private function prepare(int $clubId, int $memberId): array {
         $member = $this->members->find($clubId, $memberId);
         $club = $this->clubs->find($clubId);
         $subject = trim((string)$club->getWelcomeSubject());
@@ -81,20 +125,37 @@ class WelcomeMailService {
         if ($subject === '' || $body === '') {
             throw new ValidationException($this->l->t('The club has no text for the membership confirmation yet (“Club” tab)'));
         }
-        $email = trim((string)$member->getEmail());
-        if (!$this->mail->isUsable($email)) {
-            throw new ValidationException($this->l->t('The member has no usable email address'));
-        }
-
         $values = $this->values($member, $club);
         // one line, whatever a placeholder contains
         $renderedSubject = trim((string)preg_replace('/[\r\n]+/', ' ', $this->render($subject, $values)));
         $paragraphs = preg_split('/\R\s*\R/u', $this->render(str_replace("\r\n", "\n", $body), $values)) ?: [];
+        return [$member, $club, $renderedSubject, $paragraphs];
+    }
 
-        if (!$this->mail->send($club, $email, $member->getFullName(), 'verein.welcome', $renderedSubject, $paragraphs)) {
-            throw new ValidationException($this->l->t('The email could not be sent. The reason is in the Nextcloud log.'));
+    /**
+     * @return array{content: string, filename: string, mimeType: string}
+     * @throws \OCA\Verein\Exception\DependencyMissingException
+     */
+    private function letter(Member $member, Club $club, string $subject, array $paragraphs): array {
+        if ($this->pdf === null) {
+            throw new \OCA\Verein\Exception\DependencyMissingException($this->l->t('PDF export is not available'));
         }
-        $this->auditLog?->record($clubId, 'member', $memberId, 'welcome_mail');
+        $address = array_values(array_filter([
+            $member->getFullName(),
+            (string)$member->getStreet(),
+            trim($member->getPostalCode() . ' ' . $member->getCity()),
+        ], fn (string $line) => trim($line) !== ''));
+        $clubAddress = array_values(array_filter([(string)$club->getStreet(), trim($club->getPostalCode() . ' ' . $club->getCity())], fn (string $l) => trim($l) !== ''));
+        return $this->pdf->membershipConfirmation([
+            'club' => $club->getName(),
+            'clubAddress' => $clubAddress,
+            'address' => $address,
+            'date' => Formats::date($this->doc, Clock::todayOf($this->clock)),
+            'subject' => $subject,
+            'paragraphs' => $paragraphs,
+            'logo' => $this->logo?->imageFor($club),
+            'fileName' => $this->doc->t('membership-confirmation_%s.pdf', [(string)($member->getMembership()?->getMemberNumber() ?? $member->getId())]),
+        ]);
     }
 
     /** One pass over the template, so that text inside a value is never read as a placeholder. Unknown ones stay as they are. */
@@ -134,6 +195,7 @@ class WelcomeMailService {
             'clubIban' => $account !== null ? (string)$account->getIban() : '',
             'clubBic' => $account !== null ? (string)$account->getBic() : '',
             'creditorId' => $account !== null ? (string)$account->getCreditorId() : '',
+            'office' => (string)$membership?->getOffice(),
         ];
     }
 

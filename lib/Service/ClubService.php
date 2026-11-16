@@ -285,6 +285,36 @@ class ClubService {
     /**
      * @throws ValidationException
      */
+    /**
+     * The club's offices: a list, JSON of a list or one per line; empty lines and repeats are dropped.
+     *
+     * @return string[]
+     * @throws ValidationException
+     */
+    private function offices(mixed $raw): array {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : preg_split('/\r\n|\r|\n/', $raw);
+        }
+        $out = [];
+        $seen = [];
+        foreach (is_array($raw) ? $raw : [] as $office) {
+            $office = trim(is_scalar($office) ? (string)$office : '');
+            if ($office === '' || isset($seen[mb_strtolower($office)])) {
+                continue;
+            }
+            if (mb_strlen($office) > 100) {
+                throw new ValidationException($this->l->t('An office may have at most %s characters', [100]));
+            }
+            $seen[mb_strtolower($office)] = true;
+            $out[] = $office;
+        }
+        if (count($out) > 50) {
+            throw new ValidationException($this->l->t('A club can have at most %s offices', [50]));
+        }
+        return $out;
+    }
+
     private function applyData(Club $club, array $data, ?int $existingId = null): void {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '') {
@@ -318,6 +348,10 @@ class ClubService {
             throw new ValidationException($this->l->t('The logo address must be a complete https:// address with at most 500 characters'));
         }
         $club->setMailLogoUrl($logoUrl);
+
+        if (($data['offices'] ?? null) !== null) {
+            $club->setOffices(json_encode($this->offices($data['offices']), JSON_UNESCAPED_UNICODE));
+        }
 
         $welcomeSubject = $this->nullIfEmpty($data['welcomeSubject'] ?? null);
         if ($welcomeSubject !== null && (mb_strlen($welcomeSubject) > 200 || preg_match('/[\r\n]/', $welcomeSubject))) {

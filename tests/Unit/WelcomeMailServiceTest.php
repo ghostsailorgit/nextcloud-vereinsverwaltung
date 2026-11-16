@@ -198,4 +198,54 @@ class WelcomeMailServiceTest extends TestCase {
 
         $this->service->send(1, 42);
     }
+
+    private function withPdf(?string $logo = null): WelcomeMailService {
+        $members = $this->createMock(MemberService::class);
+        $members->method('find')->willReturnCallback(fn () => $this->member);
+        $clubs = $this->createMock(ClubMapper::class);
+        $clubs->method('find')->willReturnCallback(fn () => $this->club);
+        $accounts = $this->createMock(ClubAccountMapper::class);
+        $accounts->method('findByClub')->willReturn([]);
+        $rates = $this->createMock(FeeRateMapper::class);
+        $rates->method('findByClub')->willReturn([]);
+        $logos = $this->createMock(\OCA\Verein\Service\ClubLogo::class);
+        $logos->method('imageFor')->willReturn($logo);
+        $this->mail = $this->createMock(ClubMailer::class);
+        $this->mail->method('isUsable')->willReturn(true);
+        $this->mail->method('send')->willReturnCallback(function ($club, $to, $name, $id, $subject, $paragraphs, $attachment = null) {
+            $this->sent[] = compact('subject', 'paragraphs', 'attachment');
+            return true;
+        });
+        return new WelcomeMailService($members, $clubs, $accounts, $rates, $this->mail, $this->audit, SourceL10n::fromAppLanguage('de'),
+            pdf: new \OCA\Verein\Service\Export\PdfExporter(l10n: SourceL10n::fromAppLanguage('de')), logo: $logos);
+    }
+
+    public function testTheMailCarriesTheSameTextAsAPdfLetter(): void {
+        $this->withPdf()->send(1, 42);
+
+        $attachment = $this->sent[0]['attachment'];
+        $this->assertSame('mitgliedsbestaetigung_42.pdf', $attachment['name']);
+        $this->assertSame('application/pdf', $attachment['type']);
+        $this->assertStringStartsWith('%PDF', $attachment['content']);
+    }
+
+    public function testThePdfToDownloadWithLogoIsLogged(): void {
+        // a 1 x 1 PNG
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+        $this->member->getMembership()->setMemberNumber('A-7');
+        $this->audit->expects($this->once())->method('record')->with(1, 'member', 42, 'welcome_pdf');
+
+        $file = $this->withPdf($png)->pdf(1, 42);
+        $this->assertSame('mitgliedsbestaetigung_A-7.pdf', $file['filename']);
+        $this->assertStringStartsWith('%PDF', $file['content']);
+        $this->assertStringContainsString('/Subtype /Image', $file['content'], 'the logo is in the letter');
+        $this->assertSame([], $this->sent, 'downloading sends nothing');
+    }
+
+    public function testTheOfficeIsAPlaceholder(): void {
+        $this->member->getMembership()->setOffice('Jugendwartin');
+        $this->club->setWelcomeBody('Als {amt} / {office}');
+        $this->service->send(1, 42);
+        $this->assertSame(['Als Jugendwartin / Jugendwartin'], $this->sent[0]['paragraphs']);
+    }
 }
