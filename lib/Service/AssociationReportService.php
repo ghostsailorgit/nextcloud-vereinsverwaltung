@@ -39,9 +39,10 @@ class AssociationReportService {
 
     /**
      * @return array{date: string, rows: array<int, array{year: int, M: int, W: int, D: int, O: int}>, total: int, missingBirthDate: string[], genderFromTitle: int, genderUnknown: int}
+     * @param int[]|null $onlyMemberIds limits the report to these members (a department, MemberScope), null = the whole club
      * @throws ValidationException
      */
-    public function report(int $clubId, string $date): array {
+    public function report(int $clubId, string $date, ?array $onlyMemberIds = null): array {
         $this->checkDate($date);
         $this->clubs->find($clubId);
 
@@ -50,7 +51,13 @@ class AssociationReportService {
         $fromTitle = 0;
         $unknown = 0;
         $total = 0;
-        foreach ($this->members->findByClub($clubId) as $member) {
+        $members = $this->members->findByClub($clubId);
+        if ($onlyMemberIds !== null) {
+            // a department head's view (MemberScope)
+            $wanted = array_flip($onlyMemberIds);
+            $members = array_values(array_filter($members, fn ($m) => isset($wanted[(int)$m->getId()])));
+        }
+        foreach ($members as $member) {
             if (!$this->isMemberOn($member, $date)) {
                 continue;
             }
@@ -82,9 +89,10 @@ class AssociationReportService {
 
     /**
      * @param string $sportCode code of the sport or association ("Funktionscodes"); empty = totals only (type A)
+     * @param int[]|null $onlyMemberIds see report()
      * @throws ValidationException
      */
-    public function xml(int $clubId, string $date, string $number, string $contact, string $sportCode): string {
+    public function xml(int $clubId, string $date, string $number, string $contact, string $sportCode, ?array $onlyMemberIds = null): string {
         $number = trim($number);
         $contact = trim($contact);
         $sportCode = trim($sportCode);
@@ -97,7 +105,7 @@ class AssociationReportService {
         if ($sportCode !== '' && !preg_match('/^\d{1,6}$/', $sportCode)) {
             throw new ValidationException($this->l->t('The federation code must consist of digits'));
         }
-        $report = $this->report($clubId, $date);
+        $report = $this->report($clubId, $date, $onlyMemberIds);
         $club = $this->clubs->find($clubId);
 
         $dom = new \DOMDocument('1.0', 'utf-8');

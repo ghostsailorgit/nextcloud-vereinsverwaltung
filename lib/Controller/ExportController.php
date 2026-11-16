@@ -43,7 +43,8 @@ class ExportController extends Controller {
         LoggerInterface $logger,
         private ?\OCA\Verein\Service\CustomFieldService $customFields = null,
         private ?\OCA\Verein\Service\RBAC\RoleService $roles = null,
-        private ?\OCP\IUserSession $userSession = null
+        private ?\OCP\IUserSession $userSession = null,
+        private ?\OCA\Verein\Service\MemberScope $scope = null
     ) {
         parent::__construct($appName, $request);
         $this->memberService = $memberService;
@@ -63,8 +64,9 @@ class ExportController extends Controller {
     #[RequirePermission('verein.member.view')]
     public function exportMembersAsCsv(int $clubId): Response {
         try {
-            // Get all members
+            // Get all members (a department head: those of their groups)
             $members = $this->memberService->findAll($clubId);
+            $members = $this->scope?->filter($clubId, $members) ?? $members;
 
             // Format and export (works with empty array too)
             $formatted = $this->csvExporter->formatMembers($members);
@@ -114,8 +116,9 @@ class ExportController extends Controller {
     #[RequirePermission('verein.member.view')]
     public function exportMembersAsPdf(int $clubId): Response {
         try {
-            // Get all members
+            // Get all members (a department head: those of their groups)
             $members = $this->memberService->findAll($clubId);
+            $members = $this->scope?->filter($clubId, $members) ?? $members;
 
             // Export to PDF
             $result = $this->pdfExporter->exportMembers($members);

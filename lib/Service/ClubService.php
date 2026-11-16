@@ -66,6 +66,11 @@ class ClubService {
             $permissions = $this->roleService->getPermissionsForClub($userId, $club->getId());
             $entry = $club->jsonSerialize();
             $entry['permissions'] = $permissions;
+            // the groups a department head is limited to (RoleService::memberGroupScope()), null = the whole club
+            $entry['memberScope'] = [
+                'view' => in_array('verein.member.view', $permissions, true) ? $this->roleService->memberGroupScope($userId, 'verein.member.view', $club->getId()) : null,
+                'manage' => in_array('verein.member.manage', $permissions, true) ? $this->roleService->memberGroupScope($userId, 'verein.member.manage', $club->getId()) : null,
+            ];
             $canSeeAccounts = in_array('verein.sepa.export', $permissions, true)
                 || in_array('verein.club.manage', $permissions, true);
             // fee categories are needed to assign one to a member and to run the annual fee run

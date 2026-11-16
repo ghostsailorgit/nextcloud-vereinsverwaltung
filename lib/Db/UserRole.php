@@ -16,6 +16,8 @@ class UserRole extends Entity implements JsonSerializable {
     protected ?int $clubId = null;
     protected ?string $grantedBy = null;
     protected ?string $grantedAt = null;
+    // JSON list of group ids: the assignment covers only those groups' members (department heads); null = whole club
+    protected ?string $groupIds = null;
 
     public function __construct() {
         $this->addType('id', 'integer');
@@ -24,6 +26,16 @@ class UserRole extends Entity implements JsonSerializable {
         $this->addType('clubId', 'integer');
         $this->addType('grantedBy', 'string');
         $this->addType('grantedAt', 'string');
+        $this->addType('groupIds', 'string');
+    }
+
+    /** @return int[]|null the groups the assignment is limited to, null = the whole club */
+    public function getGroupIdList(): ?array {
+        $list = json_decode((string)$this->groupIds, true);
+        if (!is_array($list) || $list === []) {
+            return null;
+        }
+        return array_values(array_unique(array_map('intval', $list)));
     }
 
     public function jsonSerialize(): array {
@@ -34,6 +46,7 @@ class UserRole extends Entity implements JsonSerializable {
             'clubId' => $this->clubId,
             'grantedBy' => $this->grantedBy,
             'grantedAt' => $this->grantedAt,
+            'groupIds' => $this->getGroupIdList(),
         ];
     }
 }

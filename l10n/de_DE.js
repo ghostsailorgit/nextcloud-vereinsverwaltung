@@ -1078,7 +1078,13 @@ OC.L10N.register(
         "Delete section": "Bereich löschen",
         "Delete the section “{name}”?": "Den Bereich „{name}“ löschen?",
         "Section deleted": "Bereich gelöscht",
-        "The section could not be deleted": "Der Bereich konnte nicht gelöscht werden"
+        "The section could not be deleted": "Der Bereich konnte nicht gelöscht werden",
+        "For department heads: with groups chosen, the role only lets them see and edit the members of these groups (and only the permissions for members count). Without groups it applies to the whole club.": "Für Abteilungsleitungen: Mit ausgewählten Gruppen erlaubt die Rolle nur, die Mitglieder dieser Gruppen zu sehen und zu bearbeiten (es zählen nur die Rechte für Mitglieder). Ohne Gruppen gilt sie für den ganzen Verein.",
+        "Only for these groups (optional)": "Nur für diese Gruppen (optional)",
+        "Only possible with this permission for the whole club, not only for some groups": "Nur mit diesem Recht für den ganzen Verein möglich, nicht nur für einzelne Gruppen",
+        "Please choose one of your groups for the new member": "Bitte für das neue Mitglied eine deiner Gruppen auswählen",
+        "The group does not exist": "Die Gruppe gibt es nicht",
+        "Whole club": "Ganzer Verein"
     },
     "nplurals=2; plural=(n != 1);"
 );

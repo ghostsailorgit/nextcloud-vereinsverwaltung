@@ -30,8 +30,14 @@ class StatisticsService {
         $this->feeMapper = $feeMapper;
     }
 
-    public function getMemberStatistics(int $clubId): array {
+    /** @param int[]|null $onlyMemberIds limits the figures to these members (MemberScope), null = the whole club */
+    public function getMemberStatistics(int $clubId, ?array $onlyMemberIds = null): array {
         $members = $this->memberMapper->findByClub($clubId);
+        if ($onlyMemberIds !== null) {
+            // a department head's view (MemberScope)
+            $wanted = array_flip($onlyMemberIds);
+            $members = array_values(array_filter($members, fn ($m) => isset($wanted[(int)$m->getId()])));
+        }
         $total = count($members);
 
         // Group by role
