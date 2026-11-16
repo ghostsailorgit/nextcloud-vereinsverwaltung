@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.18.1] - 2026-11-16
+
+### 🐛 Behoben
+- **Auswahlfelder im Mitgliederformular** ([#47](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/47)): Der sichtbare Rahmen von Anrede, Geschlecht, Kategorie, „Beitrag zahlt“ und Konto war 4 px niedriger als der der Textfelder daneben (in Firefox und Chromium). Jetzt sind alle Felder gleich hoch und bündig.
+
+---
+
 ## [1.18.0] - 2026-11-16
 
 ### ✨ Neu

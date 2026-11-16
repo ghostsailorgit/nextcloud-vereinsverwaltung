@@ -1088,6 +1088,11 @@ export default {
      multiple and account selects at 42px. */
   > :deep(.input-field) .input-field__main-wrapper { padding-block: 0; }
   > :deep(.input-field) .input-field__input { height: var(--default-clickable-area); }
+  /* A single select (and the account select) draws its outline with the search field inside it, also 30px in a 34px
+     frame - the same correction, or it looks 4px lower than the text fields next to it (issue #47, measured in Firefox
+     and Chromium on the visible outline, not the outer box). */
+  :deep(.v-select.vs--single .input-field__main-wrapper) { padding-block: 0; }
+  :deep(.v-select.vs--single .input-field__input) { height: var(--default-clickable-area); }
   /* as specific as Nextcloud's own rule (.nc-select.v-select.select.vs--multiple ...), or it loses */
   :deep(.nc-select.v-select.select.vs--multiple .vs__dropdown-toggle) {
     min-height: var(--default-clickable-area);
