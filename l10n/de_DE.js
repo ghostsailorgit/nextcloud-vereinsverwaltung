@@ -876,6 +876,7 @@ OC.L10N.register(
         "date of signature of the mandate is invalid": "Unterschriftsdatum des Mandats ist ungültig",
         "deactivated": "deaktiviert",
         "deactivated (no payments)": "deaktiviert (keine Zahlungsvorgänge)",
+        "deceased": "verstorben",
         "default": "Standard",
         "deleted": "gelöscht",
         "derived from the membership (“Club” tab)": "ergibt sich aus der Mitgliedschaft (Reiter „Verein“)",

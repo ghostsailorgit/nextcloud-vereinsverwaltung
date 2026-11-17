@@ -165,7 +165,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     once before; don't repeat that with a new sensitive-fields list elsewhere).
 
 17. **Dunning** (`DunningService`): one letter per person over all their due fees, level = highest level so far + 1, capped at 3;
-    deactivated/anonymized people and anyone dunned within `intervalDays` are skipped with a reason. Preview first, the run is one
+    deactivated/anonymized/deceased people (a deceased person's fees not even via their payer) and anyone dunned within `intervalDays` are skipped with a reason. Preview first, the run is one
     statement per level in a transaction. Letters are generated on demand from the fees' current level. **Every email to members**
     (reminder letters, advance notice) goes through `ClubMailer`, i.e. only Nextcloud's `IMailer` (the mail server the Nextcloud
     admin configured; the club only sets sender name and reply-to) - never store SMTP credentials or build a mail transport in
