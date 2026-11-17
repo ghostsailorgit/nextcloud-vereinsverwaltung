@@ -54,7 +54,7 @@ class StatisticsService {
             'total' => $total,
             'byRole' => $byRole,
             // what the member list calls "active": not left, not deceased (the dashboard shows this one)
-            'active' => count(array_filter($members, fn ($m) => !$m->isFormer())),
+            'active' => count(array_filter($members, fn ($m) => !$m->isFormer(Clock::todayOf($this->clock)))),
             'newThisMonth' => $this->countNewMembersThisMonth($members),
             'growthByMonth' => $this->computeMemberGrowth($members),
             'upcomingBirthdays' => $this->getUpcomingBirthdays($members),
@@ -71,7 +71,7 @@ class StatisticsService {
         $upcoming = [];
 
         foreach ($members as $member) {
-            if ($member->isFormer() || empty($member->getBirthDate())) {
+            if ($member->isFormer(Clock::todayOf($this->clock)) || empty($member->getBirthDate())) {
                 continue;
             }
             try {
@@ -102,7 +102,7 @@ class StatisticsService {
         $upcoming = [];
 
         foreach ($members as $member) {
-            if ($member->isFormer() || empty($member->getJoinDate())) {
+            if ($member->isFormer(Clock::todayOf($this->clock)) || empty($member->getJoinDate())) {
                 continue;
             }
             try {

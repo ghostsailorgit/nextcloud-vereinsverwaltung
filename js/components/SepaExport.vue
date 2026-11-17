@@ -51,15 +51,39 @@
       </form>
     </div>
 
-    <!-- After a download: mark exactly the exported fees as paid -->
-    <div v-if="exportedFeeIds.length" class="skipped-warning mark-paid">
-      <p>
-        {{ n('verein', 'The file contains %n fee. Once you have submitted it to the bank, you can mark exactly this fee as paid.', 'The file contains %n fees. Once you have submitted it to the bank, you can mark exactly these fees as paid.', exportedFeeIds.length) }}
-      </p>
-      <NcButton variant="primary" :disabled="marking" @click="markExportedPaid">
-        {{ n('verein', 'Mark %n fee as paid', 'Mark %n fees as paid', exportedFeeIds.length) }}
-      </NcButton>
-      <NcButton variant="tertiary" @click="exportedFeeIds = []">{{ t('verein', 'Later') }}</NcButton>
+    <!-- Exported files: their fees stay "collecting" until marked paid or open again, and no later file contains them -->
+    <div v-if="collections.length" class="form-container collections">
+      <h3>{{ t('verein', 'Collections') }}</h3>
+      <p class="hint">{{ t('verein', 'The fees of an exported file are “in collection” and are not part of any later file. Once the money has arrived, mark them as paid; if the file was not submitted or the bank rejected it, set them to unpaid again.') }}</p>
+      <div class="table-scroll">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>{{ t('verein', 'Created') }}</th>
+              <th>{{ t('verein', 'Collection date') }}</th>
+              <th>{{ t('verein', 'Fees') }}</th>
+              <th>{{ t('verein', 'Amount') }}</th>
+              <th>{{ t('verein', 'Still in collection') }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in collections" :key="c.id">
+              <td>{{ formatDate(c.createdAt) }}</td>
+              <td>{{ formatDate(c.collectionDate) }}</td>
+              <td>{{ c.feeCount }}</td>
+              <td>{{ formatMoney(c.total) }}</td>
+              <td>{{ c.stillCollecting }}</td>
+              <td>
+                <template v-if="c.stillCollecting && canWriteFees">
+                  <NcButton variant="primary" :disabled="marking" @click="closeCollection(c, true)">{{ t('verein', 'Mark as paid') }}</NcButton>
+                  <NcButton variant="tertiary" :disabled="marking" @click="closeCollection(c, false)">{{ t('verein', 'Set to unpaid again') }}</NcButton>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Preview Section -->
@@ -195,7 +219,7 @@ export default {
     return {
       accountId: null,
       previewData: null,
-      exportedFeeIds: [],
+      collections: [],
       marking: false,
       collectionDate: '',
       noticeBusy: false,
@@ -205,6 +229,9 @@ export default {
   computed: {
     clubName() {
       return currentClub.value?.name || ''
+    },
+    canWriteFees() {
+      return (currentClub.value?.permissions || []).includes('verein.finance.write')
     },
     accounts() {
       return currentClub.value?.accounts || []
@@ -239,6 +266,7 @@ export default {
   mounted() {
     // Default account comes first (see ClubAccountMapper::findByClub)
     this.accountId = this.accounts[0]?.id ?? null
+    this.loadCollections()
   },
   methods: {
     t,
@@ -311,16 +339,28 @@ export default {
         showError(extractErrorMessage(error, t('verein', 'Error loading the preview')))
       }
     },
-    async markExportedPaid() {
-      if (!(await confirmAction(t('verein', 'Mark as paid'), n('verein', 'Mark %n fee as paid? Only do this after submitting the file to the bank.', 'Mark %n fees as paid? Only do this after submitting the file to the bank.', this.exportedFeeIds.length), { labelConfirm: t('verein', 'Mark as paid'), severity: 'warning' }))) return
+    async loadCollections() {
+      try {
+        const res = await api.get('sepa/collections')
+        this.collections = res.data.collections || []
+      } catch (error) {
+        this.collections = []
+      }
+    },
+    async closeCollection(collection, paid) {
+      const question = paid
+        ? n('verein', 'Mark %n fee of this collection as paid? Only do this once the money has arrived.', 'Mark %n fees of this collection as paid? Only do this once the money has arrived.', collection.stillCollecting)
+        : n('verein', 'Set %n fee of this collection to unpaid again? Do this only if the file was not submitted or the bank rejected it – the next SEPA file will contain it again.', 'Set %n fees of this collection to unpaid again? Do this only if the file was not submitted or the bank rejected it – the next SEPA file will contain them again.', collection.stillCollecting)
+      const label = paid ? t('verein', 'Mark as paid') : t('verein', 'Set to unpaid again')
+      if (!(await confirmAction(label, question, { labelConfirm: label, severity: 'warning' }))) return
       this.marking = true
       try {
-        const res = await api.post('finance/mark-paid', { feeIds: this.exportedFeeIds.join(',') })
-        showSuccess(n('verein', '%n fee marked as paid', '%n fees marked as paid', res.data.marked))
-        this.exportedFeeIds = []
+        await api.post(`sepa/collections/${collection.id}/close`, { paid: paid ? 1 : 0 })
+        showSuccess(paid ? t('verein', 'Fees marked as paid') : t('verein', 'Fees set to unpaid again'))
         this.previewData = null
+        await this.loadCollections()
       } catch (error) {
-        showError(extractErrorMessage(error, t('verein', 'Marking failed')))
+        showError(extractErrorMessage(error, t('verein', 'The change failed')))
       } finally {
         this.marking = false
       }
@@ -342,7 +382,9 @@ export default {
         a.click()
         window.URL.revokeObjectURL(url)
         showSuccess(t('verein', 'SEPA XML downloaded'))
-        this.exportedFeeIds = (response.headers['x-sepa-fee-ids'] || '').split(',').filter(Boolean).map(Number)
+        // the fees are now "in collection" (see the list of collections)
+        this.previewData = null
+        await this.loadCollections()
         const skipped = parseInt(response.headers['x-sepa-skipped'] || '0', 10)
         if (skipped > 0) {
           showError(n('verein', 'Attention: %n unpaid fee is not in the export (for example no IBAN or no mandate). See the preview for details.', 'Attention: %n unpaid fees are not in the export (for example no IBAN or no mandate). See the preview for details.', skipped))

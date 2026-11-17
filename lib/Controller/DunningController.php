@@ -6,6 +6,7 @@
 namespace OCA\Verein\Controller;
 
 use OCA\Verein\Attributes\RequirePermission;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCA\Verein\Service\DunningMailService;
 use OCA\Verein\Service\DunningService;
 use OCA\Verein\Service\Export\PdfExporter;
@@ -69,6 +70,7 @@ class DunningController extends Controller {
      * @NoAdminRequired
      */
     #[RequirePermission('verein.finance.write')]
+    #[UserRateLimit(limit: 20, period: 3600)]
     public function send(): JSONResponse {
         try {
             $result = $this->mail->send($this->clubId(), $this->feeIds(), (int)$this->request->getParam('deadlineDays', 14));

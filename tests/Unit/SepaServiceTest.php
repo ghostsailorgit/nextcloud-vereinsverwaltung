@@ -40,6 +40,8 @@ class SepaServiceTest extends TestCase {
     private MemberMapper&MockObject $members;
     private FeeRateMapper&MockObject $feeRates;
     private ClubService&MockObject $clubService;
+    private ClubMapper&MockObject $clubs;
+    private Clock $clock;
     private SepaService $service;
 
     /** @var array<int, Member> */
@@ -93,7 +95,9 @@ class SepaServiceTest extends TestCase {
         $tz = $this->createMock(IDateTimeZone::class);
         $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
 
-        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, new Clock($time, $tz), l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates, groups: $groups);
+        $this->clubs = $clubs;
+        $this->clock = new Clock($time, $tz);
+        $this->service = new SepaService($this->fees, $this->members, $clubs, $this->clubService, $this->clock, l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates, groups: $groups);
     }
 
     private function fee(int $id, int $memberId, float $amount, ?string $description = null, string $dueDate = '2026-03-01 00:00:00'): void {
@@ -636,5 +640,116 @@ class SepaServiceTest extends TestCase {
 
         $this->assertSame(30, $this->service->previewSepaExport(self::CLUB)['transactionCount']);
     }
-}
 
+    public function testDeceasedAccountHolderIsNotCollected(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->personsById[1]->setDeceased(true);
+        $this->fee(10, 1, 30.0);
+
+        $preview = $this->service->previewSepaExport(self::CLUB);
+
+        $this->assertSame(0, $preview['transactionCount']);
+        $this->assertSame('Kontoinhaber ist verstorben, das Mandat gilt nicht mehr', $preview['skipped'][0]['reason']);
+    }
+
+    /** @return array{0: SepaService, 1: \OCA\Verein\Db\SepaRunMapper&MockObject, 2: \OCP\IDBConnection&MockObject} */
+    private function collectingService(): array {
+        $db = $this->createMock(\OCP\IDBConnection::class);
+        $runs = $this->createMock(\OCA\Verein\Db\SepaRunMapper::class);
+        $service = new SepaService($this->fees, $this->members, $this->clubs, $this->clubService, $this->clock,
+            l10n: SourceL10n::fromAppLanguage('de'), feeRates: $this->feeRates, db: $db, runs: $runs);
+        return [$service, $runs, $db];
+    }
+
+    private function sepaRun(int $id, array $feeIds): \OCA\Verein\Db\SepaRun {
+        $run = new \OCA\Verein\Db\SepaRun();
+        $run->setId($id);
+        $run->setClubId(self::CLUB);
+        $run->setFeeIds(json_encode($feeIds));
+        return $run;
+    }
+
+    public function testExportPutsItsFeesInCollectionAndRecordsTheRun(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 30.0);
+        $this->fee(11, 1, 5.0);
+        [$service, $runs, $db] = $this->collectingService();
+        $this->clubs->expects($this->once())->method('lockForUpdate')->with(self::CLUB);
+        $this->fees->expects($this->once())->method('moveStatusInClub')
+            ->with(self::CLUB, [10, 11], ['open', 'overdue'], 'collecting', $this->anything())->willReturn(2);
+        $stored = null;
+        $runs->expects($this->once())->method('insert')->willReturnCallback(function ($run) use (&$stored) {
+            $run->setId(77);
+            $stored = $run;
+            return $run;
+        });
+        $db->expects($this->once())->method('commit');
+
+        $result = $service->export(self::CLUB, null, null, 'kassenwart');
+
+        $this->assertSame(77, $result['runId']);
+        $this->assertSame([10, 11], $stored->getFeeIdList());
+        $this->assertSame(3500, $stored->getTotalCents());
+        $this->assertSame('kassenwart', $stored->getCreatedBy());
+    }
+
+    public function testExportIsRefusedWhenAFeeChangedMeanwhile(): void {
+        $this->person(1, 'Anna', 'Ok', 'DE02120300000000202051');
+        $this->mandate(1, '2021-01-05');
+        $this->fee(10, 1, 30.0);
+        $this->fee(11, 1, 5.0);
+        [$service, $runs, $db] = $this->collectingService();
+        $this->fees->method('moveStatusInClub')->willReturn(1);
+        $runs->expects($this->never())->method('insert');
+        $db->expects($this->once())->method('rollBack');
+
+        $this->expectException(\OCA\Verein\Exception\ValidationException::class);
+        $service->export(self::CLUB, null, null, 'kassenwart');
+    }
+
+    public function testClosingACollectionLeavesFeesOfALaterCollectionAlone(): void {
+        [$service, $runs] = $this->collectingService();
+        $runs->method('findInClub')->with(5, self::CLUB)->willReturn($this->sepaRun(5, [10, 11, 12]));
+        $runs->method('findNewerInClub')->with(self::CLUB, 5)->willReturn([$this->sepaRun(6, [11])]);
+        $this->fees->expects($this->once())->method('moveStatusInClub')
+            ->with(self::CLUB, [10, 12], ['collecting'], 'open', $this->anything())->willReturn(2);
+
+        $this->assertSame(2, $service->closeCollection(self::CLUB, 5, false));
+    }
+
+    public function testMarkingACollectionPaidOnlyTouchesFeesStillInCollection(): void {
+        [$service, $runs] = $this->collectingService();
+        $runs->method('findInClub')->willReturn($this->sepaRun(5, [10, 11]));
+        $runs->method('findNewerInClub')->willReturn([]);
+        $this->fees->expects($this->once())->method('markPaidInClub')
+            ->with(self::CLUB, [10, 11], $this->anything(), ['collecting'])->willReturn(2);
+
+        $this->assertSame(2, $service->closeCollection(self::CLUB, 5, true));
+    }
+
+    public function testCollectionOfAnotherClubIsNotFound(): void {
+        [$service, $runs] = $this->collectingService();
+        $runs->method('findInClub')->willThrowException(new \OCP\AppFramework\Db\DoesNotExistException(''));
+
+        $this->expectException(\OCA\Verein\Exception\NotFoundException::class);
+        $service->closeCollection(self::CLUB, 5, true);
+    }
+
+    public function testCollectionsCountOnlyTheirOwnFeesStillInCollection(): void {
+        [$service, $runs] = $this->collectingService();
+        $runs->method('findByClub')->willReturn([$this->sepaRun(6, [11]), $this->sepaRun(5, [10, 11])]);
+        $collecting = [];
+        foreach ([10, 11] as $id) {
+            $fee = new Fee();
+            $fee->setId($id);
+            $collecting[] = $fee;
+        }
+        $this->openFees = $collecting; // findByStatusesInClub(['collecting']) answers from the same list here
+
+        $list = $service->collections(self::CLUB);
+
+        $this->assertSame([6 => 1, 5 => 1], array_column($list, 'stillCollecting', 'id'));
+    }
+}

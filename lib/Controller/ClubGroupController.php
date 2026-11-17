@@ -153,7 +153,7 @@ class ClubGroupController extends Controller {
      */
     #[RequirePermission('verein.member.manage')]
     public function updateMember(int $periodId): JSONResponse {
-        return $this->respond(fn () => $this->checkPeriod($periodId) ?? $this->groups->updatePeriod(
+        return $this->respond(fn () => $this->checkPeriod($periodId) ?? $this->checkReopen($periodId) ?? $this->groups->updatePeriod(
             $this->clubId(),
             $periodId,
             $this->request->getParam('joinedOn'),
@@ -172,6 +172,29 @@ class ClubGroupController extends Controller {
             $this->groups->deletePeriod($this->clubId(), $periodId);
             return null;
         });
+    }
+
+    /**
+     * Someone who manages only some groups may not reopen or lengthen a stay that has ended: the person would come
+     * back into their reach (MemberScope) without anyone else's say. Shortening or ending a stay stays possible.
+     * Returns null so it can precede an expression.
+     *
+     * @throws \OCA\Verein\Exception\PermissionDeniedException
+     */
+    private function checkReopen(int $periodId): mixed {
+        if ($this->scope?->groups($this->clubId(), 'verein.member.manage') === null) {
+            return null;
+        }
+        $ended = $this->groups->leftOnOfPeriod($this->clubId(), $periodId);
+        if ($ended === null) {
+            return null;
+        }
+        $raw = $this->request->getParam('leftOn');
+        $new = is_string($raw) && trim($raw) !== '' ? substr(trim($raw), 0, 10) : null;
+        if ($new === null || $new > $ended) {
+            throw new \OCA\Verein\Exception\PermissionDeniedException($this->l10n()->t('Only someone who may manage members of the whole club can reopen or extend a stay in a group that has ended'));
+        }
+        return null;
     }
 
     /**

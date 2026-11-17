@@ -8,6 +8,7 @@ namespace OCA\Verein\Controller;
 
 use Exception;
 use OCA\Verein\Attributes\RequirePermission;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCA\Verein\Db\ClubMapper;
 use OCA\Verein\Service\ClubGroupService;
 use OCA\Verein\Service\MemberService;
@@ -103,6 +104,99 @@ class MemberController extends Controller {
         $this->scope?->requireWholeClub($this->clubId());
     }
 
+    /** Fields that decide who gets rights automatically (RoleService::derivedRoles()). */
+    private const RIGHTS_FIELDS = ['leaveDate', 'leaveUnknown', 'deceased'];
+    /** Personal data stored once per person and used by every club the person belongs to. */
+    private const SHARED_FIELDS = ['iban', 'bic', 'email', 'deceased'];
+    /** What a member pays: not for department heads (members of some groups only). */
+    private const FEE_FIELDS = ['feeRateId', 'honoraryMember', 'honoraryPaysFee', 'feeExemptJoinYear', 'payerMemberId'];
+    /** Bank details and mandate: department heads need verein.member.bank for them. */
+    private const BANK_FIELDS = ['iban', 'bic', 'mandateReference', 'mandateDate', 'mandateFile', 'mandateOnPaper'];
+
+    private function uid(): string {
+        return $this->userSession->getUser()?->getUID() ?? '';
+    }
+
+    /** Whether the user reaches this person with the permission in that club (whole club, or one of their groups). */
+    private function reaches(int $clubId, int $memberId, string $permission): bool {
+        if (!$this->roleService->userHasPermission($this->uid(), $permission, $clubId)) {
+            return false;
+        }
+        return $this->scope === null || $this->scope->covers($clubId, $memberId, $permission);
+    }
+
+    /**
+     * The member fields the user may not change for this person (null = a new member). A locked field keeps its
+     * stored value (a new member: the default), whatever the request sends; the form shows it read-only.
+     *
+     * - role: only with verein.role.manage (rule 3).
+     * - userId: verein.role.manage in this club and in every other club of the person - a linked account gets the
+     *   rights the person has in each of them (RoleService::derivedRoles()).
+     * - leave date, "date unknown", deceased: they end automatic rights too, so with a linked account only with
+     *   verein.role.manage.
+     * - IBAN/BIC, email, deceased: one record for every club of the person, so only with verein.member.manage in
+     *   each of them.
+     * - fee fields: never for department heads; bank details and mandate only with verein.member.bank.
+     *
+     * @return string[]
+     */
+    private function lockedFields(?\OCA\Verein\Db\Member $member): array {
+        $clubId = $this->clubId();
+        $uid = $this->uid();
+        $locked = [];
+        $mayManageRoles = $this->canManageRoles();
+        if (!$mayManageRoles) {
+            $locked[] = 'role';
+            $locked[] = 'userId';
+        }
+        $otherClubs = $member === null ? [] : array_values(array_diff($this->memberService->clubIdsOf((int)$member->getId()), [$clubId]));
+        if ($mayManageRoles) {
+            foreach ($otherClubs as $other) {
+                if (!$this->roleService->userHasPermission($uid, 'verein.role.manage', $other)) {
+                    $locked[] = 'userId';
+                    break;
+                }
+            }
+        }
+        if ($member !== null && !$mayManageRoles && (string)$member->getUserId() !== '') {
+            array_push($locked, ...self::RIGHTS_FIELDS);
+        }
+        foreach ($otherClubs as $other) {
+            if (!$this->reaches($other, (int)$member->getId(), 'verein.member.manage')) {
+                array_push($locked, ...self::SHARED_FIELDS);
+                break;
+            }
+        }
+        if ($this->scope?->groups($clubId, 'verein.member.manage') !== null) {
+            array_push($locked, ...self::FEE_FIELDS);
+            $bank = $member === null
+                ? $this->roleService->userHasPermission($uid, 'verein.member.bank', $clubId)
+                : $this->reaches($clubId, (int)$member->getId(), 'verein.member.bank');
+            if (!$bank) {
+                array_push($locked, ...self::BANK_FIELDS);
+            }
+        }
+        return array_values(array_unique($locked));
+    }
+
+    /**
+     * Replaces locked fields in the submitted data with the stored values (a new member: the defaults).
+     *
+     * @param string[] $locked
+     */
+    private function keepLocked(array $data, array $locked, ?\OCA\Verein\Db\Member $member): array {
+        $stored = $member?->jsonSerialize() ?? [];
+        foreach ($locked as $field) {
+            $data[$field] = match ($field) {
+                // null = "leave as it is" for these (MemberService::applyUserLink()/applyFeeRate()/applyPayer())
+                'userId', 'feeRateId', 'payerMemberId' => null,
+                'role' => $stored['role'] ?? 'member',
+                default => $stored[$field] ?? (in_array($field, ['leaveUnknown', 'deceased', 'honoraryMember', 'honoraryPaysFee', 'feeExemptJoinYear', 'mandateOnPaper'], true) ? false : null),
+            };
+        }
+        return $data;
+    }
+
     /**
      * The member who pays someone's fee must be one the user reaches too.
      *
@@ -140,7 +234,7 @@ class MemberController extends Controller {
             $editable = $this->scope?->memberIds($this->clubId(), 'verein.member.manage');
             return new JSONResponse([
                 'status' => 'ok',
-                'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? []) + [
+                'members' => array_map(fn ($m) => $this->present($m, $custom[$m->getId()] ?? [], false) + [
                     'groups' => $groups[$m->getId()] ?? [],
                     'editable' => $editable === null || in_array((int)$m->getId(), $editable, true),
                 ], $members)
@@ -171,13 +265,16 @@ class MemberController extends Controller {
         $users = [];
         foreach ($this->userManager->searchDisplayName($q, 10) as $user) {
             $linked = $this->memberService->findByLinkedUser($user->getUID());
+            // who the account belongs to is only named for persons of this club; otherwise it is just "taken"
+            $here = $linked !== null && in_array($this->clubId(), $this->memberService->clubIdsOf($linked->getId()), true);
             $users[] = [
                 'id' => $user->getUID(),
                 'user' => $user->getUID(),
                 'displayName' => $user->getDisplayName(),
                 'subname' => $user->getUID(),
-                'linkedTo' => $linked !== null ? $linked->getFullName() : null,
-                'linkedToId' => $linked?->getId(),
+                'linked' => $linked !== null,
+                'linkedTo' => $here ? $linked->getFullName() : null,
+                'linkedToId' => $here ? $linked->getId() : null,
             ];
         }
         return new JSONResponse(['status' => 'ok', 'users' => $users]);
@@ -197,8 +294,8 @@ class MemberController extends Controller {
         try {
             $this->requireWholeClub();
             $q = (string)$this->request->getParam('query', '');
-            $visible = $this->visibleClubIds();
-            $members = $this->memberService->lookupInOtherClubs($this->clubId(), $q, $visible);
+            [$visible, $alsoMembers] = $this->reachableElsewhere();
+            $members = $this->memberService->lookupInOtherClubs($this->clubId(), $q, $visible, $alsoMembers);
             return new JSONResponse([
                 'status' => 'ok',
                 // Deliberately just enough to recognise the person
@@ -227,7 +324,8 @@ class MemberController extends Controller {
             if ($memberId <= 0) {
                 return new JSONResponse(['status' => 'error', 'message' => $this->l->t('memberId is required')], 400);
             }
-            if (!$this->memberService->isMemberOfAny($memberId, $this->visibleClubIds())) {
+            [$visible, $alsoMembers] = $this->reachableElsewhere();
+            if (!$this->memberService->isMemberOfAny($memberId, $visible) && !in_array($memberId, $alsoMembers, true)) {
                 return new JSONResponse([
                     'status' => 'error',
                     'message' => $this->l->t('This person does not belong to any club in which you may manage members')
@@ -280,11 +378,7 @@ class MemberController extends Controller {
     #[RequirePermission('verein.member.manage')]
     public function create() {
         try {
-            $data = $this->readMemberParams();
-            if (!$this->canManageRoles()) {
-                $data['role'] = 'member';
-                $data['userId'] = null;
-            }
+            $data = $this->keepLocked($this->readMemberParams(), $this->lockedFields(null), null);
 
             // Validierung
             $validation = $this->validationService->validateMember($data);
@@ -404,12 +498,15 @@ class MemberController extends Controller {
     public function update($id) {
         try {
             $this->checkScope((int)$id, 'verein.member.manage');
-            $data = $this->readMemberParams();
-            if (!$this->canManageRoles()) {
-                // keep the current role and account link untouched
-                $data['role'] = $this->memberService->find($this->clubId(), (int)$id)->getRole();
-                $data['userId'] = null;
+            $current = $this->memberService->find($this->clubId(), (int)$id);
+            $locked = $this->lockedFields($current);
+            // a new account link the user may not set is refused, not silently dropped
+            $wantedUser = $this->request->getParam('userId');
+            if (in_array('userId', $locked, true) && $this->canManageRoles() && $wantedUser !== null
+                && trim((string)$wantedUser) !== (string)$current->getUserId()) {
+                throw new \OCA\Verein\Exception\PermissionDeniedException($this->l->t('The person also belongs to a club in which you may not manage roles, so only someone who may do that there can link an account'));
             }
+            $data = $this->keepLocked($this->readMemberParams(), $locked, $current);
 
             // Validierung
             $validation = $this->validationService->validateMember($data);
@@ -510,6 +607,7 @@ class MemberController extends Controller {
      * @NoAdminRequired
      */
     #[RequirePermission('verein.member.manage')]
+    #[UserRateLimit(limit: 60, period: 3600)]
     public function sendWelcome($id) {
         try {
             $this->checkScope((int)$id, 'verein.member.manage');
@@ -596,10 +694,14 @@ class MemberController extends Controller {
      * The member as JSON plus the display name of the linked Nextcloud
      * account (falls back to the uid if that account no longer exists).
      */
-    private function present($member, ?array $custom = null): array {
+    private function present($member, ?array $custom = null, bool $withLocks = true): array {
         $data = $member->jsonSerialize();
         // the club's own fields, field id => value (an object in JSON, also when empty)
         $data['custom'] = (object)($custom ?? $this->customFields?->valuesFor($this->clubId(), $member->getId(), $this->customAccess()['visible']) ?? []);
+        // which fields the form shows read-only for this user (lockedFields()); computed per member only where cheap
+        if ($withLocks) {
+            $data['lockedFields'] = $this->lockedFields($member);
+        }
         $uid = $member->getUserId();
         if ($uid !== null && $uid !== '') {
             $user = $this->userManager->get($uid);
@@ -613,16 +715,28 @@ class MemberController extends Controller {
     }
 
     /**
-     * Clubs whose members the current user may manage.
+     * Whom the user may look up in other clubs and take over: every member of the clubs where they manage members
+     * as a whole, and in a club where they manage only some groups (a department head) just the members of those
+     * groups - such a limited permission must not open the whole club.
      *
-     * @return int[]
+     * @return array{0: int[], 1: int[]} [club ids searched as a whole, single member ids]
      */
-    private function visibleClubIds(): array {
-        $uid = $this->userSession->getUser()?->getUID() ?? '';
+    private function reachableElsewhere(): array {
+        $uid = $this->uid();
         $ids = $this->roleService->getClubIdsWithPermission($uid, 'verein.member.manage');
         if ($ids === null) {
-            return array_map(static fn ($c) => $c->getId(), $this->clubMapper->findAll());
+            return [array_map(static fn ($c) => $c->getId(), $this->clubMapper->findAll()), []];
         }
-        return $ids;
+        $whole = [];
+        $members = [];
+        foreach ($ids as $clubId) {
+            $scoped = $this->scope?->memberIds($clubId, 'verein.member.manage');
+            if ($scoped === null) {
+                $whole[] = $clubId;
+            } else {
+                array_push($members, ...$scoped);
+            }
+        }
+        return [$whole, array_values(array_unique($members))];
     }
 }

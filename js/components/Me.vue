@@ -131,7 +131,7 @@ export default {
     })
 
     const roleLabel = (role) => ({ member: t('verein', 'Member'), treasurer: t('verein', 'Treasurer'), admin: t('verein', 'Board') }[role] || role)
-    const statusLabel = (s) => ({ open: t('verein', 'unpaid'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'canceled') }[s] || s)
+    const statusLabel = (s) => ({ open: t('verein', 'unpaid'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'canceled'), collecting: t('verein', 'in collection') }[s] || s)
 
     const download = () => {
       window.location.href = absoluteUrl('/apps/verein/me/export')

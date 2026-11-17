@@ -116,7 +116,7 @@ const FIELDS = {
 const DATE_FIELDS = ['joinDate', 'leaveDate', 'dueDate', 'paidDate', 'birthDate', 'mandateDate']
 
 const ROLES = { member: t('verein', 'Member'), treasurer: t('verein', 'Treasurer'), admin: t('verein', 'Board') }
-const STATUS = { open: t('verein', 'unpaid'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'canceled') }
+const STATUS = { open: t('verein', 'unpaid'), paid: t('verein', 'paid'), overdue: t('verein', 'overdue'), cancelled: t('verein', 'canceled'), collecting: t('verein', 'in collection') }
 // technical fields that say nothing to a reader
 // (fullName and age are derived from name and birth date and would only repeat them)
 const HIDDEN = ['id', 'clubId', 'createdAt', 'updatedAt', 'grantedAt', 'grantedBy', 'membershipYears', 'isFormer',

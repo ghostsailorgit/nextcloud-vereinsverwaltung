@@ -254,6 +254,27 @@ class CustomFieldService {
     }
 
     /**
+     * The fields whose values the member sees under "My data": fields without a section and those of sections marked
+     * "visible to the member". The data export by someone who manages members is not limited by this.
+     *
+     * @return int[]
+     */
+    public function memberVisibleFieldIds(int $clubId): array {
+        $visible = [];
+        foreach ($this->sections($clubId) as $section) {
+            $visible[$section->getId()] = $section->isMemberVisible();
+        }
+        $ids = [];
+        foreach ($this->fields->findByClub($clubId) as $field) {
+            $sectionId = $field->getSectionId();
+            if ($sectionId === null || ($visible[$sectionId] ?? false)) {
+                $ids[] = $field->getId();
+            }
+        }
+        return $ids;
+    }
+
+    /**
      * The member's values with their labels, in the club's order, as a person reads them: for "My data" all of the
      * person's own values, for the data export of a member only what the exporting user sees.
      *
@@ -607,6 +628,11 @@ class CustomFieldService {
         }
         if (array_key_exists('sortOrder', $data) && is_numeric($data['sortOrder'])) {
             $section->setSortOrder((int)$data['sortOrder']);
+        }
+        if (array_key_exists('memberVisible', $data) && $data['memberVisible'] !== null) {
+            $section->setMemberVisible(filter_var($data['memberVisible'], FILTER_VALIDATE_BOOLEAN));
+        } elseif ($section->getId() === null) {
+            $section->setMemberVisible(true);
         }
     }
 

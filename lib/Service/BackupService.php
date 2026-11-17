@@ -45,10 +45,17 @@ class BackupService {
         'verein_custom_fields',
         'verein_custom_values',
         'verein_custom_sections',
+        'verein_sepa_runs',
     ];
 
     /** Tables that older backups do not contain; restoring such a backup leaves them untouched. */
-    public const OPTIONAL_TABLES = ['verein_audit_log', 'verein_groups', 'verein_group_members', 'verein_custom_fields', 'verein_custom_values', 'verein_custom_sections'];
+    /**
+     * Who may do what and the trace of what happened. A restore by someone who is not a Nextcloud administrator keeps
+     * these as they are, so the permission to restore cannot be used to hand out roles or to wipe the audit log.
+     */
+    public const ADMIN_ONLY_TABLES = ['verein_roles', 'verein_user_roles', 'verein_audit_log'];
+
+    public const OPTIONAL_TABLES = ['verein_audit_log', 'verein_groups', 'verein_group_members', 'verein_custom_fields', 'verein_custom_values', 'verein_custom_sections', 'verein_sepa_runs'];
 
     /** Backups older than this are removed. */
     public const RETENTION_DAYS = 30;
@@ -282,7 +289,7 @@ class BackupService {
      * @return array{created: string, appVersion: string, tables: array<int, array{table: string, now: int, backup: ?int}>}
      * @throws ValidationException if the backup comes from a newer version of the app (its columns may not exist here)
      */
-    public function summary(array $backup): array {
+    public function summary(array $backup, bool $includeAdminTables = true): array {
         $installed = (string)$this->appManager->getAppVersion('verein');
         if ($backup['appVersion'] !== '' && $installed !== '' && version_compare($backup['appVersion'], $installed, '>')) {
             throw new ValidationException($this->l->t('The backup was made with a newer version of the app (%1$s, installed: %2$s). Update the app first.', [$backup['appVersion'], $installed]));
@@ -290,7 +297,8 @@ class BackupService {
         $now = $this->currentCounts();
         $tables = [];
         foreach (self::TABLES as $table) {
-            $tables[] = ['table' => $table, 'now' => $now[$table], 'backup' => isset($backup['tables'][$table]) ? count($backup['tables'][$table]) : null];
+            $kept = !$includeAdminTables && in_array($table, self::ADMIN_ONLY_TABLES, true);
+            $tables[] = ['table' => $table, 'now' => $now[$table], 'backup' => !$kept && isset($backup['tables'][$table]) ? count($backup['tables'][$table]) : null, 'kept' => $kept];
         }
         return ['created' => $backup['created'], 'appVersion' => $backup['appVersion'], 'tables' => $tables];
     }
@@ -315,14 +323,18 @@ class BackupService {
      * The replacement itself is one transaction: it either fully succeeds or changes nothing.
      * Calendars and their shares are not part of the backup; they refresh when a member is saved.
      *
+     * Without $includeAdminTables (restore by someone who is not a Nextcloud administrator) the tables in
+     * ADMIN_ONLY_TABLES keep their current content.
+     *
      * @param array{tables: array<string, array<int, array<string, mixed>>>} $backup result of parse()
      * @return array{safetyBackup: string, tables: array<string, int>}
      */
-    public function restore(array $backup, ?string $byUser = null): array {
+    public function restore(array $backup, ?string $byUser = null, bool $includeAdminTables = true): array {
         $safety = $this->createBackup();
 
         // only what the backup contains is replaced
-        $present = array_values(array_filter(self::TABLES, fn (string $t) => isset($backup['tables'][$t])));
+        $present = array_values(array_filter(self::TABLES, fn (string $t) => isset($backup['tables'][$t])
+            && ($includeAdminTables || !in_array($t, self::ADMIN_ONLY_TABLES, true))));
 
         $this->db->beginTransaction();
         try {

@@ -305,4 +305,20 @@ class CustomFieldServiceTest extends TestCase {
         $this->assertSame([$field->getId() => 'Gesang'], $this->service->validateValues(self::CLUB, [$field->getId() => '["Gesang"]'], false),
             'one choice of a former multiple selection is still a valid single selection');
     }
+
+    public function testSectionsHiddenFromTheMemberAreLeftOutOfMyData(): void {
+        $open = $this->service->createSection(self::CLUB, ['name' => 'Ausbildung']);
+        $internal = $this->service->createSection(self::CLUB, ['name' => 'Vereinsintern', 'memberVisible' => 'false']);
+        $this->assertTrue($open->isMemberVisible(), 'visible unless switched off');
+        $this->assertFalse($internal->jsonSerialize()['memberVisible']);
+
+        $plain = $this->field('Spitzname', 'text');
+        $trained = $this->field('Lizenz', 'text', ['sectionId' => $open->getId()]);
+        $note = $this->field('Notiz des Vorstands', 'text', ['sectionId' => $internal->getId()]);
+
+        $this->assertSame([$plain->getId(), $trained->getId()], $this->service->memberVisibleFieldIds(self::CLUB));
+
+        $this->service->updateSection(self::CLUB, $internal->getId(), ['memberVisible' => true]);
+        $this->assertContains($note->getId(), $this->service->memberVisibleFieldIds(self::CLUB));
+    }
 }

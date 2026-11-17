@@ -4,6 +4,31 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.23.0] - 2026-11-17
+
+Umsetzung eines Sicherheits-Audits des Codes.
+
+### 🔒 Sicherheit
+- **Personen in mehreren Vereinen:** Eine Person ist ein Datensatz für alle ihre Vereine. Deshalb verknüpft ein Nextcloud-Konto nur noch, wer in **allen** Vereinen der Person Rollen verwalten darf (das Konto bekommt in jedem davon Rechte). IBAN/BIC, E-Mail-Adresse und „verstorben“ ändert nur, wer die Person in allen ihren Vereinen verwalten darf. Im Formular sind solche Felder dann gesperrt, mit Hinweis.
+- **Austritt und Rechte:** Austrittsdatum, „Datum unbekannt“ und „verstorben“ beenden automatische Rechte. Ist ein Konto verknüpft, ändert sie daher nur, wer Rollen verwalten darf.
+- **Abteilungsleitungen:** Beitragskategorie, Ehrenmitglied, beitragsfrei im Eintrittsjahr und Zahler ändern sie nicht mehr. Für Bankdaten und Mandat brauchen sie das neue Recht „Bankdaten und Mandat (bei Mitgliedern nur einiger Gruppen)“; wer Mitglieder des ganzen Vereins verwaltet, braucht es nicht. Eine beendete Gruppenzugehörigkeit öffnen oder verlängern sie nicht wieder. „Person aus anderem Verein hinzufügen“ zeigt aus Vereinen, in denen man nur einige Gruppen verwaltet, nur Personen dieser Gruppen.
+- **Wiederherstellen einer Sicherung** durch jemanden, der kein Nextcloud-Administrator ist, lässt Rollen, Rollenzuweisungen und das Änderungsprotokoll unverändert. Die Vorschau sagt das.
+- Die Kontosuche im Reiter „Rollen“ hält sich an die Teilen-Einstellungen von Nextcloud (z. B. nur Konten der eigenen Gruppen). Die Kontosuche im Mitgliederformular nennt den Namen der verknüpften Person nur, wenn sie im eigenen Verein ist.
+- Mahnungen und Mitgliedsbestätigungen per E-Mail sind je Konto auf 20 bzw. 60 Aufrufe pro Stunde begrenzt.
+- CSV-Export: Felder mit einem Wagenrücklauf werden wie Zeilenumbrüche in Anführungszeichen gesetzt.
+- TCPDF mindestens 6.10.
+
+### ✨ Neu
+- **Einzugsläufe im SEPA-Export:** Die Beiträge einer erstellten Datei stehen auf „im Einzug“ und kommen in keine spätere Datei, auch nicht bei einem zweiten Klick oder durch eine zweite Person. Der Reiter listet die Läufe; ist das Geld da, markiert man sie als bezahlt, wurde die Datei nicht eingereicht oder abgelehnt, setzt man sie wieder auf unbezahlt.
+- **Eigene Felder:** Bereiche haben den Schalter „Für das Mitglied unter ‚Meine Daten‘ sichtbar“ (Standard: ja), z. B. für vereinsinterne Notizen.
+
+### 🐛 Behoben
+- Ein Austrittsdatum in der Zukunft wirkt erst ab dem Tag danach: Bis dahin bleibt die Person Mitglied, mit ihren Rechten, in Listen und Statistik. Der Beitragslauf berechnet einen Zeitraum nicht mehr, der erst nach dem Austritt beginnt.
+- Zwei gleichzeitige Beitragsläufe können nicht mehr dieselben Beiträge doppelt anlegen.
+- Kein SEPA-Einzug vom Konto einer verstorbenen Person (das Mandat endet mit dem Tod).
+
+---
+
 ## [1.22.0] - 2026-11-17
 
 ### ✨ Neu

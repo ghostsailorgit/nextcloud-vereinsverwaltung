@@ -56,7 +56,7 @@ class FeeMapper extends QBMapper {
      * @param int[] $ids
      * @return int number of fees changed
      */
-    public function markPaidInClub(int $clubId, array $ids, string $now): int {
+    public function markPaidInClub(int $clubId, array $ids, string $now, array $from = ['open', 'overdue', 'collecting']): int {
         $changed = 0;
         foreach (array_chunk(array_values(array_unique(array_map('intval', $ids))), 500) as $chunk) {
             $qb = $this->db->getQueryBuilder();
@@ -66,7 +66,30 @@ class FeeMapper extends QBMapper {
                 ->set('updated_at', $qb->createNamedParameter($now))
                 ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
                 ->andWhere($qb->expr()->in('id', $qb->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
-                ->andWhere($qb->expr()->in('status', $qb->createNamedParameter(['open', 'overdue'], \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+                ->andWhere($qb->expr()->in('status', $qb->createNamedParameter($from, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
+            $changed += $qb->executeStatement();
+        }
+        return $changed;
+    }
+
+    /**
+     * Moves the given fees of the club from one set of statuses to another in one statement per chunk (SEPA
+     * collections: open/overdue -> collecting when exported, collecting -> open when a collection is undone).
+     *
+     * @param int[] $ids
+     * @param string[] $from
+     * @return int number of fees changed
+     */
+    public function moveStatusInClub(int $clubId, array $ids, array $from, string $to, string $now): int {
+        $changed = 0;
+        foreach (array_chunk(array_values(array_unique(array_map('intval', $ids))), 500) as $chunk) {
+            $qb = $this->db->getQueryBuilder();
+            $qb->update($this->getTableName())
+                ->set('status', $qb->createNamedParameter($to))
+                ->set('updated_at', $qb->createNamedParameter($now))
+                ->where($qb->expr()->eq('club_id', $qb->createNamedParameter($clubId, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)))
+                ->andWhere($qb->expr()->in('id', $qb->createNamedParameter($chunk, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT_ARRAY)))
+                ->andWhere($qb->expr()->in('status', $qb->createNamedParameter($from, \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_STR_ARRAY)));
             $changed += $qb->executeStatement();
         }
         return $changed;

@@ -81,15 +81,25 @@ class MemberService {
      * Persons from other clubs that could be added to this one - restricted
      * to the clubs the caller may look into (see MemberController::lookup()).
      *
-     * @param int[] $visibleClubIds
+     * @param int[] $visibleClubIds clubs searched as a whole
+     * @param int[] $alsoMemberIds single persons searched too (department heads: the members of their groups elsewhere)
      * @return Member[]
      */
-    public function lookupInOtherClubs(int $clubId, string $query, array $visibleClubIds): array {
+    public function lookupInOtherClubs(int $clubId, string $query, array $visibleClubIds, array $alsoMemberIds = []): array {
         if (trim($query) === '') {
             return [];
         }
         $visibleClubIds = array_values(array_diff($visibleClubIds, [$clubId]));
-        return $this->mapper->searchInOtherClubs($query, $visibleClubIds, $clubId);
+        return $this->mapper->searchInOtherClubs($query, $visibleClubIds, $clubId, 20, array_values(array_map('intval', $alsoMemberIds)));
+    }
+
+    /**
+     * The clubs the person is a member of (any state: active, left, deactivated).
+     *
+     * @return int[]
+     */
+    public function clubIdsOf(int $memberId): array {
+        return array_values(array_unique(array_map(fn ($m) => $m->getClubId(), $this->membershipMapper->findByMember($memberId))));
     }
 
     /**
@@ -276,7 +286,8 @@ class MemberService {
         $memberships = $this->membershipMapper->findByMember($id);
         if (!$member->getDeceased()) {
             foreach ($memberships as $membership) {
-                if (empty($membership->getLeaveDate()) && !$membership->getLeaveUnknown()) {
+                // a leave date still ahead does not count yet (Membership::hasLeftBy())
+                if (!$membership->hasLeftBy()) {
                     throw new ValidationException(
                         $this->l->t('The person is still an active member of at least one club and cannot be anonymized')
                     );

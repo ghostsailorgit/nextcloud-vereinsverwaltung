@@ -40,7 +40,9 @@ class SepaService {
         ?IL10N $l10n = null,
         ?DocumentL10n $documentL10n = null,
         private ?FeeRateMapper $feeRates = null,
-        private ?ClubGroupMapper $groups = null
+        private ?ClubGroupMapper $groups = null,
+        private ?\OCP\IDBConnection $db = null,
+        private ?\OCA\Verein\Db\SepaRunMapper $runs = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -105,17 +107,124 @@ class SepaService {
             throw new ValidationException($this->l->t('No unpaid or overdue fees for the SEPA export'));
         }
 
+        $msgId = $this->newMsgId($clubId);
         return [
             'xml' => $this->buildSepaXml(
                 $clubId,
                 $club->getName(),
                 $account,
                 $collected['totalCents'],
-                $collected['transactions']
+                $collected['transactions'],
+                $msgId
             ),
             'skippedCount' => count($collected['skipped']),
-            'feeIds' => array_merge(...array_column($collected['transactions'], 'feeIds'))
+            'feeIds' => array_merge(...array_column($collected['transactions'], 'feeIds')),
+            'msgId' => $msgId,
+            'totalCents' => $collected['totalCents'],
+            'collectionDate' => min(array_column($collected['transactions'], 'collectionDate')),
         ];
+    }
+
+    /**
+     * Creates the SEPA file and records it as a collection: its fees move to the status "collecting" (im Einzug),
+     * so another export - a second click, a second treasurer, a download repeated days later - cannot contain them
+     * again and the bank would not collect twice. All in one transaction with the club locked; if a fee changed in
+     * between, nothing is recorded and the export is refused.
+     *
+     * @return array{xml: string, skippedCount: int, feeIds: int[], msgId: string, totalCents: int, collectionDate: string, runId: ?int}
+     * @throws ValidationException
+     */
+    public function export(int $clubId, ?int $accountId, ?string $collectionDate, ?string $byUser): array {
+        if ($this->db === null || $this->runs === null) {
+            return $this->generateSepaXml($clubId, $accountId, $collectionDate) + ['runId' => null];
+        }
+        $this->db->beginTransaction();
+        try {
+            $this->clubMapper->lockForUpdate($clubId);
+            $result = $this->generateSepaXml($clubId, $accountId, $collectionDate);
+            $now = date('Y-m-d H:i:s');
+            $moved = $this->feeMapper->moveStatusInClub($clubId, $result['feeIds'], ['open', 'overdue'], 'collecting', $now);
+            if ($moved !== count(array_unique($result['feeIds']))) {
+                throw new ValidationException($this->l->t('Some fees changed while the file was being created. Please create the SEPA file again.'));
+            }
+            $run = new \OCA\Verein\Db\SepaRun();
+            $run->setClubId($clubId);
+            $run->setMsgId($result['msgId']);
+            $run->setCollectionDate($result['collectionDate']);
+            $run->setFeeIds(json_encode(array_values($result['feeIds'])));
+            $run->setFeeCount(count($result['feeIds']));
+            $run->setTotalCents($result['totalCents']);
+            $run->setCreatedBy($byUser);
+            $run->setCreatedAt($now);
+            $run = $this->runs->insert($run);
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+        $result['runId'] = $run->getId();
+        return $result;
+    }
+
+    /**
+     * The club's latest collections, newest first, each with how many of its fees are still "collecting".
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function collections(int $clubId): array {
+        $collecting = [];
+        foreach ($this->feeMapper->findByStatusesInClub(['collecting'], $clubId) as $fee) {
+            $collecting[$fee->getId()] = true;
+        }
+        // a fee set unpaid again and collected in a later file belongs to that later collection only
+        $taken = [];
+        $out = [];
+        foreach ($this->runs?->findByClub($clubId) ?? [] as $run) {
+            $own = array_filter($run->getFeeIdList(), fn (int $id) => isset($collecting[$id]) && !isset($taken[$id]));
+            foreach ($run->getFeeIdList() as $id) {
+                $taken[$id] = true;
+            }
+            $out[] = $run->jsonSerialize() + ['stillCollecting' => count($own)];
+        }
+        return $out;
+    }
+
+    /**
+     * Ends a collection: its fees still "collecting" become paid (the money arrived) or open again (the file was not
+     * submitted or the bank rejected it - a later export then contains them again).
+     *
+     * @return int number of fees changed
+     * @throws \OCA\Verein\Exception\NotFoundException
+     */
+    public function closeCollection(int $clubId, int $runId, bool $paid): int {
+        try {
+            $run = $this->runs?->findInClub($runId, $clubId);
+        } catch (\OCP\AppFramework\Db\DoesNotExistException $e) {
+            $run = null;
+        }
+        if ($run === null) {
+            throw new \OCA\Verein\Exception\NotFoundException($this->l->t('Collection not found'));
+        }
+        // only what is still in this collection: a fee set unpaid and collected again in a later file is that one's
+        $later = [];
+        foreach ($this->runs->findNewerInClub($clubId, $runId) as $newer) {
+            foreach ($newer->getFeeIdList() as $id) {
+                $later[$id] = true;
+            }
+        }
+        $ids = array_values(array_filter($run->getFeeIdList(), fn (int $id) => !isset($later[$id])));
+        if ($ids === []) {
+            return 0;
+        }
+        $now = date('Y-m-d H:i:s');
+        return $paid
+            ? $this->feeMapper->markPaidInClub($clubId, $ids, $now, ['collecting'])
+            : $this->feeMapper->moveStatusInClub($clubId, $ids, ['collecting'], 'open', $now);
+    }
+
+    /** Unique per file: banks reject a message id they have already seen. */
+    private function newMsgId(int $clubId): string {
+        return substr('VEREIN-' . $clubId . '-' . Clock::nowOf($this->clock)->format('YmdHis') . '-' . bin2hex(random_bytes(2)), 0, 32);
     }
 
     /**
@@ -283,6 +392,9 @@ class SepaService {
             $reason = null;
             if ($membership !== null && $membership->getDeactivated()) {
                 $reason = $this->l->t('member deactivated');
+            } elseif ($debtor->getDeceased()) {
+                // the mandate ends with the account holder's death; heirs need a new one
+                $reason = $this->l->t('the account holder has died, the mandate is no longer valid');
             } elseif ($cents <= 0) {
                 $reason = $this->l->t('amount is zero or negative');
             } elseif ($iban === '') {
@@ -502,11 +614,10 @@ class SepaService {
         string $creditorName,
         ClubAccount $account,
         int $totalCents,
-        array $transactions
+        array $transactions,
+        string $msgId
     ): string {
         $now = Clock::nowOf($this->clock);
-        // unique per file: banks reject a message id they have already seen
-        $msgId = substr('VEREIN-' . $clubId . '-' . $now->format('YmdHis') . '-' . bin2hex(random_bytes(2)), 0, 32);
         $creationDateTime = $now->format('Y-m-d\TH:i:s');
         $count = count($transactions);
         $total = self::amount($totalCents);

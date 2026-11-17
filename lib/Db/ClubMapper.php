@@ -21,6 +21,19 @@ class ClubMapper extends QBMapper {
         return $this->findEntity($qb);
     }
 
+    /**
+     * Locks the club's row until the current transaction ends (a no-op update: portable to every database Nextcloud
+     * supports; SQLite has no row locks and locks the whole database instead). Serializes runs that must not
+     * overlap within one club, e.g. two fee runs started at the same time.
+     */
+    public function lockForUpdate(int $id): void {
+        $qb = $this->db->getQueryBuilder();
+        $qb->update($this->getTableName())
+            ->set('name', $qb->createFunction('name'))
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+            ->executeStatement();
+    }
+
     /** @return Club[] */
     public function findAll(): array {
         $qb = $this->db->getQueryBuilder();

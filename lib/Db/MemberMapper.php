@@ -123,16 +123,24 @@ class MemberMapper extends QBMapper {
      * @param int[] $clubIds
      * @return Member[]
      */
-    public function searchInOtherClubs(string $query, array $clubIds, int $excludeClubId, int $limit = 20): array {
-        if ($clubIds === []) {
+    public function searchInOtherClubs(string $query, array $clubIds, int $excludeClubId, int $limit = 20, array $alsoMemberIds = []): array {
+        if ($clubIds === [] && $alsoMemberIds === []) {
             return [];
         }
 
         $qb = $this->db->getQueryBuilder();
+        // whole clubs, plus single persons (those a department head reaches in a club where they manage only some groups)
+        $reach = [];
+        if ($clubIds !== []) {
+            $reach[] = $qb->expr()->in('ms.club_id', $qb->createNamedParameter($clubIds, IQueryBuilder::PARAM_INT_ARRAY));
+        }
+        if ($alsoMemberIds !== []) {
+            $reach[] = $qb->expr()->in('m.id', $qb->createNamedParameter($alsoMemberIds, IQueryBuilder::PARAM_INT_ARRAY));
+        }
         $qb->selectDistinct('m.*')
             ->from($this->getTableName(), 'm')
             ->innerJoin('m', 'verein_memberships', 'ms', $qb->expr()->eq('ms.member_id', 'm.id'))
-            ->where($qb->expr()->in('ms.club_id', $qb->createNamedParameter($clubIds, IQueryBuilder::PARAM_INT_ARRAY)))
+            ->where($qb->expr()->orX(...$reach))
             ->andWhere($this->searchCondition($qb, $query, 'm.'))
             ->setMaxResults($limit);
 

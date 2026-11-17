@@ -53,11 +53,14 @@ class RoleService {
      * the members of those groups (memberGroupScope(), MemberScope). Every other permission of the role is ignored
      * for such an assignment: finances, SEPA, roles and club settings concern the whole club.
      */
-    public const SCOPABLE_PERMISSIONS = ['verein.member.view', 'verein.member.manage'];
+    public const SCOPABLE_PERMISSIONS = ['verein.member.view', 'verein.member.manage', 'verein.member.bank'];
 
     private const ENFORCED_PERMISSIONS = [
         'verein.member.view',
         'verein.member.manage',
+        // IBAN/BIC and mandate for whoever manages members only for some groups (a department head); managing the
+        // whole club includes them anyway (MemberController::lockedFields())
+        'verein.member.bank',
         'verein.finance.read',
         'verein.finance.write',
         'verein.finance.delete',
@@ -91,7 +94,8 @@ class RoleService {
         ClubMapper $clubMapper,
         private ?AuditLogService $auditLog = null,
         ?IL10N $l10n = null,
-        private ?\OCA\Verein\Db\ClubGroupMapper $clubGroups = null
+        private ?\OCA\Verein\Db\ClubGroupMapper $clubGroups = null,
+        private ?\OCA\Verein\Service\Clock $clock = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->memberMapper = $memberMapper;
@@ -337,7 +341,8 @@ class RoleService {
             if ($clubId !== null && $membership->getClubId() !== $clubId) {
                 continue;
             }
-            if (!empty($membership->getLeaveDate()) || $membership->getLeaveUnknown() || $membership->getDeactivated()) {
+            // a leave date entered in advance takes effect the day after it (Membership::hasLeftBy())
+            if ($membership->hasLeftBy(\OCA\Verein\Service\Clock::todayOf($this->clock)) || $membership->getDeactivated()) {
                 continue;
             }
             $role = $this->mappedRole($membership->getClubId(), $membership->getRole());
@@ -508,7 +513,7 @@ class RoleService {
 
         foreach ($this->memberMapper->findByClub($clubId) as $member) {
             $uid = $member->getUserId();
-            if ($uid === null || $uid === '' || $member->isFormer()) {
+            if ($uid === null || $uid === '' || $member->isFormer(\OCA\Verein\Service\Clock::todayOf($this->clock))) {
                 continue;
             }
             $role = $this->mappedRole($clubId, $member->getRole());

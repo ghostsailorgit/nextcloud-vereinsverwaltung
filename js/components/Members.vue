@@ -105,6 +105,7 @@
           @update:model-value="formData.email = $event"
           type="email"
           :label="t('verein', 'Email')"
+          :disabled="isLocked('email')"
           :placeholder="t('verein', 'max@example.com (optional)')"
         />
         <NcTextField
@@ -125,7 +126,7 @@
             v-model="selectedUser"
             :options="userOptions"
             :input-label="t('verein', 'Linked Nextcloud account')"
-            :disabled="!canManageRoles"
+            :disabled="isLocked('userId')"
             :placeholder="t('verein', 'Enter a name or account name')"
             @search="onUserSearch"
             @update:model-value="onUserPicked"
@@ -161,10 +162,10 @@
         </label>
         <label class="date-field">
           <span>{{ t('verein', 'Date left') }}</span>
-          <input v-model="formData.leaveDate" type="date" class="form-input" :disabled="formData.leaveUnknown" />
+          <input v-model="formData.leaveDate" type="date" class="form-input" :disabled="formData.leaveUnknown || isLocked('leaveDate')" />
         </label>
         <label class="checkbox-field">
-          <input v-model="formData.leaveUnknown" type="checkbox" :disabled="!!formData.leaveDate" />
+          <input v-model="formData.leaveUnknown" type="checkbox" :disabled="!!formData.leaveDate || isLocked('leaveUnknown')" />
           <span>{{ t('verein', 'Left, date unknown') }}</span>
         </label>
         <NcSelect
@@ -174,7 +175,7 @@
           label="label"
           :input-label="t('verein', 'Position')"
           :clearable="false"
-          :disabled="!canManageRoles"
+          :disabled="isLocked('role')"
         />
         <NcSelect
           v-if="officeOptions.length"
@@ -191,6 +192,7 @@
           label="label"
           :input-label="t('verein', 'Fee category')"
           :placeholder="t('verein', 'Club default')"
+          :disabled="isLocked('feeRateId')"
         />
         <NcSelect
           :model-value="formData.payerMemberId || null"
@@ -199,6 +201,7 @@
           label="label"
           :input-label="t('verein', 'Paid by')"
           :placeholder="t('verein', 'the member themselves')"
+          :disabled="isLocked('payerMemberId')"
           @update:model-value="formData.payerMemberId = $event ?? ''"
         />
         <label class="checkbox-field">
@@ -206,19 +209,19 @@
           <span>{{ t('verein', 'Founding member') }}</span>
         </label>
         <label class="checkbox-field">
-          <input v-model="formData.feeExemptJoinYear" type="checkbox" />
+          <input v-model="formData.feeExemptJoinYear" type="checkbox" :disabled="isLocked('feeExemptJoinYear')" />
           <span>{{ t('verein', 'Fee-exempt in the year joined') }}</span>
         </label>
         <label class="checkbox-field">
-          <input v-model="formData.honoraryMember" type="checkbox" />
+          <input v-model="formData.honoraryMember" type="checkbox" :disabled="isLocked('honoraryMember')" />
           <span>{{ t('verein', 'Honorary member') }}</span>
         </label>
         <label v-if="formData.honoraryMember" class="checkbox-field">
-          <input v-model="formData.honoraryPaysFee" type="checkbox" />
+          <input v-model="formData.honoraryPaysFee" type="checkbox" :disabled="isLocked('honoraryPaysFee')" />
           <span>{{ t('verein', 'Pays the fee voluntarily') }}</span>
         </label>
         <label class="checkbox-field">
-          <input v-model="formData.deceased" type="checkbox" />
+          <input v-model="formData.deceased" type="checkbox" :disabled="isLocked('deceased')" />
           <span>{{ t('verein', 'Deceased') }}</span>
         </label>
 
@@ -270,13 +273,16 @@
           @update:model-value="formData.iban = $event"
           type="text"
           label="IBAN"
+          :disabled="isLocked('iban')"
         />
         <NcTextField
           :model-value="formData.bic"
           @update:model-value="formData.bic = $event"
           type="text"
           label="BIC"
+          :disabled="isLocked('bic')"
         />
+        <p v-if="sharedLocked" class="hint">{{ t('verein', 'This person also belongs to another club in which you may not manage members, so the bank details, email address and “Deceased” can only be changed by someone who may do that in every one of those clubs.') }}</p>
 
         <h3 class="form-subheader">{{ t('verein', 'SEPA direct debit mandate (for this club)') }}</h3>
         <NcTextField
@@ -285,13 +291,14 @@
           type="text"
           :label="t('verein', 'Mandate reference')"
           :placeholder="t('verein', 'empty = automatic')"
+          :disabled="isLocked('mandateReference')"
         />
         <label class="date-field">
           <span>{{ t('verein', 'Date of signature') }}</span>
-          <input v-model="formData.mandateDate" type="date" class="form-input" />
+          <input v-model="formData.mandateDate" type="date" class="form-input" :disabled="isLocked('mandateDate')" />
         </label>
         <label class="checkbox-field">
-          <input v-model="formData.mandateOnPaper" type="checkbox" />
+          <input v-model="formData.mandateOnPaper" type="checkbox" :disabled="isLocked('mandateOnPaper')" />
           <span>{{ t('verein', 'SEPA mandate on paper') }}</span>
         </label>
         <div class="mandate-file">
@@ -299,8 +306,8 @@
           <div class="mandate-file-row">
             <a v-if="formData.mandateFile" :href="mandateFileUrl(formData.mandateFile)" target="_blank" rel="noopener">{{ formData.mandateFile }}</a>
             <span v-else class="hint">{{ t('verein', 'no file linked') }}</span>
-            <NcButton type="button" variant="secondary" @click="pickMandateFile">{{ t('verein', 'Choose file') }}</NcButton>
-            <NcButton v-if="formData.mandateFile" type="button" variant="tertiary" @click="formData.mandateFile = ''">{{ t('verein', 'Remove') }}</NcButton>
+            <NcButton type="button" variant="secondary" :disabled="isLocked('mandateFile')" @click="pickMandateFile">{{ t('verein', 'Choose file') }}</NcButton>
+            <NcButton v-if="formData.mandateFile" type="button" variant="tertiary" :disabled="isLocked('mandateFile')" @click="formData.mandateFile = ''">{{ t('verein', 'Remove') }}</NcButton>
           </div>
         </div>
 
@@ -557,6 +564,7 @@ const emptyFormData = () => ({
   joinDate: '',
   leaveDate: '',
   leaveUnknown: false,
+  lockedFields: [],
   role: 'member',
   foundingMember: false,
   feeExemptJoinYear: false,
@@ -645,7 +653,9 @@ export default {
         const response = await api.get('members/users', { params: { query } })
         userOptions.value = (response.data.users || []).map(u => ({
           ...u,
-          subname: u.linkedTo ? t('verein', '{id} – already linked to {name}', { id: u.id, name: u.linkedTo }) : u.id
+          subname: u.linkedTo
+            ? t('verein', '{id} – already linked to {name}', { id: u.id, name: u.linkedTo })
+            : (u.linked ? t('verein', '{id} – already linked to a person in another club', { id: u.id }) : u.id)
         }))
       } catch (error) {
         userOptions.value = []
@@ -665,6 +675,11 @@ export default {
     }
 
     const onUserPicked = (user) => {
+      if (user && user.linked && !user.linkedToId) {
+        showError(t('verein', '{user} is already linked to a person in another club', { user: user.displayName }))
+        setSelectedUserFrom(formData)
+        return
+      }
       if (user && user.linkedToId && user.linkedToId !== editingId.value) {
         showError(t('verein', '{user} is already linked to {name}', { user: user.displayName, name: user.linkedTo }))
         setSelectedUserFrom(formData)
@@ -806,6 +821,19 @@ export default {
     const newMemberGroups = ref([])
     // a department head (role limited to groups): new members go into one of their groups, no import, no other clubs
     const scoped = computed(() => Array.isArray(currentClub.value?.memberScope?.manage))
+    // fields the server will not change for this user (MemberController::lockedFields()); for a new member derived from the permissions
+    const lockedFields = computed(() => {
+      if (editingId.value) return formData.lockedFields || []
+      const locked = []
+      if (!canManageRoles.value) locked.push('role', 'userId')
+      if (scoped.value) {
+        locked.push('feeRateId', 'honoraryMember', 'honoraryPaysFee', 'feeExemptJoinYear', 'payerMemberId')
+        if (!can('verein.member.bank')) locked.push('iban', 'bic', 'mandateReference', 'mandateDate', 'mandateFile', 'mandateOnPaper')
+      }
+      return locked
+    })
+    const isLocked = (field) => lockedFields.value.includes(field)
+    const sharedLocked = computed(() => !!editingId.value && isLocked('email') && isLocked('iban'))
     const loadGroups = async () => {
       if (!canManage.value) return
       try {
@@ -903,7 +931,7 @@ export default {
       alertErrors.value = []
       try {
         // the own fields go as JSON: the API sends form fields, an object would arrive as "[object Object]"
-        const { custom, ...fields } = formData
+        const { custom, lockedFields: _locked, ...fields } = formData
         // only the fields the user may change (the server ignores the others anyway)
         const editable = Object.fromEntries(Object.entries(custom || {}).filter(([id]) => customFields.value.some(f => String(f.id) === id && f.editable)))
         const payload = { ...fields, customFields: JSON.stringify(editable) }
@@ -1104,6 +1132,8 @@ export default {
       allGroups,
       newMemberGroups,
       scoped,
+      isLocked,
+      sharedLocked,
       groupFilter,
       fieldFilterId,
       fieldFilterCondition,

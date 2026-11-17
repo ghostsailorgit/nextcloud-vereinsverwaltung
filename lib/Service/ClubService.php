@@ -45,7 +45,8 @@ class ClubService {
         private ?\OCA\Verein\Db\ClubGroupMemberMapper $groupPeriods = null,
         private ?\OCA\Verein\Db\CustomValueMapper $customValues = null,
         private ?\OCA\Verein\Db\CustomFieldMapper $customFields = null,
-        private ?\OCA\Verein\Db\CustomSectionMapper $customSections = null
+        private ?\OCA\Verein\Db\CustomSectionMapper $customSections = null,
+        private ?\OCA\Verein\Db\SepaRunMapper $sepaRuns = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
     }
@@ -136,6 +137,7 @@ class ClubService {
             throw new ValidationException($this->l->t('The club still has members and cannot be deleted'));
         }
         // fees of members removed earlier are all that can be left of them
+        $this->sepaRuns?->deleteByClub($id);
         $this->fees?->deleteByClub($id);
         $this->groupPeriods?->deleteByClub($id);
         $this->customValues?->deleteByClub($id);

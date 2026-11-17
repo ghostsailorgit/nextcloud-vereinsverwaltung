@@ -192,12 +192,13 @@ export default {
     const loading = ref(false)
     const editingId = ref(null)
 
-    // backend (ValidationService::validateFeeStatus) only accepts these 4 values
+    // backend (ValidationService::validateFeeStatus) only accepts these 5 values ('collecting' is set by the SEPA export)
     const statusOptions = [
       { id: 'open', label: t('verein', 'Unpaid') },
       { id: 'paid', label: t('verein', 'Paid') },
       { id: 'overdue', label: t('verein', 'Overdue') },
-      { id: 'cancelled', label: t('verein', 'Canceled') }
+      { id: 'cancelled', label: t('verein', 'Canceled') },
+      { id: 'collecting', label: t('verein', 'In collection') }
     ]
 
     const formData = ref({
@@ -585,6 +586,11 @@ export default {
   &.cancelled {
     background: var(--color-background-darker);
     color: var(--color-text-secondary);
+  }
+
+  &.collecting {
+    background: var(--color-primary-light);
+    color: var(--color-primary-element);
   }
 }
 

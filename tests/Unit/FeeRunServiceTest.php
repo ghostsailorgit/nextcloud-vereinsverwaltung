@@ -32,6 +32,7 @@ class FeeRunServiceTest extends TestCase {
     private FeeMapper&MockObject $fees;
     private IDBConnection&MockObject $db;
     private FeeRunService $service;
+    private ClubMapper&MockObject $clubs;
 
     /** @var FeeRate[] */
     private array $rateList = [];
@@ -50,6 +51,7 @@ class FeeRunServiceTest extends TestCase {
         $this->fees = $this->createMock(FeeMapper::class);
         $this->db = $this->createMock(IDBConnection::class);
         $clubs = $this->createMock(ClubMapper::class);
+        $this->clubs = $clubs;
 
         $groups = $this->createMock(ClubGroupMapper::class);
         $groups->method('findByClub')->willReturnCallback(fn () => $this->groupList);
@@ -1007,5 +1009,39 @@ class FeeRunServiceTest extends TestCase {
         } catch (ValidationException $e) {
             $this->assertStringContainsString('Fälligkeitsdatum', $e->getMessage());
         }
+    }
+
+    private function serviceOn(string $day): FeeRunService {
+        $time = $this->createMock(\OCP\AppFramework\Utility\ITimeFactory::class);
+        $time->method('getTime')->willReturn((new \DateTimeImmutable($day . ' 12:00:00', new \DateTimeZone('Europe/Berlin')))->getTimestamp());
+        $tz = $this->createMock(\OCP\IDateTimeZone::class);
+        $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
+        return new FeeRunService($this->rates, $this->members, $this->fees, $this->clubs, $this->db, l10n: SourceL10n::fromAppLanguage('de'),
+            clock: new \OCA\Verein\Service\Clock($time, $tz));
+    }
+
+    public function testSomeoneLeavingAtTheEndOfTheYearPaysThisYearButNotNext(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->member(10, 'Anna', 'Geht', null, '2015-01-01', '2026-12-31');
+        $service = $this->serviceOn('2026-11-17');
+
+        $this->assertCount(1, $service->plan(self::CLUB, 2026, '2026-03-31')['included'], 'still a member this year');
+        $next = $service->plan(self::CLUB, 2027, '2027-03-31');
+        $this->assertSame([], $next['included']);
+        $this->assertStringContainsString('tritt vor 2027 aus', $next['skipped'][0]['reason']);
+    }
+
+    public function testARunLocksTheClubSoTwoRunsCannotBillTheSameFees(): void {
+        $this->rate(1, 'Erwachsene', 60.0, true);
+        $this->member(10, 'Anna', 'A');
+        $order = [];
+        $this->db->method('beginTransaction')->willReturnCallback(function () use (&$order) { $order[] = 'begin'; });
+        $this->clubs->expects($this->once())->method('lockForUpdate')->with(self::CLUB)->willReturnCallback(function () use (&$order) { $order[] = 'lock'; });
+        $this->fees->method('findByClub')->willReturnCallback(function () use (&$order) { $order[] = 'read'; return []; });
+        $this->fees->method('insert')->willReturnArgument(0);
+
+        $this->service->run(self::CLUB, 2026, '2026-03-31');
+
+        $this->assertSame(['begin', 'lock'], array_slice($order, 0, 2), 'the lock comes before the fees already billed are read');
     }
 }

@@ -261,4 +261,25 @@ class SelfServiceServiceTest extends TestCase {
 
         $this->assertSame([['name' => 'Judo', 'joinedOn' => '2024-01-01', 'leftOn' => '2024-06-30']], $data['memberships'][0]['groups']);
     }
+
+    public function testMyDataLeavesOutSectionsNotVisibleToTheMemberButTheExportByTheClubDoesNot(): void {
+        $custom = $this->createMock(\OCA\Verein\Service\CustomFieldService::class);
+        $custom->method('memberVisibleFieldIds')->with(1)->willReturn([3]);
+        $asked = [];
+        $custom->method('labelledValuesFor')->willReturnCallback(function (int $club, int $member, ?array $only) use (&$asked) {
+            $asked[] = $only;
+            return [];
+        });
+        $service = new SelfServiceService($this->members, $this->memberships, $this->clubs, $this->fees, SourceL10n::fromAppLanguage('de'), customFields: $custom);
+        $this->members->method('findByUserId')->willReturn($this->person());
+        $this->members->method('find')->willReturn($this->person());
+        $this->memberships->method('findByMember')->willReturn([$this->membership(1, 'member')]);
+        $this->clubs->method('find')->willReturn($this->club(1, 'Verein'));
+        $this->fees->method('findByMember')->willReturn([]);
+
+        $service->forUser('maxmuster');
+        $service->forMemberId(5, 1, true, [3, 4]);
+
+        $this->assertSame([[3], [3, 4]], $asked);
+    }
 }

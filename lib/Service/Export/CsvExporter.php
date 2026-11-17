@@ -71,7 +71,7 @@ class CsvExporter {
             $field = str_replace('"', '""', $field);
 
             // Wrap in quotes if contains semicolon, newline, or quote
-            if (strpos($field, ';') !== false || strpos($field, "\n") !== false || strpos($field, '"') !== false) {
+            if (strpos($field, ';') !== false || strpos($field, "\n") !== false || strpos($field, "\r") !== false || strpos($field, '"') !== false) {
                 $field = '"' . $field . '"';
             }
 

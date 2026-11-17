@@ -12,7 +12,9 @@ use OCA\Verein\Service\RBAC\RoleService;
 use OCP\AppFramework\ApiController;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
+use OCP\Collaboration\Collaborators\ISearch;
 use OCP\IUserManager;
+use OCP\Share\IShare;
 use OCA\Verein\L10n\SourceL10n;
 use OCP\IL10N;
 
@@ -31,7 +33,8 @@ class RoleController extends ApiController {
         RoleService $roleService,
         RoleMapper $roleMapper,
         IUserManager $userManager,
-        ?IL10N $l10n = null
+        ?IL10N $l10n = null,
+        private ?ISearch $collaborators = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         parent::__construct($appName, $request);
@@ -55,17 +58,36 @@ class RoleController extends ApiController {
             return new JSONResponse([]);
         }
 
-        $users = $this->userManager->search($query, 10);
-        $result = array_map(static function ($user) {
-            return [
-                'id' => $user->getUID(),
-                'user' => $user->getUID(),
-                'displayName' => $user->getDisplayName(),
-                'subname' => $user->getUID(),
-            ];
-        }, array_values($users));
+        if ($this->collaborators === null) {
+            $users = $this->userManager->search($query, 10);
+            $result = array_map(static function ($user) {
+                return [
+                    'id' => $user->getUID(),
+                    'user' => $user->getUID(),
+                    'displayName' => $user->getDisplayName(),
+                    'subname' => $user->getUID(),
+                ];
+            }, array_values($users));
+            return new JSONResponse($result);
+        }
 
-        return new JSONResponse($result);
+        // the sharing search of Nextcloud: it keeps to the admin's settings on whom an account may find
+        // (only own groups, no enumeration of all accounts, ...)
+        [$found] = $this->collaborators->search(trim($query), [IShare::TYPE_USER], false, 10, 0);
+        $result = [];
+        foreach (array_merge($found['exact']['users'] ?? [], $found['users'] ?? []) as $entry) {
+            $uid = (string)($entry['value']['shareWith'] ?? '');
+            if ($uid === '' || isset($result[$uid])) {
+                continue;
+            }
+            $result[$uid] = [
+                'id' => $uid,
+                'user' => $uid,
+                'displayName' => (string)($entry['label'] ?? $uid),
+                'subname' => $uid,
+            ];
+        }
+        return new JSONResponse(array_values(array_slice($result, 0, 10)));
     }
 
     /**

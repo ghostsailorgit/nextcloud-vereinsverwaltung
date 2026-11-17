@@ -89,6 +89,8 @@ return [
         ['name' => 'sepa#preview', 'url' => '/sepa/preview', 'verb' => 'POST'],
         ['name' => 'sepa#bookingSummary', 'url' => '/sepa/booking-summary', 'verb' => 'POST'],
         ['name' => 'sepa#notice', 'url' => '/sepa/notice', 'verb' => 'POST'],
+        ['name' => 'sepa#collections', 'url' => '/sepa/collections', 'verb' => 'GET'],
+        ['name' => 'sepa#closeCollection', 'url' => '/sepa/collections/{id}/close', 'verb' => 'POST'],
 
         // Export endpoints
         ['name' => 'export#exportMembersAsCsv', 'url' => '/export/members/csv', 'verb' => 'GET'],

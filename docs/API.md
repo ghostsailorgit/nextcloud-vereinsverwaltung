@@ -139,6 +139,8 @@ Alle Adressen liegen unter `/index.php/apps/verein`. Anfragen brauchen eine ange
 | POST | `/sepa/preview` | `verein.sepa.export` |
 | POST | `/sepa/booking-summary` | `verein.sepa.export` |
 | POST | `/sepa/notice` | `verein.sepa.export` |
+| GET | `/sepa/collections` | `verein.sepa.export` |
+| POST | `/sepa/collections/{id}/close` | `verein.sepa.export` |
 
 ## Export (CSV/PDF)
 

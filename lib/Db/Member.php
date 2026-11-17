@@ -148,10 +148,17 @@ class Member extends Entity implements JsonSerializable {
     }
 
     /**
-     * A member is "ehemalig" (former) once they've left or passed away.
+     * A member is "ehemalig" (former) once they've left or passed away. A leave date takes effect the day after it
+     * (the member is still a member on the day they leave), so a resignation entered in advance changes nothing
+     * until then. Left at an unknown date or deceased: former right away.
+     *
+     * @param string|null $today Y-m-d, the local day (Clock); null = the server's date
      */
-    public function isFormer(): bool {
-        return $this->deceased || !empty($this->getLeaveDate()) || (bool)$this->membership?->getLeaveUnknown();
+    public function isFormer(?string $today = null): bool {
+        if ($this->deceased) {
+            return true;
+        }
+        return $this->membership !== null && $this->membership->hasLeftBy($today);
     }
 
     /**

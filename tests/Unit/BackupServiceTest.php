@@ -165,6 +165,28 @@ class BackupServiceTest extends TestCase {
         $this->assertCount(count(BackupService::TABLES) - 1, $result['tables']);
     }
 
+    public function testARestoreByANonAdminKeepsRolesAndTheAuditLog(): void {
+        $service = $this->serviceWithFailingWrite(null, $db);
+
+        $result = $service->restore(BackupService::parse($this->backupFile()), 'treasurer', false);
+
+        foreach (BackupService::ADMIN_ONLY_TABLES as $table) {
+            $this->assertArrayNotHasKey($table, $result['tables'], $table . ' must stay as it is');
+        }
+        $this->assertArrayHasKey('verein_members', $result['tables']);
+        $this->assertCount(count(BackupService::TABLES) - count(BackupService::ADMIN_ONLY_TABLES), $result['tables']);
+    }
+
+    public function testTheSummaryShowsWhichTablesANonAdminRestoreKeeps(): void {
+        $service = $this->serviceWithFailingWrite(null, $db);
+
+        $summary = $service->summary(BackupService::parse($this->backupFile()), false);
+        $kept = array_column(array_filter($summary['tables'], fn ($row) => $row['kept']), 'table');
+
+        $this->assertSame(BackupService::ADMIN_ONLY_TABLES, array_values(array_intersect(BackupService::TABLES, $kept)));
+        $this->assertCount(count(BackupService::ADMIN_ONLY_TABLES), $kept);
+    }
+
     /**
      * @dataProvider brokenBackups
      */
