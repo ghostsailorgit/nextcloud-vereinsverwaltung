@@ -57,7 +57,7 @@ Gesperrte Felder behalten ihren gespeicherten Wert, das Formular zeigt sie nur a
 
 Jeder Endpunkt ist mit `#[RequirePermission('verein.…')]` geschützt; ein Test stellt sicher, dass keiner
 vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/delete/export`,
-`verein.member.bank` (Bankdaten und Mandat für Abteilungsleitungen), `verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`, `verein.backup.restore` (Sicherungen; wirkt nur bei genau einem Verein, sonst nur Nextcloud-Administratoren, siehe `BackupAccess`).
+`verein.member.bank` (Bankdaten und Mandat für Abteilungsleitungen), `verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`, `verein.backup.restore` (Sicherungen; wirkt nur bei genau einem Verein und zusammen mit `verein.role.manage`, sonst nur Nextcloud-Administratoren, siehe `BackupAccess`).
 
 ## Mitglieder deaktivieren
 Ein Mitglied lässt sich in einem Verein deaktivieren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“).
@@ -236,7 +236,8 @@ höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im R
 herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
 Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` oder im Reiter „Verein“ (`BackupController`,
 siehe `BackupAccess`). Wer kein Nextcloud-Administrator ist, stellt Rollen, Rollenzuweisungen und das Änderungsprotokoll nicht mit
-wieder her (`BackupService::ADMIN_ONLY_TABLES`); sonst ließen sich damit Rechte vergeben oder Spuren löschen. Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
+wieder her (`BackupService::ADMIN_ONLY_TABLES`); sonst ließen sich damit Rechte vergeben oder Spuren löschen. Weil eine Sicherung
+auch Konto-Verknüpfungen, Funktionen und die Zuordnung Funktion → Rolle enthält, braucht ein Nicht-Admin zusätzlich „Rollen verwalten“. Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
 Der Kalender braucht keine Sicherung: Er wird aus den Mitgliederdaten erzeugt.
 Das Zurückspielen wird in der CI mit SQLite, MySQL, MariaDB und PostgreSQL geprüft (für PostgreSQL werden die ID-Zähler nachgezogen).
 

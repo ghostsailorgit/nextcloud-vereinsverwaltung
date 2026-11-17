@@ -16,8 +16,9 @@ use OCP\IL10N;
 /**
  * Who may see, download and restore backups. A backup holds every club of the installation, so restoring it also
  * replaces clubs the person has no rights in. Nextcloud administrators therefore always may; holders of the
- * permission 'verein.backup.restore' only while the installation has exactly one club - as soon as a second club
- * exists, the permission grants nothing here.
+ * permission 'verein.backup.restore' only while the installation has exactly one club and only together with
+ * 'verein.role.manage' (a backup holds account links, positions and the role mapping, which grant rights) - as soon as
+ * a second club exists, the permission grants nothing here.
  */
 class BackupAccess {
     public const PERMISSION = 'verein.backup.restore';
@@ -40,7 +41,11 @@ class BackupAccess {
             return true;
         }
         $clubs = $this->clubs->findAll();
-        return count($clubs) === 1 && $this->roles->userHasPermission($userId, self::PERMISSION, $clubs[0]->getId());
+        // a backup also holds account links, positions and the role mapping, so restoring it can hand out rights:
+        // only someone who may manage roles anyway
+        return count($clubs) === 1
+            && $this->roles->userHasPermission($userId, self::PERMISSION, $clubs[0]->getId())
+            && $this->roles->userHasPermission($userId, 'verein.role.manage', $clubs[0]->getId());
     }
 
     /** Only Nextcloud administrators restore roles and the audit log along with the rest (see BackupService::ADMIN_ONLY_TABLES). */
@@ -51,7 +56,7 @@ class BackupAccess {
     /** @throws PermissionDeniedException */
     public function check(string $userId): void {
         if (!$this->allows($userId)) {
-            throw new PermissionDeniedException($this->l->t('Backups cover all clubs. With more than one club only Nextcloud administrators may use them.'));
+            throw new PermissionDeniedException($this->l->t('Backups cover all clubs. Besides Nextcloud administrators only someone who may restore backups and manage roles may use them, and only while there is a single club.'));
         }
     }
 }

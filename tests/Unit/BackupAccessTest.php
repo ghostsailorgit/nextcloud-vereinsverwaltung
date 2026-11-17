@@ -14,11 +14,12 @@ use OCA\Verein\Service\RBAC\RoleService;
 use PHPUnit\Framework\TestCase;
 
 class BackupAccessTest extends TestCase {
-    private function access(bool $admin, bool $permission, int $clubCount): BackupAccess {
+    private function access(bool $admin, bool $permission, int $clubCount, bool $roleManage = true): BackupAccess {
         $roles = $this->createMock(RoleService::class);
         $roles->method('isNextcloudAdmin')->willReturn($admin);
         $roles->method('userHasPermission')->willReturnCallback(
-            fn (string $uid, string $perm, ?int $clubId) => $permission && $perm === 'verein.backup.restore' && $clubId === 1
+            fn (string $uid, string $perm, ?int $clubId) => $clubId === 1
+                && (($perm === 'verein.backup.restore' && $permission) || ($perm === 'verein.role.manage' && $roleManage))
         );
         $clubs = $this->createMock(ClubMapper::class);
         $list = [];
@@ -48,7 +49,13 @@ class BackupAccessTest extends TestCase {
 
     public function testRefusalNamesTheReason(): void {
         $this->expectException(PermissionDeniedException::class);
-        $this->expectExceptionMessage('mehr als einen Verein');
+        $this->expectExceptionMessage('nur solange es einen einzigen Verein gibt');
         $this->access(false, true, 2)->check('zz-vorstand');
+    }
+
+    public function testRestoringNeedsRoleManagementToo(): void {
+        // a backup sets account links, positions and the role mapping, i.e. it can hand out rights (pentest 11/2026, P1)
+        $this->assertFalse($this->access(false, true, 1, false)->allows('zz-kasse'));
+        $this->assertTrue($this->access(false, true, 1, true)->allows('zz-vorstand'));
     }
 }
