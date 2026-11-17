@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.23.1] - 2026-11-17
+
+### 🔒 Sicherheit
+- **Sicherungen wiederherstellen** dürfen außer Nextcloud-Administratoren nur noch Personen, die zusätzlich Rollen verwalten dürfen (und weiter nur bei genau einem Verein). Eine Sicherung enthält Konto-Verknüpfungen, Funktionen und die Zuordnung Funktion → Rolle; eine präparierte Datei konnte darüber Rechte vergeben, obwohl Rollen und Rollenzuweisungen seit 1.23.0 unverändert bleiben. Gefunden beim Pentest des Sicherheits-Audits.
+
+---
+
 ## [1.23.0] - 2026-11-17
 
 Umsetzung eines Sicherheits-Audits des Codes.
