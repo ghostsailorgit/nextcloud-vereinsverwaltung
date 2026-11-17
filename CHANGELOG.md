@@ -4,6 +4,13 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.23.2] - 2026-11-17
+
+### 🐛 Behoben
+- **Mahnwesen:** Verstorbene bekommen keine Zahlungserinnerung und keine Mahnung mehr. Ihre offenen Beiträge erscheinen in der Vorschau mit dem Grund „verstorben“ und landen auch nicht im Schreiben an den Zahler (z. B. die Eltern). Gefunden beim Pentest des Sicherheits-Audits.
+
+---
+
 ## [1.23.1] - 2026-11-17
 
 ### 🔒 Sicherheit

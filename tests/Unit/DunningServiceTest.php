@@ -172,6 +172,29 @@ class DunningServiceTest extends TestCase {
         $this->assertStringContainsString('nicht mehr Mitglied', $reasons[99]);
     }
 
+    public function testDeceasedPeopleAreNeverDunnedNotEvenThroughTheirPayer(): void {
+        $this->member(10, 'Anna', 'Muster');
+        $child = $this->member(11, 'Ben', 'Muster');
+        $child->getMembership()->setPayerMemberId(10);
+        $child->setDeceased(true);
+        $self = $this->member(12, 'Carl', 'Muster');
+        $self->setDeceased(true);
+        $this->fee(1, 10, 24, '2026-03-31', 'overdue', 1, '2026-01-01');
+        $this->fee(2, 11, 12, '2026-03-31', 'overdue', 1, '2026-01-01');
+        $this->fee(3, 12, 24, '2026-03-31', 'overdue', 1, '2026-01-01');
+
+        $plan = $this->service->plan(self::CLUB, 14, 14, self::TODAY);
+
+        $this->assertSame(['Anna Muster'], array_column($plan['included'], 'name'));
+        $this->assertSame([1], array_column($plan['included'][0]['fees'], 'id'));
+        $this->assertSame([11 => 'verstorben', 12 => 'verstorben'], array_column($plan['skipped'], 'reason', 'memberId'));
+
+        // letters printed again later leave them out too
+        $letters = $this->service->letters(self::CLUB, [1, 2, 3], 14, self::TODAY)['letters'];
+        $this->assertSame([10], array_column($letters, 'memberId'));
+        $this->assertCount(1, $letters[0]['fees']);
+    }
+
     public function testInvalidDaysAreRejected(): void {
         $this->expectException(ValidationException::class);
         $this->service->plan(self::CLUB, -1, 14, self::TODAY);

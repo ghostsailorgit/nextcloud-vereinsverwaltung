@@ -165,7 +165,8 @@ unter „Meine Daten“ und in dessen Download; der Export durch den Verein enth
 - **Mahnwesen** (`DunningService`, Reiter „Finanzen“, Recht „Finanzen bearbeiten“): Beiträge, die offen oder überfällig und seit
   mindestens N Tagen fällig sind, ergeben ein Schreiben je Person mit allen solchen Beiträgen. Stufe = höchste bisherige Stufe
   der Beiträge + 1: Zahlungserinnerung, 1. Mahnung, 2. und letzte Mahnung; danach wird die Person mit Grund übersprungen.
-  Übersprungen werden außerdem deaktivierte (keine Zahlungsvorgänge) und anonymisierte Personen sowie alle, die innerhalb
+  Übersprungen werden außerdem deaktivierte (keine Zahlungsvorgänge), anonymisierte und verstorbene Personen (deren Beiträge
+  auch nicht beim Zahler, z. B. den Eltern; ebenso beim erneuten Drucken der Schreiben) sowie alle, die innerhalb
   des eingestellten Abstands schon ein Schreiben bekommen haben - ein Lauf lässt sich deshalb gefahrlos wiederholen.
   Vorschau zuerst, der Lauf setzt Stufe und Datum in einer Transaktion (je Stufe eine SQL-Anweisung) und macht offene
   Beiträge überfällig. Die Schreiben (`GET /dunning/letters`, PDF für DIN-Fensterumschläge, sortiert nach Nachname) nennen

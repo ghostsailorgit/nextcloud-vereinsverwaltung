@@ -75,11 +75,17 @@ class DunningService {
         // one letter per payer, covering the fees of everyone they pay for
         /** @var array<int, Fee[]> $dueByMember */
         $dueByMember = [];
+        /** @var array<int, Fee[]> $deceased fees of deceased people: never dunned, not even to the person paying for them */
+        $deceased = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
             if (!in_array($fee->getStatus(), ['open', 'overdue'], true)) {
                 continue;
             }
             if (substr((string)$fee->getDueDate(), 0, 10) > $dueBefore || substr((string)$fee->getDueDate(), 0, 10) === '') {
+                continue;
+            }
+            if (self::isDeceased($fee->getMemberId(), $membersById)) {
+                $deceased[$fee->getMemberId()][] = $fee;
                 continue;
             }
             $dueByMember[FeePayer::of($fee->getMemberId(), $membersById)][] = $fee;
@@ -88,6 +94,9 @@ class DunningService {
         $included = [];
         $skipped = [];
         $total = 0.0;
+        foreach (array_keys($deceased) as $memberId) {
+            $skipped[] = ['memberId' => $memberId, 'name' => $membersById[$memberId]->getFullName(), 'reason' => $this->l->t('deceased')];
+        }
         foreach ($dueByMember as $memberId => $fees) {
             $member = $membersById[$memberId] ?? null;
             $name = $member !== null ? $member->getFullName() : ($fees[0]->getMemberName() ?: $this->l->t('Person #%s', [$memberId]));
@@ -242,7 +251,8 @@ class DunningService {
         $byMember = [];
         foreach ($this->fees->findByClub($clubId) as $fee) {
             if (!isset($wanted[$fee->getId()]) || (int)$fee->getDunningLevel() < 1
-                || !in_array($fee->getStatus(), ['open', 'overdue'], true)) {
+                || !in_array($fee->getStatus(), ['open', 'overdue'], true)
+                || self::isDeceased($fee->getMemberId(), $membersById)) {
                 continue;
             }
             $byMember[FeePayer::of($fee->getMemberId(), $membersById)][] = $fee;
@@ -319,6 +329,11 @@ class DunningService {
         $periods = array_values(array_unique(array_filter(array_map(fn (Fee $f) => $f->getPeriod(), $fees))));
         sort($periods);
         return ($periods !== [] ? $this->doc->t('Fee %s', [implode(', ', $periods)]) . ', ' : '') . $this->doc->t('Member %s', [$memberId]);
+    }
+
+    /** @param array<int, Member> $membersById */
+    private static function isDeceased(int $memberId, array $membersById): bool {
+        return isset($membersById[$memberId]) && $membersById[$memberId]->getDeceased();
     }
 
     private function hasPostalAddress(Member $member): bool {
