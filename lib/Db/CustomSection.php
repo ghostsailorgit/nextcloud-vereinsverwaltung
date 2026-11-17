@@ -22,6 +22,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setEditRoles(?string $editRoles)
  * @method int getSortOrder()
  * @method void setSortOrder(int $sortOrder)
+ * @method ?bool getMemberVisible()
+ * @method void setMemberVisible(?bool $memberVisible)
  * @method ?string getCreatedAt()
  * @method void setCreatedAt(?string $createdAt)
  */
@@ -32,11 +34,18 @@ class CustomSection extends Entity implements JsonSerializable {
     protected ?string $viewRoles = null;
     protected ?string $editRoles = null;
     protected ?int $sortOrder = null;
+    // whether the member sees their own values of this section under "My data"; null (older rows) = yes
+    protected ?bool $memberVisible = null;
     protected ?string $createdAt = null;
 
     public function __construct() {
         $this->addType('clubId', 'integer');
         $this->addType('sortOrder', 'integer');
+        $this->addType('memberVisible', 'boolean');
+    }
+
+    public function isMemberVisible(): bool {
+        return $this->memberVisible !== false;
     }
 
     /** @return int[] role ids that may see the section */
@@ -63,6 +72,7 @@ class CustomSection extends Entity implements JsonSerializable {
             'viewRoles' => $this->getViewRoleIds(),
             'editRoles' => $this->getEditRoleIds(),
             'sortOrder' => (int)$this->sortOrder,
+            'memberVisible' => $this->isMemberVisible(),
         ];
     }
 }

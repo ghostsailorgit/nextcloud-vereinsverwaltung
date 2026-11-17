@@ -56,7 +56,8 @@ class Application extends App implements IBootstrap {
                 $container->query(ClubMapper::class),
                 $container->query(AuditLogService::class),
                 $container->query(IL10N::class),
-                $container->query(\OCA\Verein\Db\ClubGroupMapper::class)
+                $container->query(\OCA\Verein\Db\ClubGroupMapper::class),
+                $container->query(\OCA\Verein\Service\Clock::class)
             );
         });
 

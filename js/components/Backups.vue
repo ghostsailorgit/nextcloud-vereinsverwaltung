@@ -92,6 +92,7 @@ export default {
       .filter(row => labels[row.table] && row.backup !== null)
       .map(row => t('verein', '{what}: {now} now, {backup} in the backup', { what: labels[row.table], now: row.now, backup: row.backup }))
       .join('; ')
+      + (summary.tables.some(row => row.kept) ? '. ' + t('verein', 'Roles, role assignments and the audit log stay as they are; only Nextcloud administrators restore them too') : '')
 
     // asks with what would change, then restores and reloads the page (every view shows other data afterwards)
     const restoreWith = async (preview, run) => {

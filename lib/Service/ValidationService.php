@@ -249,7 +249,8 @@ class ValidationService {
      * @return bool
      */
     public function validateFeeStatus(string $status): bool {
-        $validStatuses = ['open', 'paid', 'overdue', 'cancelled'];
+        // collecting (im Einzug): in an exported SEPA file, not yet confirmed by the bank statement (SepaService::export())
+        $validStatuses = ['open', 'paid', 'overdue', 'cancelled', 'collecting'];
         return in_array($status, $validStatuses, true);
     }
 

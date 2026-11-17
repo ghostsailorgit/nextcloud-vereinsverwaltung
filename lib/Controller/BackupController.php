@@ -73,7 +73,7 @@ class BackupController extends Controller {
      */
     #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function previewRestore(string $name): JSONResponse {
-        return $this->respond(fn () => $this->backups->summary($this->stored($name)));
+        return $this->respond(fn () => $this->backups->summary($this->stored($name), $this->everything()));
     }
 
     /**
@@ -93,7 +93,7 @@ class BackupController extends Controller {
      */
     #[RequirePermission(BackupAccess::PERMISSION, clubScoped: false)]
     public function previewUpload(): JSONResponse {
-        return $this->respond(fn () => $this->backups->summary($this->uploaded()));
+        return $this->respond(fn () => $this->backups->summary($this->uploaded(), $this->everything()));
     }
 
     /**
@@ -118,6 +118,11 @@ class BackupController extends Controller {
     /** @throws \OCA\Verein\Exception\PermissionDeniedException */
     private function allowed(): void {
         $this->access->check($this->userSession->getUser()?->getUID() ?? '');
+    }
+
+    /** Roles and the audit log are only replaced when a Nextcloud administrator restores. */
+    private function everything(): bool {
+        return $this->access->restoresEverything($this->userSession->getUser()?->getUID() ?? '');
     }
 
     /** @throws ValidationException */
@@ -150,7 +155,7 @@ class BackupController extends Controller {
     private function restoreBackup(array $backup): array {
         $this->backups->summary($backup); // refuses a backup of a newer app version
         try {
-            return $this->backups->restore($backup, $this->userSession->getUser()?->getUID());
+            return $this->backups->restore($backup, $this->userSession->getUser()?->getUID(), $this->everything());
         } catch (\Throwable $e) {
             // the service rolled back and logged the details; they may contain SQL, so only this goes out
             throw new ValidationException($this->l->t('The restore failed, nothing was changed. The details are in the Nextcloud log.'));

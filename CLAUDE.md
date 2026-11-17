@@ -63,7 +63,10 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
   `RoleService::SCOPABLE_PERMISSIONS` (member view/manage), for the people currently in those groups. The middleware only knows
   the user holds the permission *somewhere* in the club, so every place that hands out or changes members must go through
   `MemberScope` (`filter`/`check`/`memberIds`, or `requireWholeClub()` for club-wide things). A new endpoint under a member
-  permission that skips it leaks the whole club to department heads.
+  permission that skips it leaks the whole club to department heads. Department heads never change fee fields (category,
+  honorary, fee-free join year, payer) and need `verein.member.bank` (scopable) for IBAN/BIC and the mandate; whole-club
+  `verein.member.manage` does not need it (`MemberController::lockedFields()`). They may not reopen or extend an ended group
+  stay (`ClubGroupController::checkReopen()`), and "add person from another club" only offers people of their own groups there.
 
 ## Rules that are easy to get wrong
 1. **Every route needs `#[RequirePermission('verein.x')]`** (club-scoped by default; `clubScoped: false`
@@ -75,8 +78,14 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    holders of `verein.role.manage` may change them (`MemberController::canManageRoles()`, and the
    `#[RequirePermission('verein.role.manage')]` on `MemberController::deactivate()`/`activate()`); role *definitions*
    are Nextcloud-admin only; creating/deleting clubs is Nextcloud-admin only. Keep it that way.
+   A person is one row for all clubs, so `MemberController::lockedFields()` also locks: `user_id` unless the user may manage
+   roles in *every* club of the person (a different account is refused with 403, not dropped); leave date, "date unknown" and
+   deceased without `verein.role.manage` when an account is linked; IBAN/BIC, email and deceased unless the user reaches the
+   person with `verein.member.manage` in every club of the person. Locked fields keep their stored value and the form shows
+   them read-only (`lockedFields` in the member JSON). `searchUsers` names the linked person only for members of this club.
 4. **Automatic rights** (`RoleService::derivedRoles()`): explicit assignments + roles mapped from the linked
-   person's *active* memberships (no leave date, not deceased, not deactivated). Deactivating a membership
+   person's *active* memberships (not left by today - `Membership::hasLeftBy()`, the leave day itself still counts - not
+   deceased, not deactivated). A leave date in the future ends rights only after that day; `Member::isFormer($today)` likewise. Deactivating a membership
    (`MemberService::deactivate()`, per club) deletes nothing; it stops payments (fee run, SEPA export and manual
    fees skip/refuse the member), hides the member from the club calendar and suspends this derivation
    until `activate()`. No mapping configured = nothing derived.
@@ -87,7 +96,10 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    One debit per debtor and collection date (banks charge per debit), also for several fees of one person. Fees are never collected before their due date (one `PmtInf` per collection date, fees due > 14 days after the
    earliest date are skipped as "not due yet"). An optional requested collection date (never before the earliest) is used by
    preview, advance notice and file alike. The advance notice by email (`SepaPrenotificationService`) stays optional - the
-   export must never require it. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing. The preview and `POST /sepa/booking-summary` show what a collection is made up of (per date, type, category; never names).
+   export must never require it. A deceased account holder is skipped (the mandate ended). The export (`SepaService::export()`)
+   is one transaction with the club locked: its fees move to status `collecting` ("im Einzug") and a `verein_sepa_runs` row
+   records the file, so a second export cannot contain them again; the treasurer later closes the run as paid or back to open
+   (`closeCollection()`, only fees still `collecting` and not part of a newer run). Dunning ignores `collecting` fees. `SepaServiceTest` validates the file against the official XSD (downloaded in CI, not committed) - keep it passing. The preview and `POST /sepa/booking-summary` show what a collection is made up of (per date, type, category; never names).
 6. **Self-service is read-only** on purpose (a member changing their own IBAN would be a SEPA fraud risk).
 7. **Entity dirty tracking:** `Entity::setX()` does nothing if the value equals the current one, so a NOT NULL
    column that keeps its PHP default is omitted from INSERT - give such columns a DB default (see the
@@ -102,7 +114,8 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
    `prorata`); every later year is billed normally without the flag being set again. A category with age tiers charges by the age
    on its cut-off day (`AgeGrading`); no readable birth date = reported, never a guessed amount. Mass status changes
    (`markPaidInClub`, `flagOverdueInClub`) are single SQL statements - row-by-row updates took minutes on the slow host.
-   After a SEPA export the UI offers to mark exactly the exported fees (ids in `X-Sepa-Fee-Ids`) as paid.
+   A run locks the club row (`ClubMapper::lockForUpdate()`, a no-op UPDATE since SQLite has no FOR UPDATE) before it reads
+   what is billed, so two runs at once cannot bill twice. Members whose leave date lies before the period start are skipped.
 9. `IQueryBuilder::execute()` no longer exists: use `executeStatement()` / `executeQuery()`.
 10. Schema changes are `lib/Migration/Version*` classes (the legacy `appinfo/database.xml` is NOT processed).
    Bump `<version>` in `appinfo/info.xml` for every release so Nextcloud runs `occ upgrade` and the
@@ -135,6 +148,7 @@ Runtime dependency: TCPDF (`composer install --no-dev`) is only needed for the P
     Restore: `occ verein:backup:restore` or the UI (`BackupController`: Nextcloud admins, or `verein.backup.restore` only while there is exactly
     one club - `BackupAccess::check()` in every backup action, the attribute alone accepts the permission from any club; a stored backup or an
     upload, preview first, a backup of a newer app version is refused, the current state is backed up first, the restore is logged).
+    A restore by someone who is not a Nextcloud admin keeps `BackupService::ADMIN_ONLY_TABLES` (roles, assignments, audit log).
 
 15. **Anonymize, don't delete:** `MemberService::anonymize()` replaces a person's PII with placeholders but keeps the row -
     fees and SEPA history stay attributable, and a hard delete would break bookkeeping retention. Only allowed once the

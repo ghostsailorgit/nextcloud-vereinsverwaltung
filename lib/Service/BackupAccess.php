@@ -43,6 +43,11 @@ class BackupAccess {
         return count($clubs) === 1 && $this->roles->userHasPermission($userId, self::PERMISSION, $clubs[0]->getId());
     }
 
+    /** Only Nextcloud administrators restore roles and the audit log along with the rest (see BackupService::ADMIN_ONLY_TABLES). */
+    public function restoresEverything(string $userId): bool {
+        return $userId !== '' && $this->roles->isNextcloudAdmin($userId);
+    }
+
     /** @throws PermissionDeniedException */
     public function check(string $userId): void {
         if (!$this->allows($userId)) {

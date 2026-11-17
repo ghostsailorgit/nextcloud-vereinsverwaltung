@@ -82,6 +82,10 @@
         :input-label="t('verein', 'Roles that may change it')"
         :placeholder="t('verein', 'Select…')"
       />
+      <label class="checkbox-field">
+        <input v-model="sectionForm.memberVisible" type="checkbox" />
+        {{ t('verein', 'Visible to the member under “My data”') }}
+      </label>
       <div class="buttons">
         <NcButton type="submit" variant="primary" :disabled="busy">{{ sectionForm.id ? t('verein', 'Save') : t('verein', 'Add') }}</NcButton>
         <NcButton type="button" variant="tertiary" @click="showSectionForm = false">{{ t('verein', 'Cancel') }}</NcButton>
@@ -90,12 +94,13 @@
 
     <div v-if="sections.length" class="table-scroll">
       <table>
-        <thead><tr><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'May see it') }}</th><th>{{ t('verein', 'May change it') }}</th><th>{{ t('verein', 'Fields') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
+        <thead><tr><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'May see it') }}</th><th>{{ t('verein', 'May change it') }}</th><th>{{ t('verein', 'Member sees it') }}</th><th>{{ t('verein', 'Fields') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
         <tbody>
           <tr v-for="s in sections" :key="s.id">
             <td>{{ s.name }}</td>
             <td>{{ roleNames(s.viewRoles) }}</td>
             <td>{{ roleNames(s.editRoles) }}</td>
+            <td>{{ s.memberVisible === false ? t('verein', 'No') : t('verein', 'Yes') }}</td>
             <td>{{ fields.filter(f => f.sectionId === s.id).length }}</td>
             <td>
               <NcActions force-menu :aria-label="t('verein', 'More actions for {name}', { name: s.name })">
@@ -139,7 +144,7 @@ export default {
     // sectionId 0 = no section (a select cannot hold null as a choice)
     const empty = () => ({ id: null, label: '', type: 'text', sectionId: 0, options: '', required: false, showInList: false })
     const form = reactive(empty())
-    const emptySection = () => ({ id: null, name: '', viewRoles: [], editRoles: [] })
+    const emptySection = () => ({ id: null, name: '', viewRoles: [], editRoles: [], memberVisible: true })
     const sectionForm = reactive(emptySection())
     const typeOptions = fieldTypeOptions()
     const sectionOptions = computed(() => [{ id: 0, label: t('verein', 'No section (everyone who sees members)') }]
@@ -206,14 +211,14 @@ export default {
       showSectionForm.value = true
     }
     const startEditSection = (s) => {
-      Object.assign(sectionForm, { id: s.id, name: s.name, viewRoles: [...s.viewRoles], editRoles: [...s.editRoles] })
+      Object.assign(sectionForm, { id: s.id, name: s.name, viewRoles: [...s.viewRoles], editRoles: [...s.editRoles], memberVisible: s.memberVisible !== false })
       showSectionForm.value = true
     }
     const saveSection = async () => {
       busy.value = true
       try {
         // the role lists as JSON: the API sends form fields
-        const payload = { name: sectionForm.name, viewRoles: JSON.stringify(sectionForm.viewRoles), editRoles: JSON.stringify(sectionForm.editRoles) }
+        const payload = { name: sectionForm.name, viewRoles: JSON.stringify(sectionForm.viewRoles), editRoles: JSON.stringify(sectionForm.editRoles), memberVisible: sectionForm.memberVisible }
         if (sectionForm.id) await api.put(`custom-sections/${sectionForm.id}`, payload)
         else await api.post('custom-sections', payload)
         showSuccess(t('verein', 'Section saved'))

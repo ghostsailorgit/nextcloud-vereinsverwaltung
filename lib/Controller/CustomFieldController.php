@@ -128,7 +128,7 @@ class CustomFieldController extends Controller {
      */
     #[RequirePermission('verein.club.manage')]
     public function createSection(): JSONResponse {
-        return $this->respond(fn () => $this->fields->createSection($this->clubId(), $this->params(['name', 'viewRoles', 'editRoles'])), 201);
+        return $this->respond(fn () => $this->fields->createSection($this->clubId(), $this->params(['name', 'viewRoles', 'editRoles', 'memberVisible'])), 201);
     }
 
     /**
@@ -136,7 +136,7 @@ class CustomFieldController extends Controller {
      */
     #[RequirePermission('verein.club.manage')]
     public function updateSection(int $id): JSONResponse {
-        return $this->respond(fn () => $this->fields->updateSection($this->clubId(), $id, $this->params(['name', 'viewRoles', 'editRoles', 'sortOrder'])));
+        return $this->respond(fn () => $this->fields->updateSection($this->clubId(), $id, $this->params(['name', 'viewRoles', 'editRoles', 'sortOrder', 'memberVisible'])));
     }
 
     /**

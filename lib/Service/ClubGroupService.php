@@ -203,6 +203,16 @@ class ClubGroupService {
         return $this->ownPeriod($clubId, $periodId)->getGroupId();
     }
 
+    /**
+     * The day a stay ended, null while it is open.
+     *
+     * @throws NotFoundException
+     */
+    public function leftOnOfPeriod(int $clubId, int $periodId): ?string {
+        $leftOn = $this->ownPeriod($clubId, $periodId)->getLeftOn();
+        return $leftOn !== null && $leftOn !== '' ? substr($leftOn, 0, 10) : null;
+    }
+
     /** @return ClubGroupMember[] open periods of people who are still members */
     private function currentPeriods(int $clubId): array {
         $members = $this->membersById($clubId);

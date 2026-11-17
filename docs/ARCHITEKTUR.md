@@ -41,15 +41,23 @@ Drei Quellen, die sich addieren:
 2. **Manuell zugewiesene Rollen** (Reiter „Rollen“), immer für einen bestimmten Verein.
 3. **Automatische Rechte:** Im Reiter „Verein“ wird je Vereinsfunktion (Mitglied / Kassierer / Vorstand) eine
    App-Rolle festgelegt. Wer im Mitgliederformular mit einem Nextcloud-Konto verknüpft ist und eine *aktive*
-   Mitgliedschaft hat, bekommt diese Rolle automatisch. Bei Austritt oder Tod enden die Rechte sofort.
+   Mitgliedschaft hat, bekommt diese Rolle automatisch. Die Rechte enden mit dem Tag nach dem Austrittsdatum (ein
+   künftiges Datum wirkt erst dann) oder sofort bei Tod bzw. Austritt mit unbekanntem Datum.
    Ohne eingerichtete Zuordnung passiert nichts.
 
 Damit sich niemand selbst befördert, dürfen **Funktion und Konto-Verknüpfung nur ändern, wer „Rollen verwalten“
 darf**. Vereine anlegen/löschen und Rollendefinitionen ändern dürfen nur Nextcloud-Administratoren.
 
+Eine Person ist ein Datensatz für alle ihre Vereine. Deshalb sperrt das Mitgliederformular (`MemberController::lockedFields()`):
+- die Konto-Verknüpfung, wenn man nicht in **allen** Vereinen der Person Rollen verwalten darf,
+- Austrittsdatum, „Datum unbekannt“ und „verstorben“ ohne „Rollen verwalten“, sobald ein Konto verknüpft ist (sie beenden Rechte),
+- IBAN/BIC, E-Mail und „verstorben“, wenn man die Person nicht in allen ihren Vereinen verwalten darf,
+- für Abteilungsleitungen die Beitragsfelder immer und Bankdaten/Mandat ohne das Recht `verein.member.bank`.
+Gesperrte Felder behalten ihren gespeicherten Wert, das Formular zeigt sie nur an.
+
 Jeder Endpunkt ist mit `#[RequirePermission('verein.…')]` geschützt; ein Test stellt sicher, dass keiner
 vergessen wird. Rechte: `verein.member.view/manage`, `verein.finance.read/write/delete/export`,
-`verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`, `verein.backup.restore` (Sicherungen; wirkt nur bei genau einem Verein, sonst nur Nextcloud-Administratoren, siehe `BackupAccess`).
+`verein.member.bank` (Bankdaten und Mandat für Abteilungsleitungen), `verein.sepa.export`, `verein.role.manage`, `verein.club.manage`, `verein.audit.view`, `verein.backup.restore` (Sicherungen; wirkt nur bei genau einem Verein, sonst nur Nextcloud-Administratoren, siehe `BackupAccess`).
 
 ## Mitglieder deaktivieren
 Ein Mitglied lässt sich in einem Verein deaktivieren, statt es zu löschen (Reiter „Mitglieder“, Recht „Rollen verwalten“).
@@ -110,6 +118,8 @@ kann, exportiert `GET /members/{id}/export` dieselben Daten - aber nur Mitglieds
 Vereins**, nicht die anderer Vereine der Person. Das Recht ist dasselbe wie für die normale Mitgliederansicht
 (`verein.member.view`), da es nichts zeigt, was dort nicht ohnehin sichtbar ist; `MemberController::export()` prüft
 zuerst mit `find()`, dass die Person überhaupt Mitglied des aufrufenden Vereins ist (404 sonst).
+Bereiche eigener Felder haben den Schalter „für das Mitglied sichtbar“ (Standard ja). Felder ausgeschalteter Bereiche fehlen
+unter „Meine Daten“ und in dessen Download; der Export durch den Verein enthält sie weiter (nach den Leserechten des Aufrufers).
 
 ## Beiträge
 - **Mitglied entfernen:** Die Beiträge bleiben als Nachweis in der Beitragsliste, mit dem Namen in `verein_fees.member_name`, auch
@@ -210,6 +220,12 @@ Oberfläche schickt 20), jede Zeile über `MemberService::create()` samt Protoko
 - Nie vor Fälligkeit: Beiträge mit Fälligkeit bis zum frühesten Datum (oder ohne lesbare Fälligkeit) werden zu diesem
   eingezogen, Beiträge mit Fälligkeit bis 14 Kalendertage danach an ihrem Fälligkeitstag (nächster TARGET2-Tag), je Datum
   ein eigener `PmtInf`-Block; später fällige werden als „noch nicht fällig“ gemeldet und bleiben offen.
+- **Einzugsläufe** (`verein_sepa_runs`): Beim Erstellen der Datei wechseln ihre Beiträge in einer Transaktion (Verein gesperrt)
+  auf den Status „im Einzug“, und der Lauf wird mit Nachrichten-ID, Datum, Summe und Beitrags-IDs gespeichert. Ein zweiter Export
+  enthält sie deshalb nicht noch einmal; hat sich zwischendurch ein Beitrag geändert, wird der Export abgelehnt. Danach markiert
+  man den Lauf als bezahlt oder setzt ihn wieder auf unbezahlt (Recht „SEPA-Export“ und „Finanzen ändern“). Nur Beiträge, die noch
+  im Einzug und in keinem neueren Lauf sind, werden geändert. Mahnungen lassen Beiträge im Einzug aus.
+- Ist der Kontoinhaber verstorben, wird nicht eingezogen (das Mandat endet mit dem Tod).
 - `SepaServiceTest` prüft die Datei gegen das offizielle Schema pain.008.001.02; die XSD wird wegen der ISO-Lizenz nicht
   eingecheckt, sondern in der CI geladen (Commit und Prüfsumme fest, siehe `.github/workflows/tests.yml`).
 
@@ -218,8 +234,9 @@ Täglich läuft ein Nextcloud-Hintergrundjob (`DailyBackupJob`), der alle Verein
 App-Datenordner ablegt (`BackupService`). Alte Sicherungen werden nach 30 Tagen gelöscht, die neuesten 7 bleiben immer erhalten,
 höchstens 100 werden aufbewahrt. Nextcloud-Administratoren sehen die Liste im Reiter „Verein“, können sofort sichern und
 herunterladen. Die Sicherung braucht keine Datenbank-Werkzeuge und läuft auf jeder von Nextcloud unterstützten Datenbank.
-Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` (nur per Kommandozeile, bewusst nicht in der
-Weboberfläche). Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
+Zurückspielen: `occ verein:backup:list` und `occ verein:backup:restore <Name oder Pfad>` oder im Reiter „Verein“ (`BackupController`,
+siehe `BackupAccess`). Wer kein Nextcloud-Administrator ist, stellt Rollen, Rollenzuweisungen und das Änderungsprotokoll nicht mit
+wieder her (`BackupService::ADMIN_ONLY_TABLES`); sonst ließen sich damit Rechte vergeben oder Spuren löschen. Vorher wird automatisch eine Sicherung des aktuellen Stands angelegt, das Ersetzen läuft in einer Transaktion.
 Der Kalender braucht keine Sicherung: Er wird aus den Mitgliederdaten erzeugt.
 Das Zurückspielen wird in der CI mit SQLite, MySQL, MariaDB und PostgreSQL geprüft (für PostgreSQL werden die ID-Zähler nachgezogen).
 
@@ -303,4 +320,7 @@ Das Repository ist öffentlich. Keine echten Mitgliederdaten, Domains, Servernam
 - Rechte je Endpunkt (`#[RequirePermission]`), Mandantentrennung über `clubId` (jede ID-Abfrage prüft die Vereinszugehörigkeit).
 - Schreibende Endpunkte behalten den CSRF-Schutz von Nextcloud; nur lesende Endpunkte und Downloads dürfen `@NoCSRFRequired` tragen (Test).
 - SQL nur über Query-Builder mit Parametern, SEPA-XML mit Escaping, CSV-Export gegen Formelinjektion geschützt.
-- Entscheidung (bewusst so belassen): Personen sind vereinsübergreifend geteilt. Wer in Verein A Mitglieder verwalten darf, kann die Stammdaten einer Person ändern, die auch in Verein B ist (Name, IBAN, „verstorben“).
+- Personen sind vereinsübergreifend geteilt. Seit 1.23.0 ändert IBAN/BIC, E-Mail und „verstorben“ nur, wer die Person in allen ihren Vereinen verwalten darf, und ein Konto verknüpft nur, wer überall Rollen verwalten darf (siehe „Rechte“). Name und Anschrift bleiben für jeden Verein der Person änderbar.
+- Kontosuche: Der Rollen-Reiter sucht Konten über Nextclouds Teilen-Suche und hält sich damit an deren Einschränkungen (nur eigene Gruppen, keine Aufzählung). Die Kontosuche im Mitgliederformular nennt die verknüpfte Person nur, wenn sie im eigenen Verein ist.
+- Mahnungen und Mitgliedsbestätigungen per E-Mail sind je Konto begrenzt (20 bzw. 60 Aufrufe pro Stunde, `#[UserRateLimit]`).
+- CSV-Felder mit Zeilenumbruch (auch `\r`), Semikolon oder Anführungszeichen werden in Anführungszeichen gesetzt.

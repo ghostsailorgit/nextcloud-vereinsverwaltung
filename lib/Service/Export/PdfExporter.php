@@ -201,7 +201,7 @@ class PdfExporter {
             }
 
             // Translate status
-            $statusLabels = ['open' => $this->doc->t('Unpaid'), 'paid' => $this->doc->t('Paid'), 'overdue' => $this->doc->t('Overdue'), 'cancelled' => $this->doc->t('Canceled')];
+            $statusLabels = ['open' => $this->doc->t('Unpaid'), 'paid' => $this->doc->t('Paid'), 'overdue' => $this->doc->t('Overdue'), 'cancelled' => $this->doc->t('Canceled'), 'collecting' => $this->doc->t('In collection')];
             $statusLabel = $statusLabels[$status] ?? $status;
 
             $pdf->Cell($w[0], 6, (string)$id, 1, 0, 'C', $fill, '', 1);

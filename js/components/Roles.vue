@@ -182,6 +182,7 @@ import { t } from '@nextcloud/l10n'
 const PERMISSION_LABELS = {
   'verein.member.view': t('verein', 'View members'),
   'verein.member.manage': t('verein', 'Manage members'),
+  'verein.member.bank': t('verein', 'Bank details and mandate (with members of some groups only)'),
   'verein.finance.read': t('verein', 'View finances'),
   'verein.finance.write': t('verein', 'Edit fees'),
   'verein.finance.delete': t('verein', 'Delete fees'),

@@ -1107,7 +1107,38 @@
         "Filter by an own field": "Nach eigenem Feld filtern",
         "Condition": "Bedingung",
         "Any value": "Beliebiger Wert",
-        "Own fields: {example}, with the name of the field. Only fields the sender may see are filled in.": "Eigene Felder: {example}, mit dem Namen des Feldes. Ausgefüllt werden nur Felder, die der Absender sehen darf."
+        "Own fields: {example}, with the name of the field. Only fields the sender may see are filled in.": "Eigene Felder: {example}, mit dem Namen des Feldes. Ausgefüllt werden nur Felder, die der Absender sehen darf.",
+        "Bank details and mandate (with members of some groups only)": "Bankdaten und Mandat (bei Mitgliedern nur einiger Gruppen)",
+        "Collection not found": "Einzugslauf nicht gefunden",
+        "Collections": "Einzugsläufe",
+        "Created": "Erstellt",
+        "Fees marked as paid": "Beiträge als bezahlt markiert",
+        "Fees set to unpaid again": "Beiträge wieder auf unbezahlt gesetzt",
+        "In collection": "Im Einzug",
+        "Member sees it": "Mitglied sieht ihn",
+        "Only someone who may manage members of the whole club can reopen or extend a stay in a group that has ended": "Eine beendete Gruppenzugehörigkeit kann nur wieder öffnen oder verlängern, wer Mitglieder des ganzen Vereins verwalten darf",
+        "Roles, role assignments and the audit log stay as they are; only Nextcloud administrators restore them too": "Rollen, Rollenzuweisungen und das Änderungsprotokoll bleiben, wie sie sind; nur Nextcloud-Administratoren stellen sie mit wieder her",
+        "Set to unpaid again": "Wieder auf unbezahlt",
+        "Some fees changed while the file was being created. Please create the SEPA file again.": "Während die Datei erstellt wurde, haben sich Beiträge geändert. Bitte die SEPA-Datei noch einmal erstellen.",
+        "Still in collection": "Noch im Einzug",
+        "The change failed": "Die Änderung ist fehlgeschlagen",
+        "The fees of an exported file are “in collection” and are not part of any later file. Once the money has arrived, mark them as paid; if the file was not submitted or the bank rejected it, set them to unpaid again.": "Die Beiträge einer erstellten Datei sind „im Einzug“ und kommen in keine spätere Datei. Sobald das Geld eingegangen ist, als bezahlt markieren; wurde die Datei nicht eingereicht oder von der Bank abgelehnt, wieder auf unbezahlt setzen.",
+        "The person also belongs to a club in which you may not manage roles, so only someone who may do that there can link an account": "Die Person gehört auch zu einem Verein, in dem du keine Rollen verwalten darfst. Ein Konto verknüpfen kann daher nur, wer das dort darf",
+        "This person also belongs to another club in which you may not manage members, so the bank details, email address and “Deceased” can only be changed by someone who may do that in every one of those clubs.": "Diese Person gehört auch zu einem anderen Verein, in dem du keine Mitglieder verwalten darfst. Bankdaten, E-Mail-Adresse und „Verstorben“ kann daher nur ändern, wer das in jedem dieser Vereine darf.",
+        "Visible to the member under “My data”": "Für das Mitglied unter „Meine Daten“ sichtbar",
+        "_Mark %n fee of this collection as paid? Only do this once the money has arrived._::_Mark %n fees of this collection as paid? Only do this once the money has arrived._": [
+            "%n Beitrag dieses Einzugslaufs als bezahlt markieren? Erst tun, wenn das Geld eingegangen ist.",
+            "%n Beiträge dieses Einzugslaufs als bezahlt markieren? Erst tun, wenn das Geld eingegangen ist."
+        ],
+        "_Set %n fee of this collection to unpaid again? Do this only if the file was not submitted or the bank rejected it – the next SEPA file will contain it again._::_Set %n fees of this collection to unpaid again? Do this only if the file was not submitted or the bank rejected it – the next SEPA file will contain them again._": [
+            "%n Beitrag dieses Einzugslaufs wieder auf unbezahlt setzen? Nur tun, wenn die Datei nicht eingereicht wurde oder die Bank sie abgelehnt hat – die nächste SEPA-Datei enthält ihn dann wieder.",
+            "%n Beiträge dieses Einzugslaufs wieder auf unbezahlt setzen? Nur tun, wenn die Datei nicht eingereicht wurde oder die Bank sie abgelehnt hat – die nächste SEPA-Datei enthält sie dann wieder."
+        ],
+        "in collection": "im Einzug",
+        "leaves before %s": "tritt vor %s aus",
+        "the account holder has died, the mandate is no longer valid": "Kontoinhaber ist verstorben, das Mandat gilt nicht mehr",
+        "{id} – already linked to a person in another club": "{id} – schon mit einer Person in einem anderen Verein verknüpft",
+        "{user} is already linked to a person in another club": "{user} ist schon mit einer Person in einem anderen Verein verknüpft"
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

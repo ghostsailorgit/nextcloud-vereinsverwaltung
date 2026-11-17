@@ -49,7 +49,7 @@ class SelfServiceService {
         if ($person === null) {
             return ['linked' => false];
         }
-        return $this->buildExport($person, $userId);
+        return $this->buildExport($person, $userId, null, null, true);
     }
 
     /**
@@ -95,7 +95,8 @@ class SelfServiceService {
     /**
      * @return array<string, mixed>
      */
-    private function buildExport(Member $person, ?string $userId, ?int $onlyClubId = null, ?array $onlyFields = null): array {
+    /** @param bool $ownView the person looks at their own data: sections not visible to the member are left out */
+    private function buildExport(Member $person, ?string $userId, ?int $onlyClubId = null, ?array $onlyFields = null, bool $ownView = false): array {
         $clubNames = [];
         $memberships = [];
         foreach ($this->memberships->findByMember($person->getId()) as $membership) {
@@ -128,7 +129,8 @@ class SelfServiceService {
                 'isFormer' => $view->isFormer(),
                 'groups' => $this->groupsOf($person->getId(), $club->getId()),
                 // what the club stores in its own fields is part of the person's data (Art. 15 GDPR)
-                'customFields' => $this->customFields?->labelledValuesFor($club->getId(), $person->getId(), $onlyFields) ?? [],
+                'customFields' => $this->customFields?->labelledValuesFor($club->getId(), $person->getId(),
+                    $ownView ? $this->customFields->memberVisibleFieldIds($club->getId()) : $onlyFields) ?? [],
                 'membershipYears' => $view->getMembershipYears(),
                 'mandate' => [
                     'reference' => $membership->getEffectiveMandateReference(),

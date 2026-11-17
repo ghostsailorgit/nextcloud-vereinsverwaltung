@@ -23,4 +23,8 @@ class CsvExporterTest extends TestCase {
     public function testPlainNumbersStayNumbers(): void {
         $this->assertSame("-12.50;24;DE89370400440532013000\n", $this->escapeLine(['-12.50', 24, 'DE89370400440532013000']));
     }
+
+    public function testACarriageReturnIsQuotedLikeANewline(): void {
+        $this->assertSame("\"a\rb\";c\n", $this->escapeLine(["a\rb", 'c']));
+    }
 }

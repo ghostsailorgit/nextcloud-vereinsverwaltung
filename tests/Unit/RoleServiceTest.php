@@ -419,4 +419,26 @@ class RoleServiceTest extends TestCase {
             }
         }
     }
+
+    private function serviceOn(string $day): RoleService {
+        $time = $this->createMock(\OCP\AppFramework\Utility\ITimeFactory::class);
+        $time->method('getTime')->willReturn((new \DateTimeImmutable($day . ' 12:00:00', new \DateTimeZone('Europe/Berlin')))->getTimestamp());
+        $tz = $this->createMock(\OCP\IDateTimeZone::class);
+        $tz->method('getTimeZone')->willReturn(new \DateTimeZone('Europe/Berlin'));
+        return new RoleService($this->roleMapper, $this->userRoleMapper, $this->groupManager, $this->createMock(IUserSession::class),
+            $this->createMock(LoggerInterface::class), $this->memberMapper, $this->membershipMapper, $this->clubMapper,
+            l10n: SourceL10n::fromAppLanguage('de'), clock: new \OCA\Verein\Service\Clock($time, $tz));
+    }
+
+    public function testALeaveDateInTheFutureEndsDerivedRightsOnlyAfterThatDay(): void {
+        $this->role(1, ['verein.member.manage']);
+        $this->club(10, ['admin' => 1]);
+        $ms = $this->membershipIn(6, 10, 'admin');
+        $ms->setLeaveDate('2026-12-31');
+        $this->linkedPerson('leaving', $this->person(6, 'leaving'), $ms);
+
+        $this->assertTrue($this->serviceOn('2026-11-17')->userHasPermission('leaving', 'verein.member.manage', 10), 'still a member until the end of the year');
+        $this->assertTrue($this->serviceOn('2026-12-31')->userHasPermission('leaving', 'verein.member.manage', 10), 'the leave day itself still counts');
+        $this->assertFalse($this->serviceOn('2027-01-01')->userHasPermission('leaving', 'verein.member.manage', 10));
+    }
 }

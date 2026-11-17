@@ -32,7 +32,8 @@ class SepaController extends ApiController {
         private SepaPrenotificationService $notice,
         private CsvExporter $csv,
         private IAppManager $appManager,
-        private ?\OCA\Verein\Service\Clock $clock = null
+        private ?\OCA\Verein\Service\Clock $clock = null,
+        private ?\OCP\IUserSession $userSession = null
     ) {
         parent::__construct($appName, $request);
         $this->service = $service;
@@ -51,7 +52,8 @@ class SepaController extends ApiController {
     #[RequirePermission('verein.sepa.export')]
     public function export(int $clubId, ?int $accountId = null, ?string $collectionDate = null): Response {
         try {
-            $result = $this->service->generateSepaXml($clubId, $accountId, $collectionDate);
+            // records the collection: its fees become "collecting" and are not in a later file again
+            $result = $this->service->export($clubId, $accountId, $collectionDate, $this->userSession?->getUser()?->getUID());
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }
@@ -117,6 +119,38 @@ class SepaController extends ApiController {
     public function notice(int $clubId, ?int $accountId = null, ?string $collectionDate = null): JSONResponse {
         try {
             return new JSONResponse(['status' => 'ok'] + $this->notice->send($clubId, $accountId, $collectionDate));
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     *
+     * The club's latest SEPA collections (exported files), newest first.
+     */
+    #[RequirePermission('verein.sepa.export')]
+    public function collections(int $clubId): JSONResponse {
+        try {
+            return new JSONResponse(['status' => 'ok', 'collections' => $this->service->collections($clubId)]);
+        } catch (\Throwable $e) {
+            return $this->errorResponse($e);
+        }
+    }
+
+    /**
+     * @NoAdminRequired
+     *
+     * Ends a collection: paid=1 marks its fees paid, otherwise they become open again (file not submitted or rejected).
+     * Changing what was paid needs the permission for fees as well.
+     */
+    #[RequirePermission('verein.sepa.export')]
+    #[RequirePermission('verein.finance.write')]
+    public function closeCollection(int $clubId, int $id): JSONResponse {
+        try {
+            $paid = filter_var($this->request->getParam('paid', false), FILTER_VALIDATE_BOOLEAN);
+            return new JSONResponse(['status' => 'ok', 'changed' => $this->service->closeCollection($clubId, $id, $paid)]);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
         }

@@ -62,7 +62,8 @@ class FeeRunService {
         ?IL10N $l10n = null,
         ?DocumentL10n $documentL10n = null,
         private ?ClubGroupMapper $groups = null,
-        private ?ClubGroupMemberMapper $groupPeriods = null
+        private ?ClubGroupMemberMapper $groupPeriods = null,
+        private ?Clock $clock = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
@@ -139,7 +140,8 @@ class FeeRunService {
                 $skipped[] = ['memberId' => $member->getId(), 'name' => $member->getFullName(), 'reason' => $reason];
             };
 
-            if ($member->isFormer()) {
+            // a leave date still ahead counts from the day after it (Member::isFormer()); periods starting after it are skipped below
+            if ($member->isFormer(Clock::todayOf($this->clock))) {
                 $skip($this->l->t('left or deceased'));
                 continue;
             }
@@ -183,6 +185,10 @@ class FeeRunService {
                 continue;
             }
             $period = FeePeriod::of($interval, $year, $month);
+            if (self::leavesBefore($member, $year, $period['firstMonth'])) {
+                $skip($this->l->t('leaves before %s', [$period['key']]));
+                continue;
+            }
             if (!empty($join) && substr($join, 0, 7) > sprintf('%d-%02d', $year, $period['lastMonth'])) {
                 $skip($this->l->t('joins after %s', [$period['key']]));
                 continue;
@@ -273,10 +279,13 @@ class FeeRunService {
      * @throws ValidationException
      */
     public function run(int $clubId, int $year, string $dueDate, ?string $description = null, bool $prorata = false, ?int $month = null, ?array $intervals = null): array {
-        $plan = $this->plan($clubId, $year, $dueDate, $description, $prorata, $month, $intervals);
-
         $this->db->beginTransaction();
         try {
+            // one run per club at a time: two runs started together (double click, two treasurers) would both plan
+            // before either wrote and bill everyone twice. A no-op update locks the club row (the whole database on
+            // SQLite) until commit, and the plan is made only after that, so a second run sees the first one's fees.
+            $this->clubs->lockForUpdate($clubId);
+            $plan = $this->plan($clubId, $year, $dueDate, $description, $prorata, $month, $intervals);
             $now = date('Y-m-d H:i:s');
             foreach ($plan['included'] as $entry) {
                 $fee = new Fee();
@@ -407,6 +416,12 @@ class FeeRunService {
      * @param array<int, array<int, bool>> $billed group id => months with a fee already
      * @return array{included: array, skipped: string[], upcoming: array}
      */
+    /** Whether a leave date (entered in advance) lies before the first day of the period. */
+    private static function leavesBefore(Member $member, int $year, int $firstMonth): bool {
+        $leave = substr(trim((string)$member->getLeaveDate()), 0, 10);
+        return $leave !== '' && $leave < sprintf('%d-%02d-01', $year, $firstMonth);
+    }
+
     private function groupFees(Member $member, array $staysByGroup, array $linked, array $billed, int $year, int $month, bool $prorata, ?array $intervals, string $custom, array $ratesById = []): array {
         $out = ['included' => [], 'skipped' => [], 'upcoming' => []];
         foreach ($staysByGroup as $groupId => $stays) {
@@ -423,6 +438,10 @@ class FeeRunService {
             $period = FeePeriod::of($interval, $year, $month);
             if ($intervals !== null && !in_array($interval, $intervals, true)) {
                 $skip($this->l->t('payment interval not part of this run'));
+                continue;
+            }
+            if (self::leavesBefore($member, $year, $period['firstMonth'])) {
+                $skip($this->l->t('leaves before %s', [$period['key']]));
                 continue;
             }
             $change = $this->upcomingTierChange($rate, $member->getBirthDate(), $year);

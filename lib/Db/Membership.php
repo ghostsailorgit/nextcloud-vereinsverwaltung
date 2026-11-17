@@ -133,4 +133,18 @@ class Membership extends Entity implements JsonSerializable {
             'feeRateId' => $this->feeRateId,
         ];
     }
+
+    /**
+     * Whether the membership has ended by the given day: left at an unknown date, or a leave date before that day
+     * (the leave day itself still counts as a member, the same rule as the association report).
+     *
+     * @param string|null $today Y-m-d; null = the server's date
+     */
+    public function hasLeftBy(?string $today = null): bool {
+        if ($this->leaveUnknown) {
+            return true;
+        }
+        $leave = substr(trim((string)$this->leaveDate), 0, 10);
+        return $leave !== '' && $leave < ($today ?? date('Y-m-d'));
+    }
 }
