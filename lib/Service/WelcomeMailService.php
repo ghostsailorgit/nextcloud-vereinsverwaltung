@@ -11,6 +11,7 @@ use OCA\Verein\Db\Club;
 use OCA\Verein\Db\ClubAccount;
 use OCA\Verein\Db\ClubAccountMapper;
 use OCA\Verein\Db\ClubMapper;
+use OCA\Verein\Db\CustomField;
 use OCA\Verein\Db\FeeRateMapper;
 use OCA\Verein\Db\Member;
 use OCA\Verein\Exception\ValidationException;
@@ -25,6 +26,10 @@ use OCP\IL10N;
  *
  * Only ever sent on request for one member: creating or importing members sends nothing by itself. A member's IBAN appears
  * shortened only, because email is not encrypted; the club's own bank details are public anyway and appear in full.
+ *
+ * The club's own fields are placeholders too: {feld:Name} or {field:Name}, the name as the field is called (any case).
+ * Only fields the sending user may see are filled in (sections, CustomFieldService::access()); a field they may not see
+ * is left empty, a name that is no field of the club stays as it is, like every unknown placeholder.
  */
 class WelcomeMailService {
     /** placeholder (lower case) => field; every field has an English and a German name */
@@ -68,18 +73,20 @@ class WelcomeMailService {
         ?DocumentL10n $documentL10n = null,
         private ?\OCA\Verein\Service\Export\PdfExporter $pdf = null,
         private ?ClubLogo $logo = null,
-        private ?Clock $clock = null
+        private ?Clock $clock = null,
+        private ?CustomFieldService $customFields = null
     ) {
         $this->l = $l10n ?? new SourceL10n();
         $this->doc = $documentL10n?->get() ?? $this->l;
     }
 
     /**
+     * @param int[]|null $visibleFields own fields the sending user sees (CustomFieldService::access()), null = all
      * @throws ValidationException if the club has no text, the member no usable address, or sending fails
      * @throws \OCA\Verein\Exception\NotFoundException if the person is not a member of this club
      */
-    public function send(int $clubId, int $memberId): void {
-        [$member, $club, $renderedSubject, $paragraphs] = $this->prepare($clubId, $memberId);
+    public function send(int $clubId, int $memberId, ?array $visibleFields = null): void {
+        [$member, $club, $renderedSubject, $paragraphs] = $this->prepare($clubId, $memberId, $visibleFields);
         $email = trim((string)$member->getEmail());
         if (!$this->mail->isUsable($email)) {
             throw new ValidationException($this->l->t('The member has no usable email address'));
@@ -102,12 +109,13 @@ class WelcomeMailService {
     /**
      * The membership confirmation as a PDF letter (with the club's logo when it can be loaded), e.g. to print.
      *
+     * @param int[]|null $visibleFields own fields the user sees (CustomFieldService::access()), null = all
      * @return array{content: string, filename: string, mimeType: string}
      * @throws ValidationException if the club has no text
      * @throws \OCA\Verein\Exception\DependencyMissingException without TCPDF
      */
-    public function pdf(int $clubId, int $memberId): array {
-        [$member, $club, $subject, $paragraphs] = $this->prepare($clubId, $memberId);
+    public function pdf(int $clubId, int $memberId, ?array $visibleFields = null): array {
+        [$member, $club, $subject, $paragraphs] = $this->prepare($clubId, $memberId, $visibleFields);
         $file = $this->letter($member, $club, $subject, $paragraphs);
         $this->auditLog?->record($clubId, 'member', $memberId, 'welcome_pdf');
         return $file;
@@ -117,7 +125,7 @@ class WelcomeMailService {
      * @return array{0: Member, 1: Club, 2: string, 3: string[]} the member, the club, the subject and the paragraphs
      * @throws ValidationException
      */
-    private function prepare(int $clubId, int $memberId): array {
+    private function prepare(int $clubId, int $memberId, ?array $visibleFields): array {
         $member = $this->members->find($clubId, $memberId);
         $club = $this->clubs->find($clubId);
         $subject = trim((string)$club->getWelcomeSubject());
@@ -126,9 +134,10 @@ class WelcomeMailService {
             throw new ValidationException($this->l->t('The club has no text for the membership confirmation yet (“Club” tab)'));
         }
         $values = $this->values($member, $club);
+        $custom = $this->customValues($clubId, $member->getId(), $visibleFields);
         // one line, whatever a placeholder contains
-        $renderedSubject = trim((string)preg_replace('/[\r\n]+/', ' ', $this->render($subject, $values)));
-        $paragraphs = preg_split('/\R\s*\R/u', $this->render(str_replace("\r\n", "\n", $body), $values)) ?: [];
+        $renderedSubject = trim((string)preg_replace('/[\r\n]+/', ' ', $this->render($subject, $values, $custom)));
+        $paragraphs = preg_split('/\R\s*\R/u', $this->render(str_replace("\r\n", "\n", $body), $values, $custom)) ?: [];
         return [$member, $club, $renderedSubject, $paragraphs];
     }
 
@@ -158,12 +167,45 @@ class WelcomeMailService {
         ]);
     }
 
-    /** One pass over the template, so that text inside a value is never read as a placeholder. Unknown ones stay as they are. */
-    private function render(string $template, array $values): string {
-        return (string)preg_replace_callback('/\{([a-zA-Z]+)\}/', function (array $m) use ($values) {
+    /**
+     * One pass over the template, so that text inside a value is never read as a placeholder. Unknown ones stay as they are.
+     *
+     * @param array<string, string> $values field => value
+     * @param array<string, string> $custom lower-case name of an own field => value ('' = hidden or empty)
+     */
+    private function render(string $template, array $values, array $custom): string {
+        return (string)preg_replace_callback('/\{([a-zA-Z]+)\}|\{(?:feld|field):([^{}\r\n]{1,100})\}/iu', function (array $m) use ($values, $custom) {
+            if (isset($m[2]) && $m[2] !== '') {
+                return $custom[mb_strtolower(trim($m[2]))] ?? $m[0];
+            }
             $field = self::PLACEHOLDERS[strtolower($m[1])] ?? null;
             return $field === null ? $m[0] : $values[$field];
         }, $template);
+    }
+
+    /**
+     * The member's own fields as they read in a letter, by lower-case name: dates in the document's format, a checked
+     * box as "Yes", several choices separated by commas. Fields the user may not see are there, but empty.
+     *
+     * @param int[]|null $visible
+     * @return array<string, string>
+     */
+    private function customValues(int $clubId, int $memberId, ?array $visible): array {
+        if ($this->customFields === null) {
+            return [];
+        }
+        $values = $this->customFields->valuesFor($clubId, $memberId, $visible);
+        $out = [];
+        foreach ($this->customFields->fields($clubId) as $field) {
+            $value = $values[$field->getId()] ?? null;
+            $out[mb_strtolower(trim($field->getLabel()))] = $value === null ? '' : match ($field->getType()) {
+                'date' => Formats::date($this->doc, $value),
+                'checkbox' => $this->doc->t('Yes'),
+                'multiselect' => implode(', ', CustomField::valueList($value)),
+                default => $value,
+            };
+        }
+        return $out;
     }
 
     /** @return array<string, string> */

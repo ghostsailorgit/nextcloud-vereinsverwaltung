@@ -24,7 +24,8 @@ use OCP\IL10N;
 /**
  * Fields each club defines for its members itself (licence, pass number, instrument, grade, ...), so that a new kind of
  * information needs no new version of the app. Values are stored per club and member as text, normalised by type:
- * number with a dot, date as YYYY-MM-DD, a select's exact choice, a checkbox as "1" (unchecked = no value).
+ * number with a dot, date as YYYY-MM-DD, a select's exact choice, a multiple selection as a JSON list of exact choices
+ * (in the order of the field's choices), a checkbox as "1" (unchecked = no value).
  *
  * Values are personal data: they belong to the member's record ("My data", data export), are removed when the person
  * leaves the club or is anonymized, and the audit log only notes which fields changed, never the values.
@@ -384,19 +385,36 @@ class CustomFieldService {
     }
 
     /**
-     * A value as text for a spreadsheet or a letter: a date as stored (YYYY-MM-DD), a checkbox as yes/no.
+     * A value as text for a spreadsheet: a date as stored (YYYY-MM-DD), a checkbox as yes/no, the choices of a multiple
+     * selection separated by "; " (what the import reads back).
      */
     public function display(CustomField $field, ?string $value): string {
         if ($value === null || $value === '') {
             return '';
         }
-        return $field->getType() === 'checkbox' ? $this->l->t('Yes') : $value;
+        return match ($field->getType()) {
+            'checkbox' => $this->l->t('Yes'),
+            'multiselect' => implode('; ', CustomField::valueList($value)),
+            default => $value,
+        };
     }
 
     /** @throws ValidationException */
     private function normalise(CustomField $field, mixed $value): ?string {
+        if ($field->getType() === 'multiselect') {
+            return $this->normaliseChoices($field, $value);
+        }
         if (is_bool($value)) {
             $value = $value ? '1' : '';
+        }
+        // a list with one entry, e.g. a value kept from the time the field allowed several choices
+        if (is_array($value) && count($value) === 1 && is_scalar(reset($value))) {
+            $value = reset($value);
+        } elseif ($field->getType() === 'select' && is_string($value) && str_starts_with(trim($value), '[')) {
+            $list = json_decode($value, true);
+            if (is_array($list) && count($list) === 1 && is_scalar(reset($list))) {
+                $value = reset($list);
+            }
         }
         if ($value !== null && !is_scalar($value)) {
             throw new ValidationException($this->l->t('%s is invalid', [$field->getLabel()]));
@@ -444,6 +462,63 @@ class CustomFieldService {
         }
     }
 
+    /**
+     * Several choices: a list (form), JSON of a list, or text with the choices separated by ";" or line breaks (spreadsheet).
+     * Text that is exactly one choice is that choice even if it contains a comma; otherwise commas separate too.
+     * Stored as a JSON list in the order of the field's choices, nothing chosen = no value.
+     *
+     * @throws ValidationException
+     */
+    private function normaliseChoices(CustomField $field, mixed $value): ?string {
+        $byKey = [];
+        foreach ($field->getOptionList() as $option) {
+            $byKey[mb_strtolower($option)] = $option;
+        }
+        if (is_string($value)) {
+            $text = trim($value);
+            $decoded = str_starts_with($text, '[') ? json_decode($text, true) : null;
+            if (is_array($decoded)) {
+                $value = $decoded;
+            } elseif ($text === '' || isset($byKey[mb_strtolower($text)])) {
+                $value = [$text];
+            } else {
+                $parts = preg_split('/[;\r\n]+/', $text) ?: [];
+                if (count($parts) === 1) {
+                    $parts = explode(',', $text);
+                }
+                $value = $parts;
+            }
+        } elseif (is_scalar($value)) {
+            $value = [(string)$value];
+        } elseif ($value === null) {
+            $value = [];
+        }
+        if (!is_array($value)) {
+            throw new ValidationException($this->l->t('%s is invalid', [$field->getLabel()]));
+        }
+        $chosen = [];
+        foreach ($value as $item) {
+            if (!is_scalar($item)) {
+                throw new ValidationException($this->l->t('%s is invalid', [$field->getLabel()]));
+            }
+            $item = trim((string)$item);
+            if ($item === '') {
+                continue;
+            }
+            $option = $byKey[mb_strtolower($item)] ?? null;
+            if ($option === null) {
+                throw new ValidationException($this->l->t('%1$s: “%2$s” is not one of the choices', [$field->getLabel(), $item]));
+            }
+            $chosen[$option] = true;
+        }
+        if ($chosen === []) {
+            return null;
+        }
+        // the field's order, so that the same choices are always the same value
+        $ordered = array_values(array_filter($field->getOptionList(), fn (string $o) => isset($chosen[$o])));
+        return json_encode($ordered, JSON_UNESCAPED_UNICODE);
+    }
+
     /** YYYY-MM-DD or DD.MM.YYYY (as in a spreadsheet) */
     private function date(string $text): ?string {
         foreach (['Y-m-d', 'd.m.Y', 'j.n.Y'] as $format) {
@@ -478,7 +553,7 @@ class CustomFieldService {
             throw new ValidationException($this->l->t('The type of the field is invalid'));
         }
         $options = [];
-        if ($type === 'select') {
+        if (in_array($type, CustomField::CHOICE_TYPES, true)) {
             $options = $this->options($data['options'] ?? ($field->getOptionList()));
             if ($options === []) {
                 throw new ValidationException($this->l->t('A selection needs at least one choice'));
@@ -486,7 +561,7 @@ class CustomFieldService {
         }
         $field->setLabel($label);
         $field->setType($type);
-        $field->setOptions($type === 'select' ? json_encode($options, JSON_UNESCAPED_UNICODE) : null);
+        $field->setOptions(in_array($type, CustomField::CHOICE_TYPES, true) ? json_encode($options, JSON_UNESCAPED_UNICODE) : null);
         $field->setRequired($this->bool($data['required'] ?? $field->getRequired() ?? false));
         $field->setShowInList($this->bool($data['showInList'] ?? $field->getShowInList() ?? false));
         if (array_key_exists('sortOrder', $data) && is_numeric($data['sortOrder'])) {

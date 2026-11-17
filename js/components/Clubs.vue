@@ -79,6 +79,7 @@
         <details class="wide">
           <summary>{{ t('verein', 'Available placeholders') }}</summary>
           <p class="hint"><code>{vorname} {nachname} {name} {anrede} {strasse} {plz} {ort} {email} {telefon} {geburtsdatum} {eintritt} {mitgliedsnummer} {beitragskategorie} {iban} {mandatsreferenz} {verein} {vereinsstrasse} {vereinsplz} {vereinsort} {vereinsiban} {vereinsbic} {glaeubigerid} {amt}</code></p>
+          <p class="hint">{{ t('verein', 'Own fields: {example}, with the name of the field. Only fields the sender may see are filled in.', { example: '{feld:Trainerlizenz}' }) }}</p>
         </details>
         <div class="actions">
           <NcButton type="submit" variant="primary" :disabled="busy">{{ t('verein', 'Save') }}</NcButton>

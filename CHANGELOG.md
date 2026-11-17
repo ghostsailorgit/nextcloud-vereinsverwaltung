@@ -4,6 +4,19 @@ Alle wichtigen Änderungen dieser App. Das Format folgt [Keep a Changelog](https
 
 ---
 
+## [1.22.0] - 2026-11-17
+
+### ✨ Neu
+- **Eigene Felder vervollständigt** ([#49](https://github.com/ghostsailorgit/nextcloud-vereinsverwaltung/issues/49)):
+  - **Mehrfachauswahl:** Neue Feldart, bei der man mehrere Möglichkeiten zugleich wählt, z. B. Instrumente oder Lizenzen. In Liste, „Meine Daten“ und Mitgliedsbestätigung durch Kommas getrennt, im CSV-Export durch „;“. Der Import liest „;“, Zeilenumbrüche und Kommas (eine Möglichkeit, die selbst ein Komma enthält, wird erkannt). Wechselt ein Feld von Auswahlliste auf Mehrfachauswahl, bleiben die Werte erhalten.
+  - **Filter in der Mitgliederliste:** Unter der Gruppe wählt man ein eigenes Feld und eine Bedingung: ausgefüllt, nicht ausgefüllt, eine bestimmte Möglichkeit (Auswahl und Mehrfachauswahl), Ja/Nein oder „enthält …“ mit einem Text (bei Datumsfeldern z. B. „2026“). Gefiltert wird nur, was man sehen darf.
+  - **Platzhalter in der Mitgliedsbestätigung:** `{feld:Name}` (oder `{field:Name}`) setzt den Wert eines eigenen Feldes ein, Groß- und Kleinschreibung egal, Datum im Briefformat. Ausgefüllt werden nur Felder, die der Absender sehen darf; ein Feld aus einem für ihn gesperrten Bereich bleibt leer.
+
+### 🔧 Intern
+- Auf GitHub wird immer die höchste stabile Version als „Latest“ markiert, nicht die zuletzt fertig gebaute (1.20.0 war nach 1.21.0 fertig und galt deshalb als neueste).
+
+---
+
 ## [1.21.0] - 2026-11-16
 
 ### ✨ Neu

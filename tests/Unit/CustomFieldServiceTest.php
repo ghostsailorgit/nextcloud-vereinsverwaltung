@@ -266,4 +266,43 @@ class CustomFieldServiceTest extends TestCase {
         $field->setSectionId(999);
         $this->assertSame(['visible' => [], 'editable' => []], $this->service->access(self::CLUB, [10]));
     }
+
+    public function testAMultipleSelectionKeepsSeveralChoicesInTheFieldsOrder(): void {
+        $instruments = $this->field('Instrumente', 'multiselect', ['options' => "Gitarre\nBass, elektrisch\nGesang", 'required' => '1']);
+        $id = $instruments->getId();
+        $this->assertSame(['Gitarre', 'Bass, elektrisch', 'Gesang'], $instruments->getOptionList());
+
+        // form (list), spreadsheet (";" or ","), JSON, and one choice that contains a comma itself
+        foreach ([
+            [['gesang', 'Gitarre'], '["Gitarre","Gesang"]'],
+            ['Gesang; gitarre', '["Gitarre","Gesang"]'],
+            ['Gesang, Gitarre', '["Gitarre","Gesang"]'],
+            ['["Gesang"]', '["Gesang"]'],
+            ['bass, elektrisch', '["Bass, elektrisch"]'],
+            ['Gesang;Gesang', '["Gesang"]'],
+        ] as [$raw, $stored]) {
+            $this->assertSame([$id => $stored], $this->service->validateValues(self::CLUB, [$id => $raw], false), json_encode($raw));
+        }
+
+        try {
+            $this->service->validateValues(self::CLUB, [$id => ['Gitarre', 'Tuba']], false);
+            $this->fail('accepted an unknown choice');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('„Tuba“ ist keine der Auswahlmöglichkeiten', $e->getMessage());
+        }
+
+        $this->expectExceptionMessage('Instrumente ist ein Pflichtfeld');
+        $this->service->validateValues(self::CLUB, [$id => []], false);
+    }
+
+    public function testAMultipleSelectionIsReadableInASpreadsheetAndSurvivesATypeChange(): void {
+        $field = $this->field('Instrumente', 'multiselect', ['options' => ['Gitarre', 'Gesang']]);
+        $this->assertSame('Gitarre; Gesang', $this->service->display($field, '["Gitarre","Gesang"]'));
+        $this->assertSame(['Gitarre', 'Gesang'], CustomField::valueList('["Gitarre","Gesang"]'));
+        $this->assertSame(['Gitarre'], CustomField::valueList('Gitarre'), 'a value from the time the field was a single selection');
+
+        $this->service->update(self::CLUB, $field->getId(), ['label' => 'Instrumente', 'type' => 'select']);
+        $this->assertSame([$field->getId() => 'Gesang'], $this->service->validateValues(self::CLUB, [$field->getId() => '["Gesang"]'], false),
+            'one choice of a former multiple selection is still a valid single selection');
+    }
 }

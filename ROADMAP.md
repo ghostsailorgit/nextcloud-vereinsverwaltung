@@ -7,8 +7,8 @@ Stand: Version 1.21.0. Die Reihenfolge ist keine Zusage, sondern die aktuelle Ab
 | Thema | Inhalt |
 |---|---|
 | Mehrere Vereine | Vereine, Mitgliedschaften (eine Person in mehreren Vereinen), Bankkonten, Rechte je Verein |
-| Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung, eigene Mitgliedsnummer je Verein, eigene Felder je Verein (Text, Zahl, Datum, Auswahl, Ja/Nein), gruppiert in Bereiche mit eigenen Seh- und Änderungsrechten je Rolle |
-| Mitgliedsbestätigung | E-Mail mit eigenem Text und Platzhaltern, nur auf Wunsch, Mitglieds-IBAN gekürzt |
+| Mitglieder | Stammdaten, Deaktivieren, Import aus CSV mit Vorschau, IBAN-Prüfung und Dubletten-Erkennung, eigene Mitgliedsnummer je Verein, eigene Felder je Verein (Text, Zahl, Datum, Auswahl, Mehrfachauswahl, Ja/Nein) mit Filter in der Mitgliederliste, gruppiert in Bereiche mit eigenen Seh- und Änderungsrechten je Rolle |
+| Mitgliedsbestätigung | E-Mail mit eigenem Text und Platzhaltern (auch eigene Felder, nur die für den Absender sichtbaren), nur auf Wunsch, Mitglieds-IBAN gekürzt |
 | Bestandsmeldung | Jahrgänge nach Geschlecht zum Stichtag, XML-Datei der DOSB-Schnittstelle |
 | Gruppen | Gruppen innerhalb des Vereins (z. B. Trainingsgruppen) mit Ein- und Austritt je Aufenthalt, Anzeige und Filter in der Mitgliederliste |
 | Rechte | Rollen je Verein, auch nur für einzelne Gruppen (Abteilungsleitungen), automatische Rechte aus der Vereinsfunktion, Ämter je Verein als Bezeichnung, Selbstauskunft „Meine Daten“ |

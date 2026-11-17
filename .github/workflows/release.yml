@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # all tags, to find the highest version below
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -36,6 +38,14 @@ jobs:
             exit 1
           fi
 
+      # "Latest" on GitHub goes to the highest stable version, never to whichever release finished last
+      # (v1.20.0 once became "Latest" after v1.21.0 because its run ended later).
+      - name: Is this the highest stable version?
+        id: latest
+        run: |
+          highest="$(git tag --list 'v*' | grep -v -- '-' | sort -V | tail -1)"
+          if [ "${GITHUB_REF_NAME}" = "${highest}" ]; then echo "latest=true" >> "$GITHUB_OUTPUT"; else echo "latest=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Build the archive (frontend, production PHP dependencies)
         run: scripts/build-archive.sh "verein-${GITHUB_REF_NAME}.tar.gz"
 
@@ -45,3 +55,4 @@ jobs:
           files: verein-${{ github.ref_name }}.tar.gz
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ steps.latest.outputs.latest }}

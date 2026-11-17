@@ -31,7 +31,9 @@ use OCP\AppFramework\Db\Entity;
  * @method void setCreatedAt(?string $createdAt)
  */
 class CustomField extends Entity implements JsonSerializable {
-    public const TYPES = ['text', 'number', 'date', 'select', 'checkbox'];
+    public const TYPES = ['text', 'number', 'date', 'select', 'multiselect', 'checkbox'];
+    /** types whose value is one or several of the field's choices */
+    public const CHOICE_TYPES = ['select', 'multiselect'];
 
     protected int $clubId = 0;
     protected string $label = '';
@@ -57,6 +59,23 @@ class CustomField extends Entity implements JsonSerializable {
     public function getOptionList(): array {
         $list = json_decode((string)$this->options, true);
         return is_array($list) ? array_values(array_map('strval', $list)) : [];
+    }
+
+    /**
+     * The choices stored for a multiple selection (a JSON list). A value that is no list - e.g. kept from the time the
+     * field was a single selection - counts as one choice.
+     *
+     * @return string[]
+     */
+    public static function valueList(?string $value): array {
+        if ($value === null || trim($value) === '') {
+            return [];
+        }
+        $list = json_decode($value, true);
+        if (!is_array($list)) {
+            return [$value];
+        }
+        return array_values(array_filter(array_map(fn ($v) => is_scalar($v) ? trim((string)$v) : '', $list), fn (string $v) => $v !== ''));
     }
 
     public function jsonSerialize(): array {

@@ -248,4 +248,44 @@ class WelcomeMailServiceTest extends TestCase {
         $this->service->send(1, 42);
         $this->assertSame(['Als Jugendwartin / Jugendwartin'], $this->sent[0]['paragraphs']);
     }
+
+    public function testOwnFieldsArePlaceholdersButOnlyTheOnesTheSenderSees(): void {
+        $licence = new \OCA\Verein\Db\CustomField();
+        $licence->setId(5);
+        $licence->setLabel('Trainerlizenz');
+        $licence->setType('multiselect');
+        $until = new \OCA\Verein\Db\CustomField();
+        $until->setId(6);
+        $until->setLabel('Gültig bis');
+        $until->setType('date');
+        $secret = new \OCA\Verein\Db\CustomField();
+        $secret->setId(7);
+        $secret->setLabel('Führungszeugnis');
+        $secret->setType('text');
+        $custom = $this->createMock(\OCA\Verein\Service\CustomFieldService::class);
+        $custom->method('fields')->willReturn([$licence, $until, $secret]);
+        $custom->method('valuesFor')->willReturnCallback(fn (int $club, int $member, ?array $only) => array_filter(
+            [5 => '["C-Lizenz","B-Lizenz"]', 6 => '2027-03-31', 7 => 'liegt vor'],
+            fn ($id) => $only === null || in_array($id, $only, true),
+            ARRAY_FILTER_USE_KEY
+        ));
+        $members = $this->createMock(MemberService::class);
+        $members->method('find')->willReturn($this->member);
+        $clubs = $this->createMock(ClubMapper::class);
+        $clubs->method('find')->willReturn($this->club);
+        $service = new WelcomeMailService($members, $clubs, $this->createMock(ClubAccountMapper::class), $this->createMock(FeeRateMapper::class),
+            $this->mail, $this->audit, SourceL10n::fromAppLanguage('de'), customFields: $custom);
+
+        $this->club->setWelcomeSubject('Lizenz {FELD:trainerlizenz}');
+        $this->club->setWelcomeBody('{feld:Trainerlizenz} bis {field:Gültig bis}, Zeugnis: {feld:Führungszeugnis}, {feld:Gibt es nicht}');
+        $service->send(1, 42, [5, 6]);
+
+        $this->assertSame('Lizenz C-Lizenz, B-Lizenz', $this->sent[0]['subject']);
+        $this->assertStringStartsWith('C-Lizenz, B-Lizenz bis ', $this->sent[0]['paragraphs'][0]);
+        $this->assertStringContainsString('2027', $this->sent[0]['paragraphs'][0]);
+        $this->assertStringNotContainsString('2027-03-31', $this->sent[0]['paragraphs'][0], 'a date in the document format');
+        $this->assertStringContainsString('Zeugnis: , {feld:Gibt es nicht}', $this->sent[0]['paragraphs'][0],
+            'a field the sender may not see stays empty, an unknown name stays as it is');
+        $this->assertStringNotContainsString('liegt vor', json_encode($this->sent));
+    }
 }
