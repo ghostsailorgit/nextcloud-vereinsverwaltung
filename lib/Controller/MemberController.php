@@ -497,7 +497,7 @@ class MemberController extends Controller {
     public function welcomePdf($id) {
         try {
             $this->checkScope((int)$id, 'verein.member.manage');
-            $file = $this->welcomeMail->pdf($this->clubId(), (int)$id);
+            $file = $this->welcomeMail->pdf($this->clubId(), (int)$id, $this->customAccess()['visible']);
             return new DataDownloadResponse($file['content'], $file['filename'], $file['mimeType']);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);
@@ -513,7 +513,7 @@ class MemberController extends Controller {
     public function sendWelcome($id) {
         try {
             $this->checkScope((int)$id, 'verein.member.manage');
-            $this->welcomeMail->send($this->clubId(), (int)$id);
+            $this->welcomeMail->send($this->clubId(), (int)$id, $this->customAccess()['visible']);
             return new JSONResponse(['status' => 'ok']);
         } catch (\Throwable $e) {
             return $this->errorResponse($e);

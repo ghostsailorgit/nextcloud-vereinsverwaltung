@@ -238,6 +238,16 @@
               :placeholder="t('verein', 'Select…')"
               :disabled="!f.editable"
             />
+            <NcSelect
+              v-else-if="f.type === 'multiselect'"
+              v-model="formData.custom[f.id]"
+              :options="f.options"
+              :input-label="fieldLabel(f)"
+              :placeholder="t('verein', 'Select…')"
+              :disabled="!f.editable"
+              :close-on-select="false"
+              multiple
+            />
             <label v-else-if="f.type === 'checkbox'" class="checkbox-field">
               <input type="checkbox" :checked="formData.custom[f.id] === '1'" :disabled="!f.editable" @change="formData.custom[f.id] = $event.target.checked ? '1' : ''" />
               <span>{{ f.label }}</span>
@@ -342,6 +352,36 @@
         :input-label="t('verein', 'Group')"
         :placeholder="t('verein', 'All groups')"
       />
+
+      <!-- filter by one of the club's own fields; the server sends only the fields and values the user may see -->
+      <div v-if="customFields.length" class="field-filter">
+        <NcSelect
+          v-model="fieldFilterId"
+          class="member-search"
+          :options="customFields"
+          :reduce="f => f.id"
+          label="label"
+          :input-label="t('verein', 'Own field')"
+          :placeholder="t('verein', 'Filter by an own field')"
+        />
+        <NcSelect
+          v-if="fieldFilterField"
+          v-model="fieldFilterCondition"
+          class="member-search"
+          :options="fieldFilterConditions"
+          :reduce="o => o.id"
+          label="label"
+          :input-label="t('verein', 'Condition')"
+          :placeholder="t('verein', 'Any value')"
+        />
+        <NcTextField
+          v-if="fieldFilterField && fieldFilterCondition === 'contains'"
+          :model-value="fieldFilterText"
+          @update:model-value="fieldFilterText = $event"
+          class="member-search"
+          :label="t('verein', 'Text')"
+        />
+      </div>
 
       <div class="category-filter">
         <button
@@ -470,7 +510,7 @@
           </tbody>
         </table>
       </div>
-      <p v-if="filteredMembers.length === 0" class="empty-state">{{ searchQuery.trim() ? t('verein', 'No members found') : t('verein', 'No members in this category') }}</p>
+      <p v-if="filteredMembers.length === 0" class="empty-state">{{ (searchQuery.trim() || groupFilter || fieldFilterCondition) ? t('verein', 'No members found') : t('verein', 'No members in this category') }}</p>
     </div>
 
     <AnonymizeDialog
@@ -482,7 +522,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { api } from '../api'
 import { confirmAction } from '../confirm'
 import { matchesMemberSearch } from '../memberSearch'
@@ -491,7 +531,7 @@ import { extractErrorMessage } from '../errorMessage'
 import { t, n } from '@nextcloud/l10n'
 import { formatMoney, formatDate, salutationLabel } from '../format'
 import { hasAgeTiers, intervalLabel } from '../feeRates'
-import { formatFieldValue, customValues } from '../customFields'
+import { formatFieldValue, customValues, valueList, fieldFilterOptions, matchesFieldFilter } from '../customFields'
 import { absoluteUrl } from '../absoluteUrl'
 import { currentClub, can } from '../store/club'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -829,6 +869,16 @@ export default {
     }
     const searchQuery = ref('')
     const groupFilter = ref(null)
+    // filter by an own field: which field, the condition (fieldFilterOptions()) and the text for "contains"
+    const fieldFilterId = ref(null)
+    const fieldFilterCondition = ref(null)
+    const fieldFilterText = ref('')
+    const fieldFilterField = computed(() => customFields.value.find(f => f.id === fieldFilterId.value) || null)
+    const fieldFilterConditions = computed(() => fieldFilterOptions(fieldFilterField.value))
+    watch(fieldFilterId, () => {
+      fieldFilterCondition.value = null
+      fieldFilterText.value = ''
+    })
     const groupOptions = computed(() => [...new Set(members.value.flatMap(m => m.groups || []))].sort((a, b) => a.localeCompare(b)))
 
     const filteredMembers = computed(() => {
@@ -836,6 +886,9 @@ export default {
       if (category.value === 'active') list = list.filter(m => !m.isFormer)
       if (category.value === 'former') list = list.filter(m => m.isFormer)
       if (groupFilter.value) list = list.filter(m => (m.groups || []).includes(groupFilter.value))
+      if (fieldFilterField.value && fieldFilterCondition.value) {
+        list = list.filter(m => matchesFieldFilter(m, fieldFilterField.value, fieldFilterCondition.value, fieldFilterText.value))
+      }
       return list.filter(m => matchesMemberSearch(m, searchQuery.value))
     })
 
@@ -907,6 +960,10 @@ export default {
         if (formData[key] === null || formData[key] === undefined) formData[key] = defaults[key]
       }
       formData.custom = customValues(member)
+      // a multiple selection is a list in the form (stored as JSON)
+      for (const f of customFields.value) {
+        if (f.type === 'multiselect') formData.custom[f.id] = valueList(formData.custom[f.id])
+      }
     }
 
     const startAdd = () => {
@@ -1048,6 +1105,11 @@ export default {
       newMemberGroups,
       scoped,
       groupFilter,
+      fieldFilterId,
+      fieldFilterCondition,
+      fieldFilterText,
+      fieldFilterField,
+      fieldFilterConditions,
       groupOptions,
       payerOptions,
       payerName,
@@ -1301,6 +1363,16 @@ export default {
 .member-search {
   max-width: 420px;
   margin-bottom: 12px;
+}
+
+.field-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  align-items: flex-end;
+}
+.field-filter .member-search {
+  flex: 1 1 200px;
 }
 
 .category-filter {

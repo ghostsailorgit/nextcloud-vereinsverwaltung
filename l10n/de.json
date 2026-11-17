@@ -1098,7 +1098,16 @@
         "membership confirmation sent": "Mitgliedsbestätigung verschickt",
         "membership-confirmation_%s.pdf": "mitgliedsbestaetigung_%s.pdf",
         "membership-confirmation_{number}.pdf": "mitgliedsbestaetigung_{number}.pdf",
-        "“%s” is not one of the club's offices": "„%s“ ist keines der Ämter des Vereins"
+        "“%s” is not one of the club's offices": "„%s“ ist keines der Ämter des Vereins",
+        "Multiple selection": "Mehrfachauswahl",
+        "Filled in": "Ausgefüllt",
+        "Not filled in": "Nicht ausgefüllt",
+        "Contains …": "Enthält …",
+        "Own field": "Eigenes Feld",
+        "Filter by an own field": "Nach eigenem Feld filtern",
+        "Condition": "Bedingung",
+        "Any value": "Beliebiger Wert",
+        "Own fields: {example}, with the name of the field. Only fields the sender may see are filled in.": "Eigene Felder: {example}, mit dem Namen des Feldes. Ausgefüllt werden nur Felder, die der Absender sehen darf."
     },
     "pluralForm": "nplurals=2; plural=(n != 1);"
 }

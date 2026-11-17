@@ -14,7 +14,7 @@
       <NcTextField :model-value="form.label" @update:model-value="form.label = $event" :label="t('verein', 'Name of the field')" maxlength="100" required />
       <NcSelect v-model="form.type" :options="typeOptions" :reduce="o => o.id" label="label" :input-label="t('verein', 'Type of field')" :clearable="false" />
       <NcSelect v-model="form.sectionId" :options="sectionOptions" :reduce="o => o.id" label="label" :input-label="t('verein', 'Section')" :clearable="false" />
-      <label v-if="form.type === 'select'" class="choices">
+      <label v-if="form.type === 'select' || form.type === 'multiselect'" class="choices">
         <span>{{ t('verein', 'Choices (one per line)') }}</span>
         <textarea v-model="form.options" rows="4" class="form-input" />
       </label>
@@ -37,7 +37,7 @@
         <thead><tr><th>{{ t('verein', 'Name') }}</th><th>{{ t('verein', 'Type of field') }}</th><th>{{ t('verein', 'Section') }}</th><th>{{ t('verein', 'Required') }}</th><th>{{ t('verein', 'In the list') }}</th><th>{{ t('verein', 'Actions') }}</th></tr></thead>
         <tbody>
           <tr v-for="f in fields" :key="f.id">
-            <td>{{ f.label }}<small v-if="f.type === 'select'" class="hint"><br>{{ f.options.join(', ') }}</small></td>
+            <td>{{ f.label }}<small v-if="f.type === 'select' || f.type === 'multiselect'" class="hint"><br>{{ f.options.join(', ') }}</small></td>
             <td>{{ typeLabel(f.type) }}</td>
             <td>{{ sectionName(f.sectionId) }}</td>
             <td>{{ f.required ? t('verein', 'Yes') : t('verein', 'No') }}</td>
